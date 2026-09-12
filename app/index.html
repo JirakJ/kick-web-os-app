@@ -12,77 +12,77 @@
 </head>
 <body>
   <main id="home">
-    <header><span class="brand">KICK</span><span class="tv-label">TV</span><span id="header-note" class="header-note">Live streams and replays</span></header>
+    <header><span class="brand">KICK</span><span class="tv-label">TV</span><span id="header-note" class="header-note" data-i18n="header_note">Live streams and replays</span></header>
     <div class="content">
     <section class="selection" aria-labelledby="heading">
-      <p id="home-eyebrow" class="eyebrow">Your channels. Your screen.</p>
-      <h1 id="heading">What will you watch?</h1>
-      <p id="home-intro">Enter a channel or return to one of your recent ones.</p>
+      <p id="home-eyebrow" class="eyebrow" data-i18n="home_eyebrow">Your channels. Your screen.</p>
+      <h1 id="heading" data-i18n="home_heading">What will you watch?</h1>
+      <p id="home-intro" data-i18n="home_intro">Enter a channel or return to one of your recent ones.</p>
       <form id="channel-form" novalidate>
-        <label id="channel-label" for="channel">Kick channel</label>
-        <input id="channel" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Channel name or kick.com/… link" aria-describedby="error">
+        <label id="channel-label" for="channel" data-i18n="channel_label">Kick channel</label>
+        <input id="channel" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Channel name or kick.com/… link" data-i18n-attr="placeholder:channel_placeholder" aria-describedby="error">
         <p id="error" role="alert"></p>
         <div class="home-actions">
-          <button id="play" type="submit" class="primary"><span id="play-label">Play live</span> <span aria-hidden="true">▶</span></button>
-          <button id="recordings" type="button">Replays</button>
+          <button id="play" type="submit" class="primary"><span id="play-label" data-i18n="play_live">Play live</span> <span aria-hidden="true">▶</span></button>
+          <button id="recordings" type="button" data-i18n="recordings">Replays</button>
         </div>
       </form>
     </section>
     <section id="recent" aria-labelledby="recent-heading" hidden>
-      <h2 id="recent-heading">Recently opened</h2>
+      <h2 id="recent-heading" data-i18n="recent_heading">Recently opened</h2>
       <div id="recent-channels"></div>
-      <nav id="recent-pages" aria-label="Recent channel pages" hidden>
-        <button id="recent-previous" type="button" aria-label="Previous channels">←</button>
+      <nav id="recent-pages" aria-label="Recent channel pages" data-i18n-attr="aria-label:recent_pages_label" hidden>
+        <button id="recent-previous" type="button" aria-label="Previous channels" data-i18n-attr="aria-label:recent_previous">←</button>
         <span id="recent-page-number"></span>
-        <button id="recent-next" type="button" aria-label="More channels">→</button>
+        <button id="recent-next" type="button" aria-label="More channels" data-i18n-attr="aria-label:recent_next">→</button>
       </nav>
     </section>
     </div>
-    <footer><span id="footer-hints">↑ ↓ Select &nbsp; OK Confirm &nbsp; Back Return</span><small><span id="footer-note">Unofficial Kick player · No chat</span> · <span id="app-version">v0.7.0</span></small></footer>
+    <footer><span id="footer-hints" data-i18n="footer_hints">↑ ↓ Select &nbsp; OK Confirm &nbsp; Back Return</span><small><span id="footer-note" data-i18n="footer_note">Unofficial Kick player · No chat</span> · <span id="app-version">v0.7.0</span></small></footer>
   </main>
   <section id="catalog" aria-labelledby="catalog-heading" hidden>
     <div class="catalog-header">
       <div class="catalog-description">
-        <p id="catalog-eyebrow" class="eyebrow">Kick channel</p>
+        <p id="catalog-eyebrow" class="eyebrow" data-i18n="channel_label">Kick channel</p>
         <h1 id="catalog-heading"></h1>
         <p id="channel-status" role="status"></p>
       </div>
       <div class="catalog-actions">
-        <button id="catalog-back" type="button">Change channel</button>
-        <button id="live" type="button" class="primary" hidden><span class="live-dot" aria-hidden="true"></span><span id="live-label">Play live</span></button>
+        <button id="catalog-back" type="button" data-i18n="change_channel">Change channel</button>
+        <button id="live" type="button" class="primary" hidden><span class="live-dot" aria-hidden="true"></span><span id="live-label" data-i18n="play_live">Play live</span></button>
       </div>
     </div>
-    <h2 id="videos-heading">Stream replays</h2>
+    <h2 id="videos-heading" data-i18n="videos_heading">Stream replays</h2>
     <p id="videos-status" role="status"></p>
-    <button id="catalog-retry" type="button" hidden>Try again</button>
+    <button id="catalog-retry" type="button" data-i18n="retry" hidden>Try again</button>
     <div id="videos"></div>
-    <nav id="pages" aria-label="Replay pages" hidden>
-      <button id="previous-page" type="button">← Previous</button>
+    <nav id="pages" aria-label="Replay pages" data-i18n-attr="aria-label:videos_pages_label" hidden>
+      <button id="previous-page" type="button" data-i18n="page_previous">← Previous</button>
       <span id="page-number"></span>
-      <button id="next-page" type="button">Next →</button>
+      <button id="next-page" type="button" data-i18n="page_next">Next →</button>
     </nav>
   </section>
-  <section id="watch" aria-label="Player" tabindex="-1" hidden>
+  <section id="watch" aria-label="Player" data-i18n-attr="aria-label:player_label" tabindex="-1" hidden>
     <div id="video-host"></div>
     <p id="playback-status" role="status"></p>
     <div id="playback-controls">
       <p id="video-title"></p>
-      <p id="quality">Highest available quality</p>
+      <p id="quality" data-i18n="quality_default">Highest available quality</p>
       <div id="timeline">
-        <label id="seek-label" for="seek">Replay position</label>
+        <label id="seek-label" for="seek" data-i18n="seek_label">Replay position</label>
         <div class="seek-row">
           <span id="elapsed">0:00</span>
           <div class="seek-track">
             <progress id="seek-progress" max="1" value="0" aria-hidden="true"></progress>
-            <input id="seek" type="range" min="0" max="0" value="0" step="1" aria-label="Replay position" disabled>
+            <input id="seek" type="range" min="0" max="0" value="0" step="1" aria-label="Replay position" data-i18n-attr="aria-label:seek_label" disabled>
           </div>
           <span id="duration">0:00</span>
         </div>
       </div>
-      <button id="toggle" type="button">Pause</button>
-      <button id="watch-recordings" type="button">Channel replays</button>
+      <button id="toggle" type="button" data-i18n="pause">Pause</button>
+      <button id="watch-recordings" type="button" data-i18n="channel_recordings">Channel replays</button>
     </div>
-    <button id="back" type="button">Change channel</button>
+    <button id="back" type="button" data-i18n="change_channel">Change channel</button>
   </section>
 </body>
 </html>

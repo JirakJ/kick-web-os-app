@@ -22,14 +22,28 @@ Manual review of the changes:
 - Service errors now carry a stable code. The app translates a code only if it
   is a known dictionary key; parameters are limited to four short strings or
   finite numbers, and free-text fallbacks are cut to 200 code points.
-- Gzip responses are inflated incrementally and rejected once the decoded text
-  exceeds 1 MiB, so a compressed bomb cannot exceed the existing memory bound.
-  Unsupported content encodings are rejected before any data is read, and the
-  inflater is closed on every completion path.
+- Gzip responses are piped into the inflater with stream backpressure and
+  rejected once the decoded text exceeds 1 MiB, so a compressed bomb cannot
+  exceed the existing memory bound. Unsupported content encodings are rejected
+  before any data is read, and the inflater is destroyed on every completion
+  path. A pull-request review found that the first draft called `close()` from
+  inside the inflater's own data callback, which crashes the TV's Node 8.12
+  runtime; the fix was confirmed on a real Node 8.12.0 binary, where the draft
+  died with `TypeError: Cannot read property 'write' of null` and the shipped
+  code completes oversized, malformed, compressed and plain transfers.
 - The keep-alive agent uses the same TLS verification as before; no host is
-  caller-supplied and redirects remain disabled.
-- The playlist host and path are split with an anchored regular expression
-  after the allowlist check, replacing the deprecated `url.parse`.
+  caller-supplied and redirects remain disabled. A request that fails with a
+  connection reset before any response, which a server-closed idle socket can
+  cause on Node 8, is retried once on a fresh connection.
+- The playlist host and path come from the WHATWG `URL` parser after the
+  allowlist check, replacing the deprecated `url.parse` while still
+  percent-encoding unsafe path characters without double-encoding.
+- Exceptions that are not deliberate service failures map to a fixed `internal`
+  code instead of forwarding engine text, and an internal replay-list failure
+  is distinguished from any object Kick could return by a private marker.
+- Static labels declare their dictionary key in markup (`data-i18n`,
+  `data-i18n-attr`); the test suite checks that every key exists and that the
+  English defaults in `index.html` match the dictionary.
 - The locale is read only from `webOSSystem.locale`, `PalmSystem.locale` and the
   browser language, each guarded, with values longer than 35 characters ignored.
 
@@ -38,7 +52,7 @@ Manual review of the changes:
 | Change | Effect |
 | --- | --- |
 | `Accept-Encoding: gzip` for Kick responses | Channel document 8.8 KB → 2.4 KB, 30-replay list 64 KB → 7.5 KB on the wire (measured against `kick.com` on 12 September 2026 for one channel) |
-| Keep-alive HTTPS agent (six sockets, two idle) | Status polling and channel/replay lookups reuse TLS sessions instead of a handshake per request |
+| Keep-alive HTTPS agent (six sockets, two idle) | Status polling and channel/replay lookups reuse TLS sessions instead of a handshake per request; one retry covers a socket the server already closed |
 | Title symbol expression compiled once | The emoji-isolating regular expression is no longer rebuilt for every catalog card or player title |
 | Thumbnails decoded asynchronously | `img.decoding = 'async'` keeps thumbnail decoding off the main thread where the TV browser supports it |
 

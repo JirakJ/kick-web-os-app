@@ -14,18 +14,16 @@ if (typeof document !== 'undefined') (function () {
   if (typeof PalmSystem !== 'undefined') localeScope.PalmSystem = PalmSystem;
   if (typeof navigator !== 'undefined') localeScope.navigator = navigator;
   var t = KickI18n.translator(KickI18n.detect(localeScope));
-  // Static labels: element id -> text key; attribute table: element id -> [attribute, key].
-  var staticText = { 'header-note': 'header_note', 'home-eyebrow': 'home_eyebrow', heading: 'home_heading', 'home-intro': 'home_intro',
-    'channel-label': 'channel_label', 'play-label': 'play_live', recordings: 'recordings', 'recent-heading': 'recent_heading',
-    'footer-hints': 'footer_hints', 'footer-note': 'footer_note', 'catalog-eyebrow': 'channel_label', 'catalog-back': 'change_channel',
-    'live-label': 'play_live', 'videos-heading': 'videos_heading', 'catalog-retry': 'retry', 'previous-page': 'page_previous',
-    'next-page': 'page_next', quality: 'quality_default', 'seek-label': 'seek_label', toggle: 'pause',
-    'watch-recordings': 'channel_recordings', back: 'change_channel' };
-  var staticAttributes = { channel: ['placeholder', 'channel_placeholder'], 'recent-pages': ['aria-label', 'recent_pages_label'],
-    'recent-previous': ['aria-label', 'recent_previous'], 'recent-next': ['aria-label', 'recent_next'],
-    pages: ['aria-label', 'videos_heading'], watch: ['aria-label', 'player_label'], seek: ['aria-label', 'seek_label'] };
-  Object.keys(staticText).forEach(function (id) { el(id).textContent = t(staticText[id]); });
-  Object.keys(staticAttributes).forEach(function (id) { el(id).setAttribute(staticAttributes[id][0], t(staticAttributes[id][1])); });
+  // Static labels declare their key in markup: data-i18n for text, data-i18n-attr="attr:key;attr:key" for attributes.
+  var labelled = document.querySelectorAll('[data-i18n],[data-i18n-attr]');
+  for (var l = 0; l < labelled.length; l++) (function (node) {
+    var textKey = node.getAttribute('data-i18n'), attributes = node.getAttribute('data-i18n-attr');
+    if (textKey) node.textContent = t(textKey);
+    if (attributes) attributes.split(';').forEach(function (pair) {
+      var parts = pair.split(':');
+      if (parts.length === 2 && parts[0].trim() && parts[1].trim()) node.setAttribute(parts[0].trim(), t(parts[1].trim()));
+    });
+  }(labelled[l]));
   try { document.title = t('title'); if (document.documentElement) document.documentElement.lang = t.language; } catch (e) { /* Optional metadata. */ }
   var input = el('channel');
   var playback = { paused: true, phase: 'idle', position: 0, duration: 0, ready: false, seeking: false };
@@ -254,7 +252,8 @@ if (typeof document !== 'undefined') (function () {
     }
   }
   // Service failures carry a code for translation; free text is the bounded fallback.
-  function serviceError(code, params, text, fallbackKey) {
+  function serviceError(reply, fallbackKey) {
+    var code = reply && reply.errorCode, params = reply && reply.errorParams, text = reply && reply.errorText;
     if (typeof code === 'string' && /^[a-z_]{1,32}$/.test(code) &&
       Object.prototype.hasOwnProperty.call(KickI18n.strings.en, 'svc_' + code)) {
       var safe = {};
@@ -264,7 +263,7 @@ if (typeof document !== 'undefined') (function () {
       });
       return t('svc_' + code, safe);
     }
-    return typeof text === 'string' && text ? Array.from(text).slice(0, 200).join('') : t(fallbackKey);
+    return typeof text === 'string' && text ? Array.from(text.slice(0, 400)).slice(0, 200).join('') : t(fallbackKey);
   }
   function mediaStatus(key, params) {
     // Player statuses are i18n keys; a nested reason key is translated before substitution.
@@ -332,7 +331,7 @@ if (typeof document !== 'undefined') (function () {
       if (item.best) el('quality').textContent = t('best_quality', { quality: item.best.height === 2160 ? '4K' : item.best.height + 'p' }) +
         (item.best.fps ? t('fps_suffix', { fps: item.best.fps }) : '');
       if (!document.hidden) player.load(item);
-      else mediaStatus('playback_stopped', { resume: t('resume') });
+      else mediaStatus('playback_stopped');
     });
     el('watch').focus();
   }
@@ -408,8 +407,7 @@ if (typeof document !== 'undefined') (function () {
     data.videos = data.videos.filter(function (v) { return v && typeof v.url === 'string'; }).slice(0, 30);
     el('channel-status').textContent = t(data.live ? 'status_live' : 'status_offline');
     el('live').hidden = !data.live;
-    var videosError = data.videosErrorCode || data.videosError ?
-      serviceError(data.videosErrorCode, data.videosErrorParams, data.videosError, 'svc_videos_unavailable') : '';
+    var videosError = data.videosError && typeof data.videosError === 'object' ? serviceError(data.videosError, 'svc_videos_unavailable') : '';
     el('catalog-retry').hidden = !videosError;
     el('videos-status').textContent = videosError || (data.videos.length ? '' : t('no_replays'));
   }
@@ -448,7 +446,7 @@ if (typeof document !== 'undefined') (function () {
     }
     callService('channel', { channel: name }, function (data) {
       if (!data.returnValue || !Array.isArray(data.videos)) {
-        el('channel-status').textContent = serviceError(data.errorCode, data.errorParams, data.errorText, 'channel_failed');
+        el('channel-status').textContent = serviceError(data, 'channel_failed');
         el('catalog-retry').hidden = false;
         return;
       }

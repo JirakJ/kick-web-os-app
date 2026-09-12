@@ -1,13 +1,13 @@
 'use strict';
 var https = require('https');
 var zlib = require('zlib');
+var URL = require('url').URL;
 var Service = require('webos-service');
 var service = new Service('cz.jirak.kicktv.service');
 var pending = Object.create(null);
 var activeRequests = 0;
 // Reuse TLS connections between channel, replay and status lookups on the same host.
-var agent = typeof https.Agent === 'function' ?
-  new https.Agent({ keepAlive: true, keepAliveMsecs: 15000, maxSockets: 6, maxFreeSockets: 2 }) : undefined;
+var agent = new https.Agent({ keepAlive: true, keepAliveMsecs: 15000, maxSockets: 6, maxFreeSockets: 2 });
 
 function titleText(value, fallback) {
   // Limit Unicode code points, never half of an emoji's UTF-16 surrogate pair.
@@ -23,8 +23,10 @@ function failure(code, message, params) {
 }
 
 function errorReply(error) {
-  return { returnValue: false, errorCode: error && error.code || '', errorParams: error && error.params || {},
-    errorText: error && error.message || 'Request failed.' };
+  // Only failure() errors carry a code; any other exception maps to a fixed internal code.
+  var known = error && typeof error.code === 'string' && error.params;
+  return { returnValue: false, errorCode: known ? error.code : 'internal', errorParams: known ? error.params : {},
+    errorText: known ? error.message : 'The data from Kick could not be processed.' };
 }
 
 function respond(message, data) {
@@ -49,53 +51,62 @@ function getText(hostname, path, background) {
   if (activeRequests >= (background ? 4 : 6)) return Promise.reject(failure('busy', 'Another request is in progress. Try again shortly.'));
   activeRequests++;
   var work = new Promise(function (resolve, reject) {
-    var completed = false;
-    var timer, inflater = null;
+    var completed = false, retried = false;
+    var timer, req = null, inflater = null;
     function finish(error, data) {
       if (completed) return;
       completed = true;
       clearTimeout(timer);
-      if (inflater) { try { inflater.close(); } catch (e) { /* Already closed. */ } }
+      if (inflater && typeof inflater.destroy === 'function') { try { inflater.destroy(); } catch (e) { /* Already destroyed. */ } }
       if (error) {
         if (req) req.abort();
         reject(error);
       } else resolve(data);
     }
-    // No caller-supplied host, redirects, credentials, or disabled TLS checks.
-    var req = https.get({ hostname: hostname, path: path, agent: agent,
-      headers: { Accept: '*/*', 'Accept-Encoding': 'gzip', 'Cache-Control': 'no-cache' } }, function (res) {
-      if (res.statusCode !== 200) {
-        finish(failure('http', 'Kick API: HTTP ' + res.statusCode, { status: res.statusCode }));
-        return;
-      }
-      var encoding = String(res.headers && res.headers['content-encoding'] || '').trim().toLowerCase();
-      var body = '', bytes = 0;
-      var stream = res;
-      if (encoding === 'gzip' || encoding === 'x-gzip') {
-        // Compressed transfers are inflated incrementally; the 1 MiB limit applies to inflated text.
-        inflater = stream = zlib.createGunzip();
-        stream.on('error', function () { finish(failure('decode', 'The response from Kick could not be decoded.')); });
-        res.on('data', function (chunk) { if (!completed) inflater.write(chunk); });
-        res.on('end', function () { if (!completed) inflater.end(); });
-      } else if (encoding && encoding !== 'identity') {
-        finish(failure('decode', 'Unsupported content encoding.'));
-        return;
-      }
-      stream.setEncoding('utf8');
-      stream.on('data', function (chunk) {
-        if (completed) return;
-        bytes += Buffer.byteLength(chunk, 'utf8');
-        if (bytes > 1048576) {
-          finish(failure('too_large', 'The response from Kick is too large.'));
-        } else body += chunk;
+    function attempt() {
+      var responded = false;
+      // No caller-supplied host, redirects, credentials, or disabled TLS checks.
+      req = https.get({ hostname: hostname, path: path, agent: agent,
+        headers: { Accept: '*/*', 'Accept-Encoding': 'gzip', 'Cache-Control': 'no-cache' } }, function (res) {
+        responded = true;
+        if (res.statusCode !== 200) {
+          finish(failure('http', 'Kick API: HTTP ' + res.statusCode, { status: res.statusCode }));
+          return;
+        }
+        var encoding = String(res.headers && res.headers['content-encoding'] || '').trim().toLowerCase();
+        var body = '', bytes = 0;
+        var stream = res;
+        if (encoding === 'gzip' || encoding === 'x-gzip') {
+          // Compressed transfers are inflated incrementally with backpressure; the 1 MiB limit applies to inflated text.
+          inflater = stream = zlib.createGunzip();
+          inflater.on('error', function () { finish(failure('decode', 'The response from Kick could not be decoded.')); });
+          res.pipe(inflater);
+        } else if (encoding && encoding !== 'identity') {
+          finish(failure('decode', 'Unsupported content encoding.'));
+          return;
+        }
+        stream.setEncoding('utf8');
+        stream.on('data', function (chunk) {
+          if (completed) return;
+          bytes += Buffer.byteLength(chunk, 'utf8');
+          if (bytes > 1048576) {
+            finish(failure('too_large', 'The response from Kick is too large.'));
+          } else body += chunk;
+        });
+        res.on('error', function (error) { finish(failure('transfer', error && error.message || 'Transfer failed.')); });
+        res.on('aborted', function () { finish(failure('aborted', 'The transfer was interrupted. Try again.')); });
+        stream.on('end', function () {
+          finish(null, body);
+        });
       });
-      res.on('error', function (error) { finish(failure('transfer', error && error.message || 'Transfer failed.')); });
-      res.on('aborted', function () { finish(failure('aborted', 'The transfer was interrupted. Try again.')); });
-      stream.on('end', function () {
-        finish(null, body);
+      req.on('error', function (error) {
+        // A kept-alive socket may have been closed by the server; retry once on a fresh connection.
+        var reset = error && (error.code === 'ECONNRESET' || error.code === 'EPIPE' || error.message === 'socket hang up');
+        if (!completed && !responded && !retried && reset) { retried = true; attempt(); return; }
+        finish(failure('connect', 'Could not connect to Kick.'));
       });
-    });
-    req.on('error', function () { finish(failure('connect', 'Could not connect to Kick.')); });
+    }
+    attempt();
     timer = setTimeout(function () {
       finish(failure('timeout', 'Kick did not respond in time. Try again.'));
     }, 12000);
@@ -143,9 +154,9 @@ service.register('prepare', function (message) {
     respond(message, errorReply(failure('bad_url', 'Video address not allowed.')));
     return;
   }
-  // mediaURL already restricted the origin; split host and path without the legacy URL parser.
-  var parts = source.match(/^https:\/\/([^/]+)(\/.*)$/);
-  getText(parts[1], parts[2]).then(function (body) {
+  // mediaURL already restricted the origin; the WHATWG parser percent-encodes unsafe path characters.
+  var url = new URL(source);
+  getText(url.hostname, url.pathname + url.search).then(function (body) {
     if (body.trim().indexOf('#EXTM3U') !== 0) throw failure('bad_playlist', 'Invalid video playlist.');
     var variants = [];
     body.split(/\r?\n/).forEach(function (line) {
@@ -170,8 +181,10 @@ service.register('channel', function (message) {
     respond(message, errorReply(failure('invalid_channel', 'Invalid channel name.')));
     return;
   }
+  // A private marker distinguishes an internal replay-list failure from any object Kick might return.
+  var failedVideos = {};
   Promise.all([getJSON(slug), getJSON(slug + '/videos').catch(function (e) {
-    return { error: e };
+    return { marker: failedVideos, error: e };
   })]).then(function (results) {
     var channel = results[0];
     if (!channel || channel.slug !== slug) throw failure('wrong_channel', 'Kick did not return the requested channel.');
@@ -191,15 +204,13 @@ service.register('channel', function (message) {
         duration: isFinite(length) && length > 0 ? Math.min(length / 1000, 2592000) : 0 };
     }) : [];
     var videosError = Array.isArray(recordings) ? null :
-      (recordings && recordings.error) || failure('videos_unavailable', 'The replay list is not available.');
+      recordings && recordings.marker === failedVideos ? recordings.error : failure('videos_unavailable', 'The replay list is not available.');
     respond(message, { returnValue: true, channel: slug,
       live: live && live.is_live === true && source ? {
         title: titleText(live.session_title, slug), url: source, isLive: true
       } : null,
       videos: videos,
-      videosError: videosError ? videosError.message : '',
-      videosErrorCode: videosError ? videosError.code || '' : '',
-      videosErrorParams: videosError ? videosError.params || {} : {} });
+      videosError: videosError ? errorReply(videosError) : null });
   }).catch(function (e) {
     respond(message, errorReply(e));
   });

@@ -8,7 +8,7 @@ var KickI18n = (function () {
       home_intro: 'Enter a channel or return to one of your recent ones.',
       channel_label: 'Kick channel', channel_placeholder: 'Channel name or kick.com/… link',
       play_live: 'Play live', recordings: 'Replays', recent_heading: 'Recently opened',
-      recent_pages_label: 'Recent channel pages', recent_previous: 'Previous channels', recent_next: 'More channels',
+      recent_pages_label: 'Recent channel pages', recent_previous: 'Previous channels', recent_next: 'More channels', videos_pages_label: 'Replay pages',
       footer_hints: '↑ ↓ Select   OK Confirm   Back Return', footer_note: 'Unofficial Kick player · No chat',
       change_channel: 'Change channel', videos_heading: 'Stream replays', retry: 'Try again',
       page_previous: '← Previous', page_next: 'Next →', player_label: 'Player',
@@ -41,7 +41,8 @@ var KickI18n = (function () {
       svc_timeout: 'Kick did not respond in time. Try again.', svc_invalid_data: 'Kick returned invalid data.',
       svc_decode: 'The response from Kick could not be decoded.', svc_bad_url: 'Video address not allowed.',
       svc_bad_playlist: 'Invalid video playlist.', svc_invalid_channel: 'Invalid channel name.',
-      svc_wrong_channel: 'Kick did not return the requested channel.', svc_videos_unavailable: 'The replay list is not available.'
+      svc_wrong_channel: 'Kick did not return the requested channel.', svc_videos_unavailable: 'The replay list is not available.',
+      svc_internal: 'The data from Kick could not be processed.'
     },
     cs: {
       title: 'Stream pro Kick', header_note: 'Živé vysílání a záznamy',
@@ -49,7 +50,7 @@ var KickI18n = (function () {
       home_intro: 'Zadej kanál, nebo se vrať k některému z posledních.',
       channel_label: 'Kanál na Kicku', channel_placeholder: 'Název kanálu nebo odkaz kick.com/…',
       play_live: 'Přehrát živě', recordings: 'Záznamy', recent_heading: 'Naposledy spuštěné',
-      recent_pages_label: 'Stránky nedávných kanálů', recent_previous: 'Předchozí kanály', recent_next: 'Další kanály',
+      recent_pages_label: 'Stránky nedávných kanálů', recent_previous: 'Předchozí kanály', recent_next: 'Další kanály', videos_pages_label: 'Stránky záznamů',
       footer_hints: '↑ ↓ Výběr   OK Potvrdit   Zpět Návrat', footer_note: 'Neoficiální přehrávač pro Kick · Bez chatu',
       change_channel: 'Změnit kanál', videos_heading: 'Záznamy vysílání', retry: 'Zkusit znovu',
       page_previous: '← Předchozí', page_next: 'Další →', player_label: 'Přehrávač',
@@ -82,7 +83,8 @@ var KickI18n = (function () {
       svc_timeout: 'Kick neodpověděl včas. Zkuste to znovu.', svc_invalid_data: 'Kick vrátil neplatná data.',
       svc_decode: 'Odpověď Kicku se nepodařilo rozbalit.', svc_bad_url: 'Nepovolená adresa videa.',
       svc_bad_playlist: 'Neplatný playlist videa.', svc_invalid_channel: 'Neplatný název kanálu.',
-      svc_wrong_channel: 'Kick nevrátil požadovaný kanál.', svc_videos_unavailable: 'Seznam záznamů není dostupný.'
+      svc_wrong_channel: 'Kick nevrátil požadovaný kanál.', svc_videos_unavailable: 'Seznam záznamů není dostupný.',
+      svc_internal: 'Data z Kicku se nepodařilo zpracovat.'
     },
     sk: {
       title: 'Stream pre Kick', header_note: 'Živé vysielanie a záznamy',
@@ -90,7 +92,7 @@ var KickI18n = (function () {
       home_intro: 'Zadaj kanál alebo sa vráť k niektorému z posledných.',
       channel_label: 'Kanál na Kicku', channel_placeholder: 'Názov kanála alebo odkaz kick.com/…',
       play_live: 'Prehrať naživo', recordings: 'Záznamy', recent_heading: 'Naposledy spustené',
-      recent_pages_label: 'Stránky nedávnych kanálov', recent_previous: 'Predchádzajúce kanály', recent_next: 'Ďalšie kanály',
+      recent_pages_label: 'Stránky nedávnych kanálov', recent_previous: 'Predchádzajúce kanály', recent_next: 'Ďalšie kanály', videos_pages_label: 'Stránky záznamov',
       footer_hints: '↑ ↓ Výber   OK Potvrdiť   Späť Návrat', footer_note: 'Neoficiálny prehrávač pre Kick · Bez chatu',
       change_channel: 'Zmeniť kanál', videos_heading: 'Záznamy vysielania', retry: 'Skúsiť znova',
       page_previous: '← Predchádzajúce', page_next: 'Ďalšie →', player_label: 'Prehrávač',
@@ -123,7 +125,8 @@ var KickI18n = (function () {
       svc_timeout: 'Kick neodpovedal včas. Skúste to znova.', svc_invalid_data: 'Kick vrátil neplatné dáta.',
       svc_decode: 'Odpoveď Kicku sa nepodarilo rozbaliť.', svc_bad_url: 'Nepovolená adresa videa.',
       svc_bad_playlist: 'Neplatný playlist videa.', svc_invalid_channel: 'Neplatný názov kanála.',
-      svc_wrong_channel: 'Kick nevrátil požadovaný kanál.', svc_videos_unavailable: 'Zoznam záznamov nie je dostupný.'
+      svc_wrong_channel: 'Kick nevrátil požadovaný kanál.', svc_videos_unavailable: 'Zoznam záznamov nie je dostupný.',
+      svc_internal: 'Dáta z Kicku sa nepodarilo spracovať.'
     },
     de: {
       title: 'Stream für Kick', header_note: 'Livestreams und Aufzeichnungen',
@@ -131,7 +134,7 @@ var KickI18n = (function () {
       home_intro: 'Gib einen Kanal ein oder kehre zu einem der letzten zurück.',
       channel_label: 'Kick-Kanal', channel_placeholder: 'Kanalname oder Link kick.com/…',
       play_live: 'Live abspielen', recordings: 'Aufzeichnungen', recent_heading: 'Zuletzt geöffnet',
-      recent_pages_label: 'Seiten der letzten Kanäle', recent_previous: 'Vorherige Kanäle', recent_next: 'Weitere Kanäle',
+      recent_pages_label: 'Seiten der letzten Kanäle', recent_previous: 'Vorherige Kanäle', recent_next: 'Weitere Kanäle', videos_pages_label: 'Seiten der Aufzeichnungen',
       footer_hints: '↑ ↓ Auswahl   OK Bestätigen   Zurück Verlassen', footer_note: 'Inoffizieller Kick-Player · Ohne Chat',
       change_channel: 'Kanal wechseln', videos_heading: 'Stream-Aufzeichnungen', retry: 'Erneut versuchen',
       page_previous: '← Zurück', page_next: 'Weiter →', player_label: 'Player',
@@ -164,7 +167,8 @@ var KickI18n = (function () {
       svc_timeout: 'Kick hat nicht rechtzeitig geantwortet. Versuche es erneut.', svc_invalid_data: 'Kick hat ungültige Daten geliefert.',
       svc_decode: 'Die Antwort von Kick konnte nicht entpackt werden.', svc_bad_url: 'Videoadresse nicht erlaubt.',
       svc_bad_playlist: 'Ungültige Video-Playlist.', svc_invalid_channel: 'Ungültiger Kanalname.',
-      svc_wrong_channel: 'Kick hat nicht den angeforderten Kanal geliefert.', svc_videos_unavailable: 'Die Liste der Aufzeichnungen ist nicht verfügbar.'
+      svc_wrong_channel: 'Kick hat nicht den angeforderten Kanal geliefert.', svc_videos_unavailable: 'Die Liste der Aufzeichnungen ist nicht verfügbar.',
+      svc_internal: 'Die Daten von Kick konnten nicht verarbeitet werden.'
     },
     pl: {
       title: 'Stream dla Kick', header_note: 'Transmisje na żywo i nagrania',
@@ -172,7 +176,7 @@ var KickI18n = (function () {
       home_intro: 'Wpisz kanał albo wróć do jednego z ostatnich.',
       channel_label: 'Kanał na Kick', channel_placeholder: 'Nazwa kanału lub link kick.com/…',
       play_live: 'Odtwórz na żywo', recordings: 'Nagrania', recent_heading: 'Ostatnio otwarte',
-      recent_pages_label: 'Strony ostatnich kanałów', recent_previous: 'Poprzednie kanały', recent_next: 'Kolejne kanały',
+      recent_pages_label: 'Strony ostatnich kanałów', recent_previous: 'Poprzednie kanały', recent_next: 'Kolejne kanały', videos_pages_label: 'Strony nagrań',
       footer_hints: '↑ ↓ Wybór   OK Zatwierdź   Wstecz Powrót', footer_note: 'Nieoficjalny odtwarzacz Kick · Bez czatu',
       change_channel: 'Zmień kanał', videos_heading: 'Nagrania transmisji', retry: 'Spróbuj ponownie',
       page_previous: '← Poprzednia', page_next: 'Następna →', player_label: 'Odtwarzacz',
@@ -205,7 +209,8 @@ var KickI18n = (function () {
       svc_timeout: 'Kick nie odpowiedział na czas. Spróbuj ponownie.', svc_invalid_data: 'Kick zwrócił nieprawidłowe dane.',
       svc_decode: 'Nie udało się rozpakować odpowiedzi Kick.', svc_bad_url: 'Niedozwolony adres wideo.',
       svc_bad_playlist: 'Nieprawidłowa playlista wideo.', svc_invalid_channel: 'Nieprawidłowa nazwa kanału.',
-      svc_wrong_channel: 'Kick nie zwrócił żądanego kanału.', svc_videos_unavailable: 'Lista nagrań jest niedostępna.'
+      svc_wrong_channel: 'Kick nie zwrócił żądanego kanału.', svc_videos_unavailable: 'Lista nagrań jest niedostępna.',
+      svc_internal: 'Nie udało się przetworzyć danych z Kick.'
     },
     es: {
       title: 'Stream para Kick', header_note: 'Directos y repeticiones',
@@ -213,7 +218,7 @@ var KickI18n = (function () {
       home_intro: 'Escribe un canal o vuelve a uno de los recientes.',
       channel_label: 'Canal de Kick', channel_placeholder: 'Nombre del canal o enlace kick.com/…',
       play_live: 'Ver en directo', recordings: 'Repeticiones', recent_heading: 'Abiertos recientemente',
-      recent_pages_label: 'Páginas de canales recientes', recent_previous: 'Canales anteriores', recent_next: 'Más canales',
+      recent_pages_label: 'Páginas de canales recientes', recent_previous: 'Canales anteriores', recent_next: 'Más canales', videos_pages_label: 'Páginas de repeticiones',
       footer_hints: '↑ ↓ Seleccionar   OK Confirmar   Atrás Volver', footer_note: 'Reproductor no oficial de Kick · Sin chat',
       change_channel: 'Cambiar canal', videos_heading: 'Repeticiones del directo', retry: 'Reintentar',
       page_previous: '← Anterior', page_next: 'Siguiente →', player_label: 'Reproductor',
@@ -246,7 +251,8 @@ var KickI18n = (function () {
       svc_timeout: 'Kick no respondió a tiempo. Inténtalo de nuevo.', svc_invalid_data: 'Kick devolvió datos no válidos.',
       svc_decode: 'No se pudo descomprimir la respuesta de Kick.', svc_bad_url: 'Dirección de vídeo no permitida.',
       svc_bad_playlist: 'Lista de reproducción de vídeo no válida.', svc_invalid_channel: 'Nombre de canal no válido.',
-      svc_wrong_channel: 'Kick no devolvió el canal solicitado.', svc_videos_unavailable: 'La lista de repeticiones no está disponible.'
+      svc_wrong_channel: 'Kick no devolvió el canal solicitado.', svc_videos_unavailable: 'La lista de repeticiones no está disponible.',
+      svc_internal: 'No se pudieron procesar los datos de Kick.'
     },
     pt: {
       title: 'Stream para Kick', header_note: 'Transmissões ao vivo e gravações',
@@ -254,7 +260,7 @@ var KickI18n = (function () {
       home_intro: 'Digite um canal ou volte a um dos recentes.',
       channel_label: 'Canal do Kick', channel_placeholder: 'Nome do canal ou link kick.com/…',
       play_live: 'Assistir ao vivo', recordings: 'Gravações', recent_heading: 'Abertos recentemente',
-      recent_pages_label: 'Páginas de canais recentes', recent_previous: 'Canais anteriores', recent_next: 'Mais canais',
+      recent_pages_label: 'Páginas de canais recentes', recent_previous: 'Canais anteriores', recent_next: 'Mais canais', videos_pages_label: 'Páginas de gravações',
       footer_hints: '↑ ↓ Selecionar   OK Confirmar   Voltar Retornar', footer_note: 'Player não oficial do Kick · Sem chat',
       change_channel: 'Mudar canal', videos_heading: 'Gravações das transmissões', retry: 'Tentar novamente',
       page_previous: '← Anterior', page_next: 'Próxima →', player_label: 'Player',
@@ -287,7 +293,8 @@ var KickI18n = (function () {
       svc_timeout: 'O Kick não respondeu a tempo. Tente novamente.', svc_invalid_data: 'O Kick retornou dados inválidos.',
       svc_decode: 'Não foi possível descompactar a resposta do Kick.', svc_bad_url: 'Endereço de vídeo não permitido.',
       svc_bad_playlist: 'Playlist de vídeo inválida.', svc_invalid_channel: 'Nome de canal inválido.',
-      svc_wrong_channel: 'O Kick não retornou o canal solicitado.', svc_videos_unavailable: 'A lista de gravações não está disponível.'
+      svc_wrong_channel: 'O Kick não retornou o canal solicitado.', svc_videos_unavailable: 'A lista de gravações não está disponível.',
+      svc_internal: 'Não foi possível processar os dados do Kick.'
     },
     fr: {
       title: 'Stream pour Kick', header_note: 'Directs et rediffusions',
@@ -295,7 +302,7 @@ var KickI18n = (function () {
       home_intro: 'Saisis une chaîne ou reviens à l’une des dernières.',
       channel_label: 'Chaîne Kick', channel_placeholder: 'Nom de la chaîne ou lien kick.com/…',
       play_live: 'Lire en direct', recordings: 'Rediffusions', recent_heading: 'Ouvertes récemment',
-      recent_pages_label: 'Pages des chaînes récentes', recent_previous: 'Chaînes précédentes', recent_next: 'Autres chaînes',
+      recent_pages_label: 'Pages des chaînes récentes', recent_previous: 'Chaînes précédentes', recent_next: 'Autres chaînes', videos_pages_label: 'Pages des rediffusions',
       footer_hints: '↑ ↓ Sélection   OK Valider   Retour Quitter', footer_note: 'Lecteur Kick non officiel · Sans chat',
       change_channel: 'Changer de chaîne', videos_heading: 'Rediffusions des streams', retry: 'Réessayer',
       page_previous: '← Précédent', page_next: 'Suivant →', player_label: 'Lecteur',
@@ -328,7 +335,8 @@ var KickI18n = (function () {
       svc_timeout: 'Kick n’a pas répondu à temps. Réessaie.', svc_invalid_data: 'Kick a renvoyé des données invalides.',
       svc_decode: 'La réponse de Kick n’a pas pu être décompressée.', svc_bad_url: 'Adresse vidéo non autorisée.',
       svc_bad_playlist: 'Playlist vidéo invalide.', svc_invalid_channel: 'Nom de chaîne invalide.',
-      svc_wrong_channel: 'Kick n’a pas renvoyé la chaîne demandée.', svc_videos_unavailable: 'La liste des rediffusions n’est pas disponible.'
+      svc_wrong_channel: 'Kick n’a pas renvoyé la chaîne demandée.', svc_videos_unavailable: 'La liste des rediffusions n’est pas disponible.',
+      svc_internal: 'Les données de Kick n’ont pas pu être traitées.'
     },
     it: {
       title: 'Stream per Kick', header_note: 'Dirette e repliche',
@@ -336,7 +344,7 @@ var KickI18n = (function () {
       home_intro: 'Inserisci un canale o torna a uno dei recenti.',
       channel_label: 'Canale Kick', channel_placeholder: 'Nome del canale o link kick.com/…',
       play_live: 'Guarda in diretta', recordings: 'Repliche', recent_heading: 'Aperti di recente',
-      recent_pages_label: 'Pagine dei canali recenti', recent_previous: 'Canali precedenti', recent_next: 'Altri canali',
+      recent_pages_label: 'Pagine dei canali recenti', recent_previous: 'Canali precedenti', recent_next: 'Altri canali', videos_pages_label: 'Pagine delle repliche',
       footer_hints: '↑ ↓ Seleziona   OK Conferma   Indietro Torna', footer_note: 'Player Kick non ufficiale · Senza chat',
       change_channel: 'Cambia canale', videos_heading: 'Repliche delle dirette', retry: 'Riprova',
       page_previous: '← Precedente', page_next: 'Successiva →', player_label: 'Player',
@@ -369,7 +377,8 @@ var KickI18n = (function () {
       svc_timeout: 'Kick non ha risposto in tempo. Riprova.', svc_invalid_data: 'Kick ha restituito dati non validi.',
       svc_decode: 'Impossibile decomprimere la risposta di Kick.', svc_bad_url: 'Indirizzo video non consentito.',
       svc_bad_playlist: 'Playlist video non valida.', svc_invalid_channel: 'Nome del canale non valido.',
-      svc_wrong_channel: 'Kick non ha restituito il canale richiesto.', svc_videos_unavailable: 'L’elenco delle repliche non è disponibile.'
+      svc_wrong_channel: 'Kick non ha restituito il canale richiesto.', svc_videos_unavailable: 'L’elenco delle repliche non è disponibile.',
+      svc_internal: 'Impossibile elaborare i dati di Kick.'
     },
     hu: {
       title: 'Stream Kickhez', header_note: 'Élő adások és felvételek',
@@ -377,7 +386,7 @@ var KickI18n = (function () {
       home_intro: 'Adj meg egy csatornát, vagy térj vissza az egyik legutóbbihoz.',
       channel_label: 'Kick-csatorna', channel_placeholder: 'Csatorna neve vagy kick.com/… link',
       play_live: 'Élő lejátszás', recordings: 'Felvételek', recent_heading: 'Legutóbb megnyitott',
-      recent_pages_label: 'Legutóbbi csatornák oldalai', recent_previous: 'Előző csatornák', recent_next: 'További csatornák',
+      recent_pages_label: 'Legutóbbi csatornák oldalai', recent_previous: 'Előző csatornák', recent_next: 'További csatornák', videos_pages_label: 'Felvételek oldalai',
       footer_hints: '↑ ↓ Kiválasztás   OK Megerősítés   Vissza Kilépés', footer_note: 'Nem hivatalos Kick-lejátszó · Chat nélkül',
       change_channel: 'Csatorna váltása', videos_heading: 'Adások felvételei', retry: 'Újra',
       page_previous: '← Előző', page_next: 'Következő →', player_label: 'Lejátszó',
@@ -410,7 +419,8 @@ var KickI18n = (function () {
       svc_timeout: 'A Kick nem válaszolt időben. Próbáld újra.', svc_invalid_data: 'A Kick érvénytelen adatokat adott vissza.',
       svc_decode: 'A Kick válaszát nem sikerült kicsomagolni.', svc_bad_url: 'Nem engedélyezett videócím.',
       svc_bad_playlist: 'Érvénytelen videó-lejátszási lista.', svc_invalid_channel: 'Érvénytelen csatornanév.',
-      svc_wrong_channel: 'A Kick nem a kért csatornát adta vissza.', svc_videos_unavailable: 'A felvételek listája nem érhető el.'
+      svc_wrong_channel: 'A Kick nem a kért csatornát adta vissza.', svc_videos_unavailable: 'A felvételek listája nem érhető el.',
+      svc_internal: 'A Kick adatait nem sikerült feldolgozni.'
     },
     uk: {
       title: 'Stream для Kick', header_note: 'Прямі ефіри та записи',
@@ -418,7 +428,7 @@ var KickI18n = (function () {
       home_intro: 'Введи канал або повернися до одного з останніх.',
       channel_label: 'Канал на Kick', channel_placeholder: 'Назва каналу або посилання kick.com/…',
       play_live: 'Дивитися наживо', recordings: 'Записи', recent_heading: 'Нещодавно відкриті',
-      recent_pages_label: 'Сторінки нещодавніх каналів', recent_previous: 'Попередні канали', recent_next: 'Наступні канали',
+      recent_pages_label: 'Сторінки нещодавніх каналів', recent_previous: 'Попередні канали', recent_next: 'Наступні канали', videos_pages_label: 'Сторінки записів',
       footer_hints: '↑ ↓ Вибір   OK Підтвердити   Назад Повернутися', footer_note: 'Неофіційний плеєр Kick · Без чату',
       change_channel: 'Змінити канал', videos_heading: 'Записи трансляцій', retry: 'Спробувати знову',
       page_previous: '← Попередня', page_next: 'Наступна →', player_label: 'Плеєр',
@@ -451,7 +461,8 @@ var KickI18n = (function () {
       svc_timeout: 'Kick не відповів вчасно. Спробуйте знову.', svc_invalid_data: 'Kick повернув недійсні дані.',
       svc_decode: 'Не вдалося розпакувати відповідь Kick.', svc_bad_url: 'Адреса відео не дозволена.',
       svc_bad_playlist: 'Недійсний плейлист відео.', svc_invalid_channel: 'Недійсна назва каналу.',
-      svc_wrong_channel: 'Kick не повернув запитаний канал.', svc_videos_unavailable: 'Список записів недоступний.'
+      svc_wrong_channel: 'Kick не повернув запитаний канал.', svc_videos_unavailable: 'Список записів недоступний.',
+      svc_internal: 'Не вдалося обробити дані з Kick.'
     },
     ru: {
       title: 'Stream для Kick', header_note: 'Прямые эфиры и записи',
@@ -459,7 +470,7 @@ var KickI18n = (function () {
       home_intro: 'Введи канал или вернись к одному из последних.',
       channel_label: 'Канал на Kick', channel_placeholder: 'Название канала или ссылка kick.com/…',
       play_live: 'Смотреть в эфире', recordings: 'Записи', recent_heading: 'Недавно открытые',
-      recent_pages_label: 'Страницы недавних каналов', recent_previous: 'Предыдущие каналы', recent_next: 'Следующие каналы',
+      recent_pages_label: 'Страницы недавних каналов', recent_previous: 'Предыдущие каналы', recent_next: 'Следующие каналы', videos_pages_label: 'Страницы записей',
       footer_hints: '↑ ↓ Выбор   OK Подтвердить   Назад Вернуться', footer_note: 'Неофициальный плеер Kick · Без чата',
       change_channel: 'Сменить канал', videos_heading: 'Записи трансляций', retry: 'Повторить',
       page_previous: '← Предыдущая', page_next: 'Следующая →', player_label: 'Плеер',
@@ -492,7 +503,8 @@ var KickI18n = (function () {
       svc_timeout: 'Kick не ответил вовремя. Попробуйте снова.', svc_invalid_data: 'Kick вернул недопустимые данные.',
       svc_decode: 'Не удалось распаковать ответ Kick.', svc_bad_url: 'Адрес видео не разрешён.',
       svc_bad_playlist: 'Недопустимый плейлист видео.', svc_invalid_channel: 'Недопустимое название канала.',
-      svc_wrong_channel: 'Kick не вернул запрошенный канал.', svc_videos_unavailable: 'Список записей недоступен.'
+      svc_wrong_channel: 'Kick не вернул запрошенный канал.', svc_videos_unavailable: 'Список записей недоступен.',
+      svc_internal: 'Не удалось обработать данные с Kick.'
     },
     tr: {
       title: 'Kick için Stream', header_note: 'Canlı yayınlar ve kayıtlar',
@@ -500,7 +512,7 @@ var KickI18n = (function () {
       home_intro: 'Bir kanal gir veya son kanallardan birine dön.',
       channel_label: 'Kick kanalı', channel_placeholder: 'Kanal adı veya kick.com/… bağlantısı',
       play_live: 'Canlı oynat', recordings: 'Kayıtlar', recent_heading: 'Son açılanlar',
-      recent_pages_label: 'Son kanal sayfaları', recent_previous: 'Önceki kanallar', recent_next: 'Sonraki kanallar',
+      recent_pages_label: 'Son kanal sayfaları', recent_previous: 'Önceki kanallar', recent_next: 'Sonraki kanallar', videos_pages_label: 'Kayıt sayfaları',
       footer_hints: '↑ ↓ Seç   OK Onayla   Geri Dön', footer_note: 'Resmî olmayan Kick oynatıcısı · Sohbet yok',
       change_channel: 'Kanalı değiştir', videos_heading: 'Yayın kayıtları', retry: 'Tekrar dene',
       page_previous: '← Önceki', page_next: 'Sonraki →', player_label: 'Oynatıcı',
@@ -533,7 +545,8 @@ var KickI18n = (function () {
       svc_timeout: 'Kick zamanında yanıt vermedi. Tekrar deneyin.', svc_invalid_data: 'Kick geçersiz veri döndürdü.',
       svc_decode: 'Kick yanıtı açılamadı.', svc_bad_url: 'Video adresine izin verilmiyor.',
       svc_bad_playlist: 'Geçersiz video oynatma listesi.', svc_invalid_channel: 'Geçersiz kanal adı.',
-      svc_wrong_channel: 'Kick istenen kanalı döndürmedi.', svc_videos_unavailable: 'Kayıt listesi kullanılamıyor.'
+      svc_wrong_channel: 'Kick istenen kanalı döndürmedi.', svc_videos_unavailable: 'Kayıt listesi kullanılamıyor.',
+      svc_internal: 'Kick verileri işlenemedi.'
     }
   };
   var fallback = 'en';
