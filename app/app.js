@@ -156,14 +156,25 @@ if (typeof document !== 'undefined') (function () {
   function setVideoTitle(node, value) {
     var text = Array.from(String(value || 'Záznam')).slice(0, 200).join('');
     node.textContent = '';
-    // webOS 5 corrupts repeated supplementary glyphs in one shaping run.
-    // Isolate symbols, keeping flags, skin tones and joined emoji together.
-    var parts = text.match(/(?:\uD83C[\uDDE6-\uDDFF]){2}|[\uD800-\uDBFF][\uDC00-\uDFFF](?:[\uFE0E\uFE0F]|\uD83C[\uDFFB-\uDFFF]|\u200D(?:[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]))*|[^\uD800-\uDFFF]+/g) || [];
-    parts.forEach(function (part) {
+    // BMP emoji covered by the bundled font. ASCII stays in ordinary text spans.
+    var bmp = '\u00A9\u00AE\u203C\u2049\u2122\u2139\u2194-\u2199\u21A9-\u21AA\u231A-\u231B\u2328\u23CF\u23E9-\u23F3\u23F8-\u23FA\u24C2\u25AA-\u25AB\u25B6\u25C0\u25FB-\u25FE\u2600-\u2604\u260E\u2611\u2614-\u2615\u2618\u261D\u2620\u2622-\u2623\u2626\u262A\u262E-\u262F\u2638-\u263A\u2640\u2642\u2648-\u2653\u265F-\u2660\u2663\u2665-\u2666\u2668\u267B\u267E-\u267F\u2692-\u2697\u2699\u269B-\u269C\u26A0-\u26A1\u26A7\u26AA-\u26AB\u26B0-\u26B1\u26BD-\u26BE\u26C4-\u26C5\u26C8\u26CE-\u26CF\u26D1\u26D3-\u26D4\u26E9-\u26EA\u26F0-\u26F5\u26F7-\u26FA\u26FD\u2702\u2705\u2708-\u270D\u270F\u2712\u2714\u2716\u271D\u2721\u2728\u2733-\u2734\u2744\u2747\u274C\u274E\u2753-\u2755\u2757\u2763-\u2764\u2795-\u2797\u27A1\u27B0\u27BF\u2934-\u2935\u2B05-\u2B07\u2B1B-\u2B1C\u2B50\u2B55\u3030\u303D\u3297\u3299';
+    var atom = '(?:[' + bmp + ']|[\\uD800-\\uDBFF][\\uDC00-\\uDFFF])';
+    var part = atom + '(?:[\\uFE0E\\uFE0F]|\\uD83C[\\uDFFB-\\uDFFF]|\\uDB40[\\uDC20-\\uDC7F])*';
+    var symbols = new RegExp('[#*0-9]\\uFE0F?\\u20E3|(?:\\uD83C[\\uDDE6-\\uDDFF]){2}|' + part + '(?:\\u200D' + part + ')*', 'g');
+    var index = 0, match;
+    function append(value, className) {
+      if (!value) return;
       var span = document.createElement('span');
-      if (part.charCodeAt(0) >= 0xD800 && part.charCodeAt(0) <= 0xDBFF) span.className = 'title-symbol';
-      span.textContent = part; node.appendChild(span);
-    });
+      if (className) span.className = className;
+      span.textContent = value; node.appendChild(span);
+    }
+    // Isolate whole emoji sequences to avoid webOS 5's repeated-glyph corruption.
+    while ((match = symbols.exec(text)) !== null) {
+      append(text.slice(index, match.index), '');
+      append(match[0], /^[#*0-9]/.test(match[0]) ? 'title-symbol title-keycap' : 'title-symbol');
+      index = match.index + match[0].length;
+    }
+    append(text.slice(index), '');
   }
   function startVideo(item) {
     if (!item || typeof item.url !== 'string' ||

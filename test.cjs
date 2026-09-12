@@ -268,8 +268,40 @@ assert.match(fs.readFileSync('app/fonts/OFL.txt','utf8'),/SIL OPEN FONT LICENSE 
 const css=fs.readFileSync('app/style.css','utf8');
 assert.match(css,/\.title-symbol\s*\{[^}]*font-family:[^}]*"Kick Emoji"/);
 assert.doesNotMatch(css.match(/body, input, button\s*\{[^}]*\}/)[0],/Emoji/,'Body text must keep its original font metrics');
-assert.match(css,/unicode-range:\s*U\+200D, U\+FE0E-FE0F, U\+10000-10FFFF/,'The fallback cannot change ASCII spacing');
+function fontCovers(family, cp) {
+  const face=css.match(/@font-face\s*\{[^}]+\}/g).find(f=>f.includes('"'+family+'"'));
+  return face.match(/unicode-range:([^;]+)/)[1].split(',').some(range=>{
+    const [start,end]=range.trim().slice(2).split('-').map(n=>parseInt(n,16));
+    return cp>=start&&cp<=(end??start);
+  });
+}
+for(let cp=32;cp<127;cp++)assert.equal(fontCovers('Kick Emoji',cp),false,'Ordinary ASCII cannot pick up emoji font metrics');
+assert.match(css,/\.title-keycap\s*\{[^}]*"Kick Keycap"/);
+for(const cp of [0x23,0x2a,0x31,0x20e3,0xfe0f])assert.ok(fontCovers('Kick Keycap',cp));
 assert.match(fs.readFileSync('app/index.html','utf8'),/font-src 'self' file:/,'Packaged local fonts must be allowed by CSP');
+// Distinct emoji from 681 public LIVE/replay titles across 35 channels (2026-09-12).
+const sampledSymbols=['⚔️','⚠️','⛽','✍️','❌','❣️','🇲🇹','🌊','🌍','🌎','🌞','🌴','🍂','🍦','🍷','🎒','🎓',
+ '🏙️','🐌','🐕','🐟','🐠','🐳','👁️','👄','👈','👐','👓','👹','👺','👾','💀','💈','💗','💬','💰','💼',
+ '🔥','🔪','🔴','🖌','🖱️','😇','😈','😱','🚀','🚗','🚘','🚬','🛑','🤖','🤗','🤤','🥂','🥡','🥰','🥳',
+ '🥵','🥶','🦒','🦲','🧀','🧠','🧡','🧳','🪖','🫡','🫦'];
+const compoundSymbols=['❤️‍🔥','🏴‍☠️','✍🏽','👩🏽‍💻','1️⃣','#️⃣','*️⃣','🏴\u{e0067}\u{e0062}\u{e0065}\u{e006e}\u{e0067}\u{e007f}'];
+boot();
+for(const symbol of sampledSymbols.concat(compoundSymbols)){
+ const title='Český text ¿Qué? 778-037 # * 123 '+symbol+' / '+symbol;
+ submit('example');respond({live:null,videos:[{...vod,title}]});
+ function checkSymbols(node){
+  assert.equal(node.textContent,title);
+  const spans=node.children.filter(c=>(c.className||'').split(' ').includes('title-symbol'));
+  assert.deepEqual(spans.map(c=>c.textContent),[symbol,symbol],'Keep each repeated emoji sequence intact: '+symbol);
+  assert.ok(!node.children[0].className,'Ordinary text, digits and spaces keep the text font');
+  const keycap=/^[#*0-9]/.test(symbol);
+  for(const span of spans)assert.equal(span.className.includes('title-keycap'),keycap);
+  for(const c of symbol)assert.ok(fontCovers(keycap?'Kick Keycap':'Kick Emoji',c.codePointAt(0)),'Fallback CSS covers '+symbol);
+ }
+ checkSymbols(elements.videos.firstChild.children[1]);
+ openReplay();checkSymbols(elements['video-title']);key(461);click('catalog-back');
+}
+console.log('Title symbols: passed (68 sampled sequences, 8 compound cases, catalog/player isolation and ordinary text spacing).');
 
 async function testService() {
   const {EventEmitter}=require('node:events');

@@ -4,7 +4,11 @@ Noto Emoji, Copyright 2013 Google LLC, licensed under [SIL OFL 1.1](OFL.txt).
 The app bundles a monochrome regular-weight WOFF2 for TVs with incomplete emoji fonts,
 including the military helmet (U+1FA96) and saluting face (U+1FAE1) used in Czechfather's titles.
 Native color emoji take precedence when available. Only `.title-symbol` uses this fallback;
-its CSS Unicode range excludes ordinary letters, digits and spaces to preserve text spacing.
+its CSS Unicode range covers the 170 BMP emoji in this font as well as supplementary emoji,
+and excludes ordinary letters, digits and spaces to preserve text spacing. A separate
+`Kick Keycap` alias of the same file supplies ASCII bases only inside isolated keycap
+sequences such as 1️⃣. Joined emoji, flags and skin tones stay in one symbol span.
+See the [channel symbol audit](../../docs/symbol-audit.md) for local coverage and rendering evidence.
 
 Source: [google/fonts, revision 8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5](https://github.com/google/fonts/tree/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/notoemoji).
 Converted from `NotoEmoji[wght].ttf` with fontTools 4.63.0:

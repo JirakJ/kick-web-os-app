@@ -43,7 +43,7 @@ npm test
 npm run package
 ```
 
-The output is `dist/cz.jirak.kicktv_0.5.1_all.ipk`. It contains both the app (`cz.jirak.kicktv`) and its service (`cz.jirak.kicktv.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
+The output is `dist/cz.jirak.kicktv_0.5.2_all.ipk`. It contains both the app (`cz.jirak.kicktv`) and its service (`cz.jirak.kicktv.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
 
 The webOS CLI is a development dependency. The service uses the TV's built-in `webos-service` module and Node.js standard libraries; it does not ship npm dependencies. Service code remains compatible with Node.js 8.12.0 on the tested webOS 5 device.
 
@@ -92,6 +92,8 @@ Version 0.4.1 was checked on an LG 55NANO863NA running firmware 04.64.00 and web
 Version 0.5.0 was checked on the same TV for repeated emoji in Astatoro's replay titles, normal text spacing, replay badges and saved positions after restarting the app. Completion was checked by seeking the native player near the end and letting playback finish. The screenshots above show this version running on the TV. Supplementary symbols render separately to avoid the older webOS renderer corrupting repeated emoji.
 
 Version 0.5.1 adds a bundled emoji fallback for missing glyphs such as Czechfather's 🪖 and 🫡. Native color emoji take precedence; missing glyphs use monochrome Noto Emoji. The fallback applies only to symbol spans and excludes letters, digits and spaces, preserving normal text spacing. Font coverage and the actual fallback glyphs were checked locally, alongside regression tests. This version has not yet been checked on the TV, which was powered off during the fix.
+
+Version 0.5.2 extends fallback routing to BMP emoji such as ⚔️, ⚠️, ⛽, ✍️, ❌ and ❣️, and keeps compound emoji intact. The [channel symbol audit](docs/symbol-audit.md) covers 681 titles from 35 channels, including 19 channels outside the initial sample. All 68 sampled emoji sequences were checked against the bundled font, rendered locally and added to catalog/player regressions. These local checks do not verify the TV renderer; the TV remained powered off.
 
 This is not a guarantee of crash-free operation. Several-hour playback, router outages, screensaver behavior and actual 4K/1440p playback have not been verified. The TV reported an active, unmuted audio track; audible output was not independently checked. The quality label reports the source's highest available resolution, not a measurement of the current adaptive level.
 
