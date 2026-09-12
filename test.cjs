@@ -24,7 +24,9 @@ const fs = require('node:fs');
 let elements, document, window, navigator, bridges, timers, clock;
 function element(id = '') {
   return {
-    id, hidden: false, disabled: false, value: '', textContent: '', children: [], attrs: {}, handlers: {},
+    id, hidden: false, disabled: false, value: '', _text: '', children: [], attrs: {}, handlers: {},
+    get textContent(){return this._text+this.children.map(c=>c.textContent).join('');},
+    set textContent(value){this._text=String(value);this.children.forEach(c=>{c.parentNode=null;});this.children=[];},
     paused: true, _time: 0, duration: 300, readyState: 0, seeking: false, seeks: [],
     get currentTime() { return this._time; },
     set currentTime(value) { this._time = value; this.seeks.push(value); this.seeking = true; },
@@ -199,11 +201,71 @@ click('next-page');assert.equal(elements['page-number'].textContent,'2 / 3');
 click('next-page');assert.equal(elements.videos.children.length,2);assert.equal(elements['next-page'].disabled,true);
 console.log('Player and TV UI: passed (serialized seeking, bounded recovery, stale events, stalled/failed media, lifecycle, API failures, history, grid navigation).');
 
+// Replay history follows actual media progress, survives restarts, and never stores signed URLs.
+const historyKey='kick-watched-videos', historyData=new Map();let historyWrites=0;
+const historyStorage={getItem:k=>historyData.get(k)||null,setItem(k,v){if(k===historyKey)historyWrites++;historyData.set(k,v);}};
+const replayA={...vod,id:'replay-a'}, replayB={...vod,id:'replay-b',url:'https://stream.kick.com/b/master.m3u8'};
+function openReplay(index=0){elements.videos.children[index].handlers.click();qualityResponse();ready();}
+function progressAt(seconds){node()._time=seconds;node().handlers.timeupdate();}
+function history(){return JSON.parse(historyData.get(historyKey)||'[]');}
+function replayBadge(index,cls){return elements.videos.children[index].firstChild.children.find(c=>c.className===cls);}
+boot(historyStorage);submit('astatoro');respond({live:null,videos:[replayA,replayB]});
+openReplay();assert.equal(history().length,0,'Loading and playing events alone are not viewing');
+click('toggle');elements.seek.value=150;elements.seek.handlers.change();advance(300);seeked();progressAt(150);
+assert.equal(history().length,0,'A paused seek does not mark the recording as seen');
+click('toggle');progressAt(150.25);assert.equal(history()[0].position,150.25);
+assert.equal(history()[0].key,'astatoro:replay-a');assert.equal(historyWrites,1);
+advance(3000);progressAt(153.25);assert.equal(historyWrites,1,'Do not write storage on every timeupdate');
+click('toggle');assert.equal(history()[0].position,153.25,'Pause flushes the latest played position');
+const previousReplay=node();key(461);
+assert.equal(replayBadge(0,'last-watched').textContent,'Naposledy sledované');
+assert.equal(replayBadge(0,'watched-badge').textContent,'Sledováno · 2:33');
+assert.match(elements.videos.firstChild.attrs['aria-label'],/Naposledy sledované, Sledováno/);
+assert.equal(replayBadge(1,'watched-badge'),undefined);
+openReplay(1);node().handlers.error();key(461);
+assert.equal(replayBadge(1,'watched-badge'),undefined,'A failed start is not viewing');
+openReplay(1);progressAt(2);advance(1000);progressAt(3);window.handlers.pagehide();
+assert.equal(history()[0].key,'astatoro:replay-b');assert.equal(history()[0].position,3);
+previousReplay.handlers.timeupdate();assert.equal(history()[0].key,'astatoro:replay-b','Old decoder events cannot reorder history');
+assert.ok(history().every(h=>Object.keys(h).sort().join(',')==='duration,finished,key,position'));
+boot(historyStorage);submit('astatoro');respond({live:null,videos:[{...replayA,url:replayA.url+'?token=changed'},replayB]});
+assert.equal(replayBadge(0,'watched-badge').textContent,'Sledováno · 2:33','Stable IDs survive refreshed stream URLs');
+assert.equal(replayBadge(0,'last-watched'),undefined);assert.ok(replayBadge(1,'last-watched'));
+openReplay();progressAt(1);node().handlers.ended();key(461);
+assert.equal(replayBadge(0,'watched-badge').textContent,'Zhlédnuto');
+assert.equal(replayBadge(0,'watched-progress').value,replayBadge(0,'watched-progress').max);
+assert.ok(replayBadge(0,'last-watched'));assert.equal(replayBadge(1,'last-watched'),undefined);
+click('catalog-back');submit('another');respond({live:null,videos:[replayA]});
+assert.equal(replayBadge(0,'watched-badge'),undefined,'Replay identity includes its channel');
+click('catalog-back');submit('astatoro');respond({videos:[replayA],live});progressAt(3);key(461);
+assert.equal(history()[0].key,'astatoro:replay-a','LIVE does not change replay history');
+for(const invalid of ['{broken','null','{}','x'.repeat(100001),JSON.stringify([null,{key:'astatoro:replay-a',position:'1',duration:300,finished:false}])]){
+ historyData.set(historyKey,invalid);boot(historyStorage);submit('astatoro');respond({live:null,videos:[replayA]});
+ assert.equal(replayBadge(0,'watched-badge'),undefined);
+ openReplay();node().handlers.ended();assert.equal(replayBadge(0,'watched-badge'),undefined);
+ progressAt(1);key(461);assert.equal(replayBadge(0,'watched-badge'),undefined,'Ended without any playback never marks viewed');
+}
+historyData.set(historyKey,JSON.stringify(Array.from({length:220},(_,i)=>({key:'astatoro:old-'+i,position:10,duration:300,finished:false}))));
+boot(historyStorage);submit('astatoro');respond({live:null,videos:[replayA]});openReplay();progressAt(1);
+assert.equal(history().length,200);assert.equal(history()[0].key,'astatoro:replay-a');assert.equal(history().at(-1).key,'astatoro:old-198');
+boot({getItem(){throw Error('Denied');},setItem(){throw Error('Quota');}});
+submit('astatoro');respond({live:null,videos:[replayA]});openReplay();progressAt(2);document.hidden=true;document.handlers.visibilitychange();
+document.hidden=false;document.handlers.visibilitychange();key(461);assert.ok(replayBadge(0,'watched-badge'),'Storage failure preserves this session without crashing');
+console.log('Replay history: passed (actual progress, stable IDs, last-viewed badges, completion, restarts, bounded storage and storage failures).');
+boot();submit('astatoro');respond({live:null,videos:[{...vod,title:'x'.repeat(199)+'🔴tail'}]});
+assert.equal(elements.videos.firstChild.children[1].textContent,'x'.repeat(199)+'🔴','UI title limits preserve complete emoji');
+const symbolTitle='🔴ONE🔴TWO🔴 👩🏽‍💻 🇨🇿 <img src=x>';
+click('catalog-back');submit('astatoro');respond({live:null,videos:[{...vod,title:symbolTitle}]});
+const renderedTitle=elements.videos.firstChild.children[1];
+assert.equal(renderedTitle.textContent,symbolTitle,'Untrusted titles stay plain text');
+assert.deepEqual(renderedTitle.children.filter(c=>c.className==='title-symbol').map(c=>c.textContent),['🔴','🔴','🔴','👩🏽‍💻','🇨🇿']);
+openReplay();assert.equal(elements['video-title'].textContent,symbolTitle,'Catalog and player use the same symbol rendering');
+
 async function testService() {
   const {EventEmitter}=require('node:events');
   let handlers={}, calls=[], replies=[], status=200, transport='ok', waiting=[];
   const responseData={slug:'example',playback_url:live.url,livestream:{is_live:true,session_title:'Live'}};
-  const good={is_live:false,source:vod.url,session_title:'Public',duration:60000,thumbnail:{src:'https://files.kick.com/test.jpg'},video:{is_private:false,status:'public'}};
+  const good={is_live:false,source:vod.url,session_title:'Public',duration:60000,thumbnail:{src:'https://files.kick.com/test.jpg'},video:{uuid:'fd0d9069-63ca-42b2-b7b9-4d23134506b1',is_private:false,status:'public'}};
   let recordings=[good,{...good,video:{is_private:true,status:'public'}},{...good,is_live:true},{...good,source:'https://evil.test/x.m3u8'},{...good,video:{is_private:false,status:'public',deleted_at:'now'}}];
   let playlist='#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=7000000,RESOLUTION=1920x1080,FRAME-RATE=60\n1080.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=18000000,RESOLUTION=3840x2160,FRAME-RATE=30\n4k.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=11000000,RESOLUTION=2560x1440,FRAME-RATE=60\n1440.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=90000000,RESOLUTION=7680x4320\n8k.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=200000\naudio.m3u8';
   const https={get(options, callback){
@@ -230,7 +292,17 @@ async function testService() {
   assert.equal(replies[0].returnValue,true);assert.equal(replies[0].videos.length,1);
   assert.equal(replies[0].videos[0].thumbnail,'https://files.kick.com/test.jpg');
   assert.equal(replies[0].videos[0].duration,60);assert.equal(replies[0].live.url,live.url);
+  assert.equal(replies[0].videos[0].id,good.video.uuid);
   assert.ok(calls.every(c=>c.hostname==='kick.com'&&c.rejectUnauthorized!==false));
+  replies=[];good.session_title='🔴ONE🔴TWO🔴 𝕋𝕍 e\u030c';responseData.livestream.session_title=good.session_title;
+  send({channel:'example'});await new Promise(r=>setImmediate(r));
+  assert.equal(replies[0].videos[0].title,'🔴ONE🔴TWO🔴 TV ě');assert.equal(replies[0].live.title,replies[0].videos[0].title);
+  replies=[];good.session_title='x'.repeat(199)+'🔴tail';good.video.uuid='';good.video.id=122451580;
+  send({channel:'example'});await new Promise(r=>setImmediate(r));
+  assert.equal(replies[0].videos[0].title,'x'.repeat(199)+'🔴','Service truncation never splits a surrogate pair');
+  assert.equal(replies[0].videos[0].id,'122451580');
+  replies=[];good.video.uuid='<script>';
+  send({channel:'example'});await new Promise(r=>setImmediate(r));assert.equal(replies[0].videos[0].id,'');
   replies=[];responseData.livestream=null;send({channel:'example'});await new Promise(r=>setImmediate(r));
   assert.equal(replies[0].live,null);
   replies=[];status=403;send({channel:'example'});await new Promise(r=>setImmediate(r));

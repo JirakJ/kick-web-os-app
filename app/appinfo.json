@@ -1,6 +1,6 @@
 {
   "id": "cz.jirak.kicktv",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "vendor": "Jiri Jirak",
   "type": "web",
   "main": "index.html",

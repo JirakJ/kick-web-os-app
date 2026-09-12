@@ -121,11 +121,15 @@ function KickPlayer(host, events) {
     });
     on('timeupdate', function () {
       if (activeSeek === null && finite(node.currentTime)) {
-        var advanced = Math.abs(node.currentTime - position) > 0.05;
+        var delta = node.currentTime - position;
+        var advanced = Math.abs(delta) > 0.05;
         position = Math.max(0, node.currentTime);
         if (advanced && wantPlay && !node.paused) {
           phase = 'playing'; status(''); armDeadline();
           if (healthySince && Date.now() - healthySince >= 30000) retries = 0;
+          if (!item.isLive && delta > 0 && !node.seeking && queuedSeek === null && events.progress) {
+            events.progress(position, duration, false);
+          }
         }
       }
       changed();
@@ -156,6 +160,7 @@ function KickPlayer(host, events) {
     on('ended', function () {
       if (item.isLive) { recover('Živé vysílání se přerušilo.'); return; }
       wantPlay = false; phase = 'ended'; position = duration;
+      if (events.progress) events.progress(position, duration, true);
       clearDeadline(); status('Záznam skončil. Vyberte další.'); changed();
     });
     on('click', function () { if (events.interact) events.interact(); });

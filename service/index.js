@@ -6,6 +6,11 @@ var service = new Service('cz.jirak.kicktv.service');
 var pending = Object.create(null);
 var activeRequests = 0;
 
+function titleText(value, fallback) {
+  // Limit Unicode code points, never half of an emoji's UTF-16 surrogate pair.
+  return Array.from(String(value || fallback).normalize('NFKC')).slice(0, 200).join('');
+}
+
 function respond(message, data) {
   try { message.respond(data); } catch (e) { /* The requesting app may have closed. */ }
 }
@@ -125,14 +130,15 @@ service.register('channel', function (message) {
         !v.video.deleted_at && !v.video.is_pruned && v.video.status === 'public' && mediaURL(v.source);
     }).slice(0, 30).map(function (v) {
       var length = Number(v.duration);
-      return { title: String(v.session_title || 'Záznam').slice(0, 200),
+      var id = String(v.video.uuid || v.video.id || v.id || '');
+      return { id: /^[a-z0-9-]{1,64}$/.test(id) ? id : '', title: titleText(v.session_title, 'Záznam'),
         url: mediaURL(v.source), date: String(v.created_at || '').slice(0, 10),
         thumbnail: imageURL(v.thumbnail),
         duration: isFinite(length) && length > 0 ? Math.min(length / 1000, 2592000) : 0 };
     }) : [];
     respond(message, { returnValue: true, channel: slug,
       live: live && live.is_live === true && source ? {
-        title: String(live.session_title || slug).slice(0, 200), url: source, isLive: true
+        title: titleText(live.session_title, slug), url: source, isLive: true
       } : null,
       videos: videos,
       videosError: Array.isArray(recordings) ? '' : ((recordings && recordings.error) || 'Seznam záznamů není dostupný.') });

@@ -15,6 +15,7 @@ if (typeof document !== 'undefined') (function () {
   var hidingControls = false;
   var page = 0;
   var recents = [];
+  var watched = [], historyDirty = false, historyWrittenAt = 0;
   var recentButtons = [];
   var videoButtons = [];
   var current = null;
@@ -30,8 +31,34 @@ if (typeof document !== 'undefined') (function () {
     playback = next;
     el('toggle').textContent = next.phase === 'error' ? 'Zkusit znovu' : next.paused ? 'Pokračovat' : 'Pozastavit';
     updateTimeline();
+    if (next.paused) saveWatched();
     if (transition && screen === 'watch' && next.phase !== 'idle') showControls();
-  }, interact: function () { showControls(); el('toggle').focus(); } });
+  }, progress: rememberVideo, interact: function () { showControls(); el('toggle').focus(); } });
+
+  function videoKey(item) {
+    return item && !item.isLive && typeof item.id === 'string' && /^[a-z0-9-]{1,64}$/.test(item.id) ?
+      kickChannel(input.value) + ':' + item.id : '';
+  }
+  function watchedVideo(item) {
+    var key = videoKey(item);
+    return watched.filter(function (entry) { return entry.key === key; })[0];
+  }
+  function saveWatched() {
+    if (!historyDirty) return;
+    try { localStorage.setItem('kick-watched-videos', JSON.stringify(watched)); } catch (e) { /* Keep this session's history if storage is unavailable. */ }
+    historyDirty = false; historyWrittenAt = Date.now();
+  }
+  function rememberVideo(position, duration, ended) {
+    var key = videoKey(current), previous = watchedVideo(current);
+    if (!key || ended && !previous || !isFinite(position) || position <= 0) return;
+    watched = [{ key: key, position: Math.min(position, 2592000),
+      duration: isFinite(duration) && duration > 0 ? Math.min(duration, 2592000) : 0,
+      finished: !!ended || !!(previous && previous.finished) }].concat(watched.filter(function (entry) {
+      return entry.key !== key;
+    })).slice(0, 200);
+    historyDirty = true;
+    if (!previous || ended || Date.now() - historyWrittenAt >= 10000) saveWatched();
+  }
 
   function setScreen(name) {
     screen = name;
@@ -46,6 +73,7 @@ if (typeof document !== 'undefined') (function () {
     if (previous) { try { previous.cancel(); } catch (e) { /* A closed bridge is already cancelled. */ } }
   }
   function unload() {
+    saveWatched();
     clearTimeout(controlsTimer);
     preparing = false;
     el('toggle').disabled = false;
@@ -125,6 +153,18 @@ if (typeof document !== 'undefined') (function () {
     el('playback-status').hidden = !message;
     if (message) showControls();
   }
+  function setVideoTitle(node, value) {
+    var text = Array.from(String(value || 'Záznam')).slice(0, 200).join('');
+    node.textContent = '';
+    // webOS 5 corrupts repeated supplementary glyphs in one shaping run.
+    // Isolate symbols, keeping flags, skin tones and joined emoji together.
+    var parts = text.match(/(?:\uD83C[\uDDE6-\uDDFF]){2}|[\uD800-\uDBFF][\uDC00-\uDFFF](?:[\uFE0E\uFE0F]|\uD83C[\uDFFB-\uDFFF]|\u200D(?:[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]))*|[^\uD800-\uDFFF]+/g) || [];
+    parts.forEach(function (part) {
+      var span = document.createElement('span');
+      if (part.charCodeAt(0) >= 0xD800 && part.charCodeAt(0) <= 0xDBFF) span.className = 'title-symbol';
+      span.textContent = part; node.appendChild(span);
+    });
+  }
   function startVideo(item) {
     if (!item || typeof item.url !== 'string' ||
       !/^https:\/\/(?:stream\.kick\.com|(?:[a-z0-9-]+\.)+live-video\.net)\/[^\s?#]+\.m3u8(?:\?[^\s#]*)?$/.test(item.url)) {
@@ -134,7 +174,7 @@ if (typeof document !== 'undefined') (function () {
     current = item;
     scrubbing = false;
     setScreen('watch');
-    el('video-title').textContent = (item.isLive ? 'ŽIVĚ · ' : '') + item.title;
+    setVideoTitle(el('video-title'), (item.isLive ? 'ŽIVĚ · ' : '') + item.title);
     el('timeline').hidden = !!item.isLive;
     el('seek').value = 0;
     el('seek').max = 0;
@@ -162,6 +202,7 @@ if (typeof document !== 'undefined') (function () {
     current = null;
     unload();
     setScreen('catalog');
+    renderVideos();
     (catalog && catalog.live ? el('live') : videoButtons[0] || el('catalog-back')).focus();
   }
   function renderVideos() {
@@ -186,13 +227,34 @@ if (typeof document !== 'undefined') (function () {
       }
       button.appendChild(preview);
       var title = document.createElement('span');
-      title.className = 'video-title'; title.textContent = String(item.title || 'Záznam').slice(0, 200);
+      title.className = 'video-title'; setVideoTitle(title, item.title);
       button.appendChild(title);
       var details = document.createElement('small');
       var seconds = Number(item.duration);
       var minutes = isFinite(seconds) && seconds > 0 ? Math.floor(seconds / 60) : 0;
       details.textContent = String(item.date || '').slice(0, 10) + ' · ' + Math.floor(minutes / 60) + ' h ' + minutes % 60 + ' min';
       button.appendChild(details);
+      var entry = watchedVideo(item);
+      if (entry) {
+        var badge = document.createElement('span');
+        badge.className = 'watched-badge';
+        badge.textContent = entry.finished ? 'Zhlédnuto' : 'Sledováno · ' + formatTime(entry.position);
+        preview.appendChild(badge);
+        var latest = watched[0].key === entry.key;
+        if (latest) {
+          var last = document.createElement('span');
+          last.className = 'last-watched'; last.textContent = 'Naposledy sledované';
+          preview.appendChild(last);
+        }
+        if (entry.duration) {
+          var progress = document.createElement('progress');
+          progress.className = 'watched-progress'; progress.max = entry.duration;
+          progress.value = entry.finished ? entry.duration : Math.min(entry.position, entry.duration);
+          preview.appendChild(progress);
+        }
+        button.setAttribute('aria-label', title.textContent + ', ' + details.textContent + ', ' +
+          (latest ? 'Naposledy sledované, ' : '') + badge.textContent);
+      }
       button.addEventListener('click', function () { startVideo(item); });
       list.appendChild(button); videoButtons.push(button);
     });
@@ -374,6 +436,17 @@ if (typeof document !== 'undefined') (function () {
       if (screen === 'catalog') controls[next].scrollIntoView({ block: 'nearest' });
     }
   });
+  try {
+    var rawHistory = localStorage.getItem('kick-watched-videos') || '[]';
+    var savedHistory = rawHistory.length <= 100000 ? JSON.parse(rawHistory) : [];
+    if (Array.isArray(savedHistory)) savedHistory.slice(0, 200).forEach(function (entry) {
+      if (!entry || typeof entry.key !== 'string' || !/^[a-z0-9_-]{1,25}:[a-z0-9-]{1,64}$/.test(entry.key) ||
+        typeof entry.position !== 'number' || !isFinite(entry.position) || entry.position <= 0 || entry.position > 2592000 ||
+        typeof entry.duration !== 'number' || !isFinite(entry.duration) || entry.duration < 0 || entry.duration > 2592000 ||
+        typeof entry.finished !== 'boolean' || watched.some(function (other) { return other.key === entry.key; })) return;
+      watched.push({ key: entry.key, position: entry.position, duration: entry.duration, finished: entry.finished });
+    });
+  } catch (e) { /* Ignore corrupt or unavailable replay history. */ }
   try {
     var saved = JSON.parse(localStorage.getItem('kick-recent-channels') || '[]');
     if (Array.isArray(saved)) saved.forEach(function (value) {

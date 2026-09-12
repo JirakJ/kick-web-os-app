@@ -49,7 +49,14 @@ footer small { font-size: inherit; }
 .video-preview { position: relative; display: block; height: 0; padding-bottom: 40%; background: #24282d; overflow: hidden; }
 .video-preview::before { content: '▶'; position: absolute; left: 46%; top: 35%; font-size: 42px; color: #737b84; }
 .video-preview img { position: absolute; width: 100%; height: 100%; object-fit: cover; }
+.watched-badge, .last-watched { position: absolute; left: 12px; max-width: calc(100% - 24px); padding: 7px 12px; border-radius: 4px; font-size: 20px; line-height: 24px; }
+.watched-badge { bottom: 16px; background: rgba(0,0,0,.88); color: #fff; }
+.last-watched { top: 12px; background: #53fc18; color: #0b0e0f; }
+.watched-progress { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; border: 0; -webkit-appearance: none; appearance: none; }
+.watched-progress::-webkit-progress-bar { background: #45494f; }
+.watched-progress::-webkit-progress-value { background: #53fc18; }
 .video-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 12px 18px 8px; height: 56px; font-size: 24px; line-height: 28px; }
+.title-symbol { display: inline-block; font-weight: 400; }
 #videos button small { display: block; margin: 0 18px 18px; color: #a9afb7; font-size: 21px; font-weight: 400; font-variant-numeric: tabular-nums; }
 #pages { display: flex; align-items: center; justify-content: center; padding-top: 22px; }
 #pages button { padding: 14px 24px; font-size: 24px; }
