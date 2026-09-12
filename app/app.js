@@ -9,6 +9,24 @@ if (typeof module !== 'undefined') module.exports = kickChannel;
 if (typeof document !== 'undefined') (function () {
   'use strict';
   function el(id) { return document.getElementById(id); }
+  var localeScope = {};
+  if (typeof webOSSystem !== 'undefined') localeScope.webOSSystem = webOSSystem;
+  if (typeof PalmSystem !== 'undefined') localeScope.PalmSystem = PalmSystem;
+  if (typeof navigator !== 'undefined') localeScope.navigator = navigator;
+  var t = KickI18n.translator(KickI18n.detect(localeScope));
+  // Static labels: element id -> text key; attribute table: element id -> [attribute, key].
+  var staticText = { 'header-note': 'header_note', 'home-eyebrow': 'home_eyebrow', heading: 'home_heading', 'home-intro': 'home_intro',
+    'channel-label': 'channel_label', 'play-label': 'play_live', recordings: 'recordings', 'recent-heading': 'recent_heading',
+    'footer-hints': 'footer_hints', 'footer-note': 'footer_note', 'catalog-eyebrow': 'channel_label', 'catalog-back': 'change_channel',
+    'live-label': 'play_live', 'videos-heading': 'videos_heading', 'catalog-retry': 'retry', 'previous-page': 'page_previous',
+    'next-page': 'page_next', quality: 'quality_default', 'seek-label': 'seek_label', toggle: 'pause',
+    'watch-recordings': 'channel_recordings', back: 'change_channel' };
+  var staticAttributes = { channel: ['placeholder', 'channel_placeholder'], 'recent-pages': ['aria-label', 'recent_pages_label'],
+    'recent-previous': ['aria-label', 'recent_previous'], 'recent-next': ['aria-label', 'recent_next'],
+    pages: ['aria-label', 'videos_heading'], watch: ['aria-label', 'player_label'], seek: ['aria-label', 'seek_label'] };
+  Object.keys(staticText).forEach(function (id) { el(id).textContent = t(staticText[id]); });
+  Object.keys(staticAttributes).forEach(function (id) { el(id).setAttribute(staticAttributes[id][0], t(staticAttributes[id][1])); });
+  try { document.title = t('title'); if (document.documentElement) document.documentElement.lang = t.language; } catch (e) { /* Optional metadata. */ }
   var input = el('channel');
   var playback = { paused: true, phase: 'idle', position: 0, duration: 0, ready: false, seeking: false };
   var preparing = false;
@@ -31,7 +49,7 @@ if (typeof document !== 'undefined') (function () {
   var player = KickPlayer(el('video-host'), { status: mediaStatus, change: function (next) {
     var transition = playback.phase !== next.phase || playback.paused !== next.paused;
     playback = next;
-    var label = next.phase === 'error' ? 'Zkusit znovu' : next.paused ? 'Pokračovat' : 'Pozastavit';
+    var label = next.phase === 'error' ? t('retry') : next.paused ? t('resume') : t('pause');
     if (el('toggle').textContent !== label) el('toggle').textContent = label;
     updateTimeline();
     if (next.paused) saveWatched();
@@ -106,12 +124,12 @@ if (typeof document !== 'undefined') (function () {
       var label = document.createElement('span');
       label.className = 'recent-name'; label.textContent = name; button.appendChild(label);
       var live = document.createElement('span');
-      live.className = 'recent-live'; live.textContent = 'ŽIVĚ'; live.hidden = true; button.appendChild(live);
+      live.className = 'recent-live'; live.textContent = t('live_badge'); live.hidden = true; button.appendChild(live);
       button.addEventListener('click', function () { startChannel(name, true); });
       var remove = document.createElement('button');
       remove.type = 'button'; remove.className = 'recent-remove'; remove.textContent = '×';
-      remove.setAttribute('aria-label', 'Odebrat kanál ' + name);
-      remove.setAttribute('title', 'Odebrat kanál');
+      remove.setAttribute('aria-label', t('remove_channel_named', { name: name }));
+      remove.setAttribute('title', t('remove_channel'));
       remove.addEventListener('click', function () {
         cancelRecentStatus();
         var index = recentButtons.indexOf(button);
@@ -135,7 +153,7 @@ if (typeof document !== 'undefined') (function () {
       var name = recents[recentPage * 6 + index], status = recentStatus[name];
       var live = !!(status && status.live === true && Date.now() - status.at < 60000);
       button.children[1].hidden = !live;
-      button.setAttribute('aria-label', name + (live ? ', právě vysílá' : ''));
+      button.setAttribute('aria-label', name + (live ? ', ' + t('live_now') : ''));
     });
   }
   function cancelRecentStatus() {
@@ -211,7 +229,7 @@ if (typeof document !== 'undefined') (function () {
     cancelRequest();
     var token = generation;
     try { request = new PalmServiceBridge(); }
-    catch (e) { callback({ errorText: 'Službu přehrávače nelze spustit. Zkuste aplikaci znovu otevřít.' }); return; }
+    catch (e) { callback({ errorText: t('service_unavailable') }); return; }
     request.onservicecallback = function (response) {
       if (token !== generation) return;
       var data;
@@ -220,36 +238,57 @@ if (typeof document !== 'undefined') (function () {
         data = JSON.parse(response);
         if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('response');
       }
-      catch (e) { data = { errorText: 'TV vrátila neplatnou odpověď.' }; }
+      catch (e) { data = { errorText: t('invalid_response') }; }
       cancelRequest();
       callback(data);
     };
     requestTimer = setTimeout(function () {
       if (token !== generation) return;
       cancelRequest();
-      callback({ errorText: 'TV neobdržela odpověď. Vraťte se a zkuste to znovu.' });
+      callback({ errorText: t('no_response') });
     }, 18000);
     try { request.call('luna://cz.jirak.kicktv.service/' + method, JSON.stringify(payload)); }
     catch (e) {
       cancelRequest();
-      callback({ errorText: 'Službu přehrávače se nepodařilo spustit. Zkuste aplikaci znovu otevřít.' });
+      callback({ errorText: t('service_unavailable') });
     }
   }
-  function mediaStatus(message) {
+  // Service failures carry a code for translation; free text is the bounded fallback.
+  function serviceError(code, params, text, fallbackKey) {
+    if (typeof code === 'string' && /^[a-z_]{1,32}$/.test(code) &&
+      Object.prototype.hasOwnProperty.call(KickI18n.strings.en, 'svc_' + code)) {
+      var safe = {};
+      if (params && typeof params === 'object') Object.keys(params).slice(0, 4).forEach(function (key) {
+        var value = params[key];
+        if (/^[a-z]{1,16}$/.test(key) && (typeof value === 'number' && isFinite(value) || typeof value === 'string' && value.length <= 64)) safe[key] = value;
+      });
+      return t('svc_' + code, safe);
+    }
+    return typeof text === 'string' && text ? Array.from(text).slice(0, 200).join('') : t(fallbackKey);
+  }
+  function mediaStatus(key, params) {
+    // Player statuses are i18n keys; a nested reason key is translated before substitution.
+    var values = { retry: t('retry'), resume: t('resume') };
+    if (params) Object.keys(params).forEach(function (name) { values[name] = params[name]; });
+    if (typeof values.reason === 'string') values.reason = t(values.reason, values.reasonParams);
+    var message = key ? t(key, values) : '';
     if (el('playback-status').textContent === message) return;
     el('playback-status').textContent = message;
     el('playback-status').hidden = !message;
     if (message) showControls();
   }
-  function setVideoTitle(node, value) {
-    var text = Array.from(String(value || 'Záznam')).slice(0, 200).join('');
-    node.textContent = '';
-    // BMP emoji covered by the bundled font. ASCII stays in ordinary text spans.
+  // BMP emoji covered by the bundled font. ASCII stays in ordinary text spans. Compiled once per page load.
+  var symbols = (function () {
     var bmp = '\u00A9\u00AE\u203C\u2049\u2122\u2139\u2194-\u2199\u21A9-\u21AA\u231A-\u231B\u2328\u23CF\u23E9-\u23F3\u23F8-\u23FA\u24C2\u25AA-\u25AB\u25B6\u25C0\u25FB-\u25FE\u2600-\u2604\u260E\u2611\u2614-\u2615\u2618\u261D\u2620\u2622-\u2623\u2626\u262A\u262E-\u262F\u2638-\u263A\u2640\u2642\u2648-\u2653\u265F-\u2660\u2663\u2665-\u2666\u2668\u267B\u267E-\u267F\u2692-\u2697\u2699\u269B-\u269C\u26A0-\u26A1\u26A7\u26AA-\u26AB\u26B0-\u26B1\u26BD-\u26BE\u26C4-\u26C5\u26C8\u26CE-\u26CF\u26D1\u26D3-\u26D4\u26E9-\u26EA\u26F0-\u26F5\u26F7-\u26FA\u26FD\u2702\u2705\u2708-\u270D\u270F\u2712\u2714\u2716\u271D\u2721\u2728\u2733-\u2734\u2744\u2747\u274C\u274E\u2753-\u2755\u2757\u2763-\u2764\u2795-\u2797\u27A1\u27B0\u27BF\u2934-\u2935\u2B05-\u2B07\u2B1B-\u2B1C\u2B50\u2B55\u3030\u303D\u3297\u3299';
     var atom = '(?:[' + bmp + ']|[\\uD800-\\uDBFF][\\uDC00-\\uDFFF])';
     var part = atom + '(?:[\\uFE0E\\uFE0F]|\\uD83C[\\uDFFB-\\uDFFF]|\\uDB40[\\uDC20-\\uDC7F])*';
-    var symbols = new RegExp('[#*0-9]\\uFE0F?\\u20E3|(?:\\uD83C[\\uDDE6-\\uDDFF]){2}|' + part + '(?:\\u200D' + part + ')*', 'g');
+    return new RegExp('[#*0-9]\\uFE0F?\\u20E3|(?:\\uD83C[\\uDDE6-\\uDDFF]){2}|' + part + '(?:\\u200D' + part + ')*', 'g');
+  }());
+  function setVideoTitle(node, value) {
+    var text = Array.from(String(value || t('replay'))).slice(0, 200).join('');
+    node.textContent = '';
     var index = 0, match;
+    symbols.lastIndex = 0;
     function append(value, className) {
       if (!value) return;
       var span = document.createElement('span');
@@ -267,20 +306,20 @@ if (typeof document !== 'undefined') (function () {
   function startVideo(item) {
     if (!item || typeof item.url !== 'string' ||
       !/^https:\/\/(?:stream\.kick\.com|(?:[a-z0-9-]+\.)+live-video\.net)\/[^\s?#]+\.m3u8(?:\?[^\s#]*)?$/.test(item.url)) {
-      el('videos-status').textContent = 'Kick neposkytl platnou adresu videa.';
+      el('videos-status').textContent = t('invalid_video_url');
       return;
     }
     current = item;
     scrubbing = false;
     setScreen('watch');
-    setVideoTitle(el('video-title'), (item.isLive ? 'ŽIVĚ · ' : '') + item.title);
+    setVideoTitle(el('video-title'), (item.isLive ? t('live_badge') + ' · ' : '') + item.title);
     el('timeline').hidden = !!item.isLive;
     el('seek').value = 0;
     el('seek').max = 0;
-    el('quality').textContent = 'Nejvyšší dostupná kvalita';
-    el('toggle').textContent = 'Pozastavit';
+    el('quality').textContent = t('quality_default');
+    el('toggle').textContent = t('pause');
     unload();
-    mediaStatus('Načítání nejlepší dostupné kvality…');
+    mediaStatus('loading_quality');
     preparing = true;
     el('toggle').disabled = true;
     callService('prepare', { url: item.url }, function (data) {
@@ -290,9 +329,10 @@ if (typeof document !== 'undefined') (function () {
       var best = data.returnValue && data.best;
       item.best = best && typeof best.bitrate === 'number' && isFinite(best.bitrate) && best.bitrate > 0 &&
         typeof best.height === 'number' && best.height > 0 && best.height <= 2160 ? best : null;
-      if (item.best) el('quality').textContent = 'Nejvyšší dostupná: ' + (item.best.height === 2160 ? '4K' : item.best.height + 'p') + (item.best.fps ? ' · ' + item.best.fps + ' fps' : '');
+      if (item.best) el('quality').textContent = t('best_quality', { quality: item.best.height === 2160 ? '4K' : item.best.height + 'p' }) +
+        (item.best.fps ? t('fps_suffix', { fps: item.best.fps }) : '');
       if (!document.hidden) player.load(item);
-      else mediaStatus('Přehrávání je zastavené. Zvolte Pokračovat.');
+      else mediaStatus('playback_stopped', { resume: t('resume') });
     });
     el('watch').focus();
   }
@@ -319,7 +359,7 @@ if (typeof document !== 'undefined') (function () {
       preview.setAttribute('aria-hidden', 'true');
       if (typeof item.thumbnail === 'string' && /^https:\/\/(?:files|images)\.kick\.com\/[^\s#]+$/.test(item.thumbnail)) {
         var img = document.createElement('img');
-        img.alt = ''; img.referrerPolicy = 'no-referrer';
+        img.alt = ''; img.referrerPolicy = 'no-referrer'; img.decoding = 'async';
         img.addEventListener('error', function () { img.hidden = true; });
         img.src = item.thumbnail;
         preview.appendChild(img);
@@ -331,18 +371,18 @@ if (typeof document !== 'undefined') (function () {
       var details = document.createElement('small');
       var seconds = Number(item.duration);
       var minutes = isFinite(seconds) && seconds > 0 ? Math.floor(seconds / 60) : 0;
-      details.textContent = String(item.date || '').slice(0, 10) + ' · ' + Math.floor(minutes / 60) + ' h ' + minutes % 60 + ' min';
+      details.textContent = String(item.date || '').slice(0, 10) + ' · ' + t('duration_hm', { h: Math.floor(minutes / 60), m: minutes % 60 });
       button.appendChild(details);
       var entry = watchedVideo(item);
       if (entry) {
         var badge = document.createElement('span');
         badge.className = 'watched-badge';
-        badge.textContent = entry.finished ? 'Zhlédnuto' : 'Sledováno · ' + formatTime(entry.position);
+        badge.textContent = entry.finished ? t('watched_finished') : t('watched_at', { time: formatTime(entry.position) });
         preview.appendChild(badge);
         var latest = watched[0].key === entry.key;
         if (latest) {
           var last = document.createElement('span');
-          last.className = 'last-watched'; last.textContent = 'Naposledy sledované';
+          last.className = 'last-watched'; last.textContent = t('last_watched');
           preview.appendChild(last);
         }
         if (entry.duration) {
@@ -352,7 +392,7 @@ if (typeof document !== 'undefined') (function () {
           preview.appendChild(progress);
         }
         button.setAttribute('aria-label', title.textContent + ', ' + details.textContent + ', ' +
-          (latest ? 'Naposledy sledované, ' : '') + badge.textContent);
+          (latest ? t('last_watched') + ', ' : '') + badge.textContent);
       }
       button.addEventListener('click', function () { startVideo(item); });
       list.appendChild(button); videoButtons.push(button);
@@ -366,21 +406,23 @@ if (typeof document !== 'undefined') (function () {
     catalog = data; page = 0;
     recentStatus[kickChannel(input.value)] = { live: !!data.live, at: Date.now() };
     data.videos = data.videos.filter(function (v) { return v && typeof v.url === 'string'; }).slice(0, 30);
-    el('channel-status').textContent = data.live ? 'Právě vysílá' : 'Právě offline · Vyber si některý ze záznamů.';
+    el('channel-status').textContent = t(data.live ? 'status_live' : 'status_offline');
     el('live').hidden = !data.live;
-    el('catalog-retry').hidden = !data.videosError;
-    el('videos-status').textContent = data.videosError || (data.videos.length ? '' : 'Kanál nemá dostupné veřejné záznamy.');
+    var videosError = data.videosErrorCode || data.videosError ?
+      serviceError(data.videosErrorCode, data.videosErrorParams, data.videosError, 'svc_videos_unavailable') : '';
+    el('catalog-retry').hidden = !videosError;
+    el('videos-status').textContent = videosError || (data.videos.length ? '' : t('no_replays'));
   }
   function startChannel(value, autoplay) {
     var name = kickChannel(value);
     if (!name) {
-      el('error').textContent = 'Zadejte název kanálu nebo odkaz https://kick.com/kanal.';
+      el('error').textContent = t('invalid_channel_input');
       input.setAttribute('aria-invalid', 'true');
       input.focus();
       return;
     }
     if (navigator.onLine === false) {
-      el(screen === 'catalog' ? 'channel-status' : 'error').textContent = 'TV není připojená k internetu. Zkontrolujte připojení.';
+      el(screen === 'catalog' ? 'channel-status' : 'error').textContent = t('offline');
       return;
     }
     input.value = name;
@@ -396,17 +438,17 @@ if (typeof document !== 'undefined') (function () {
     el('catalog-retry').hidden = true;
     el('live').hidden = true;
     el('catalog-heading').textContent = name;
-    el('channel-status').textContent = 'Načítání kanálu…';
+    el('channel-status').textContent = t('loading_channel');
     el('videos-status').textContent = '';
     setScreen('catalog');
     el('catalog-back').focus();
     if (typeof PalmServiceBridge === 'undefined') {
-      el('channel-status').textContent = 'Přehrávání vyžaduje instalaci aplikace včetně služby do TV.';
+      el('channel-status').textContent = t('needs_service');
       return;
     }
     callService('channel', { channel: name }, function (data) {
       if (!data.returnValue || !Array.isArray(data.videos)) {
-        el('channel-status').textContent = data.errorText || 'Kanál se nepodařilo načíst. Zkuste to znovu.';
+        el('channel-status').textContent = serviceError(data.errorCode, data.errorParams, data.errorText, 'channel_failed');
         el('catalog-retry').hidden = false;
         return;
       }
@@ -448,7 +490,7 @@ if (typeof document !== 'undefined') (function () {
     var elapsed = formatTime(position), total = formatTime(duration);
     el('elapsed').textContent = elapsed;
     el('duration').textContent = total;
-    el('seek').setAttribute('aria-valuetext', elapsed + ' z ' + total);
+    el('seek').setAttribute('aria-valuetext', t('time_of', { elapsed: elapsed, total: total }));
   }
   el('channel-form').addEventListener('submit', function (event) { event.preventDefault(); startChannel(input.value, true); });
   el('recordings').addEventListener('click', function () { startChannel(input.value, false); });
@@ -487,7 +529,7 @@ if (typeof document !== 'undefined') (function () {
       clearTimeout(controlsTimer);
       if (current) player.suspend();
       else if (interrupted && screen === 'catalog') {
-        el('channel-status').textContent = 'Načítání bylo přerušeno. Zvolte Zkusit znovu.';
+        el('channel-status').textContent = t('lookup_interrupted', { retry: t('retry') });
         el('catalog-retry').hidden = false;
       }
     } else if (current) { showControls(); el('toggle').focus(); }

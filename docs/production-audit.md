@@ -1,4 +1,65 @@
-# Production audit for 0.6.0
+# Production audit for 0.7.0
+
+Checked on 12 September 2026 using local regression tests and the packaged IPK.
+The LG 55NANO863NA was powered off or unreachable during this release, so the
+device-level checks below refer to 0.6.0; the 0.7.0 changes were not yet run on
+the TV.
+
+## Security
+
+| Check | Scope | Result |
+| --- | --- | --- |
+| OSV Scanner | 229 resolved lockfile packages, including build dependencies | No known vulnerabilities reported |
+| npm audit | Current lockfile, including build dependencies | No known vulnerabilities reported |
+| Gitleaks | Five commits in repository history and the working tree | No secrets reported |
+| Semgrep | `p/javascript` and `p/nodejs` rule packs over all four application/service JS files | No findings; all files parsed |
+
+Manual review of the changes:
+
+- Interface strings come from a bundled dictionary and are written with
+  `textContent` or attribute setters; no translation is ever used as HTML.
+  Placeholders accept only alphabetic names and substitute plain text.
+- Service errors now carry a stable code. The app translates a code only if it
+  is a known dictionary key; parameters are limited to four short strings or
+  finite numbers, and free-text fallbacks are cut to 200 code points.
+- Gzip responses are inflated incrementally and rejected once the decoded text
+  exceeds 1 MiB, so a compressed bomb cannot exceed the existing memory bound.
+  Unsupported content encodings are rejected before any data is read, and the
+  inflater is closed on every completion path.
+- The keep-alive agent uses the same TLS verification as before; no host is
+  caller-supplied and redirects remain disabled.
+- The playlist host and path are split with an anchored regular expression
+  after the allowlist check, replacing the deprecated `url.parse`.
+- The locale is read only from `webOSSystem.locale`, `PalmSystem.locale` and the
+  browser language, each guarded, with values longer than 35 characters ignored.
+
+## Performance changes
+
+| Change | Effect |
+| --- | --- |
+| `Accept-Encoding: gzip` for Kick responses | Channel document 8.8 KB → 2.4 KB, 30-replay list 64 KB → 7.5 KB on the wire (measured against `kick.com` on 12 September 2026 for one channel) |
+| Keep-alive HTTPS agent (six sockets, two idle) | Status polling and channel/replay lookups reuse TLS sessions instead of a handshake per request |
+| Title symbol expression compiled once | The emoji-isolating regular expression is no longer rebuilt for every catalog card or player title |
+| Thumbnails decoded asynchronously | `img.decoding = 'async'` keeps thumbnail decoding off the main thread where the TV browser supports it |
+
+The regression suite keeps the earlier rendering budgets (six thumbnails per
+catalog load, at most 60 timeline text writes per simulated minute, no pause
+label writes during steady playback).
+
+## Localization checks
+
+`npm test` verifies that all 13 languages define every key with identical
+placeholders and no markup, that `app/resources/<language>/appinfo.json` matches
+the dictionary titles, that locale tags such as `cs-CZ`, `sk_SK`, `pt-BR` and
+`zh-Hans-CN` map correctly, that unsupported or missing locales fall back to
+English, and that English, Slovak and French interfaces render expected strings
+including translated service errors and player statuses. Launcher title
+resources follow LG's documented `resources/<locale>/appinfo.json` layout but
+were not confirmed on the TV.
+
+---
+
+# Production audit for 0.6.0 (device-verified)
 
 Checked on 12 September 2026 using local regression tests and the powered-on
 LG 55NANO863NA (firmware 04.64.00, webOS 5.6.2, Chrome 68).
