@@ -26,10 +26,11 @@ function mediaURL(value) {
     /^https:\/\/(?:stream\.kick\.com|(?:[a-z0-9-]+\.)+live-video\.net)\/[^\s?#]+\.m3u8(?:\?[^\s#]*)?$/.test(value) ? value : '';
 }
 
-function getText(hostname, path) {
+function getText(hostname, path, background) {
   var key = hostname + path;
   if (pending[key]) return pending[key];
-  if (activeRequests >= 6) return Promise.reject(new Error('Probíhá jiné načítání. Zkuste to za chvíli znovu.'));
+  // Background status checks leave two request slots for opening a channel/video.
+  if (activeRequests >= (background ? 4 : 6)) return Promise.reject(new Error('Probíhá jiné načítání. Zkuste to za chvíli znovu.'));
   activeRequests++;
   var work = new Promise(function (resolve, reject) {
     var completed = false;
@@ -38,13 +39,15 @@ function getText(hostname, path) {
       if (completed) return;
       completed = true;
       clearTimeout(timer);
-      if (error) reject(error); else resolve(data);
+      if (error) {
+        if (req) req.abort();
+        reject(error);
+      } else resolve(data);
     }
     // No caller-supplied host, redirects, credentials, or disabled TLS checks.
     var req = https.get({ hostname: hostname, path: path,
       headers: { Accept: '*/*', 'Cache-Control': 'no-cache' } }, function (res) {
       if (res.statusCode !== 200) {
-        res.resume();
         finish(new Error('Kick API: HTTP ' + res.statusCode));
         return;
       }
@@ -53,11 +56,9 @@ function getText(hostname, path) {
       res.on('data', function (chunk) {
         if (completed) return;
         bytes += Buffer.byteLength(chunk, 'utf8');
-        body += chunk;
         if (bytes > 1048576) {
           finish(new Error('Odpověď Kicku je příliš velká.'));
-          req.abort();
-        }
+        } else body += chunk;
       });
       res.on('error', finish);
       res.on('aborted', function () { finish(new Error('Přenos dat se přerušil. Zkuste to znovu.')); });
@@ -68,7 +69,6 @@ function getText(hostname, path) {
     req.on('error', function () { finish(new Error('Nepodařilo se připojit ke Kicku.')); });
     timer = setTimeout(function () {
       finish(new Error('Kick neodpověděl včas. Zkuste to znovu.'));
-      req.abort();
     }, 12000);
   });
   pending[key] = work.then(function (data) {
@@ -79,12 +79,34 @@ function getText(hostname, path) {
   return pending[key];
 }
 
-function getJSON(path) {
-  return getText('kick.com', '/api/v2/channels/' + path).then(function (body) {
+function getJSON(path, background) {
+  return getText('kick.com', '/api/v2/channels/' + path, background).then(function (body) {
     try { return JSON.parse(body); }
     catch (e) { throw new Error('Kick vrátil neplatná data.'); }
   });
 }
+
+service.register('statuses', function (message) {
+  var channels = message.payload && message.payload.channels;
+  if (!Array.isArray(channels) || !channels.length || channels.length > 6 || channels.some(function (name, i) {
+    return typeof name !== 'string' || !/^[a-z0-9_-]{1,25}$/.test(name) || channels.indexOf(name) !== i;
+  })) {
+    respond(message, { returnValue: false, errorText: 'Neplatný seznam kanálů.' }); return;
+  }
+  var next = 0, statuses = [];
+  function worker() {
+    var index = next++;
+    if (index >= channels.length) return Promise.resolve();
+    var name = channels[index];
+    return getJSON(name, true).then(function (channel) {
+      if (!channel || channel.slug !== name) throw new Error('channel');
+      statuses[index] = { channel: name, live: !!(channel.livestream && channel.livestream.is_live === true) };
+    }).catch(function () { statuses[index] = { channel: name, live: null }; }).then(worker);
+  }
+  Promise.all([worker(), worker()]).then(function () {
+    respond(message, { returnValue: true, statuses: statuses });
+  }).catch(function () { respond(message, { returnValue: false, errorText: 'Stav kanálů není dostupný.' }); });
+});
 
 service.register('prepare', function (message) {
   var source = mediaURL(message.payload && message.payload.url);
@@ -102,7 +124,8 @@ service.register('prepare', function (message) {
       var bps = line.match(/(?:[:,])BANDWIDTH=(\d+)/);
       var fps = line.match(/(?:[:,])FRAME-RATE=([\d.]+)/);
       if (size && bps && +size[1] > 0 && +size[2] > 0 && +bps[1] > 0 && +bps[1] <= 200000000 && +size[1] <= 3840 && +size[2] <= 2160) {
-        variants.push({ width: +size[1], height: +size[2], bitrate: +bps[1], fps: fps ? +fps[1] : 0 });
+        var rate = fps ? +fps[1] : 0;
+        variants.push({ width: +size[1], height: +size[2], bitrate: +bps[1], fps: isFinite(rate) && rate > 0 && rate <= 240 ? rate : 0 });
       }
     });
     variants.sort(function (a, b) { return b.height - a.height || b.width - a.width || b.fps - a.fps || b.bitrate - a.bitrate; });

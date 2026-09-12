@@ -15,8 +15,9 @@ if (typeof document !== 'undefined') (function () {
   var hidingControls = false;
   var page = 0;
   var recents = [];
+  var recentPage = 0, recentStatus = Object.create(null), recentRequest = null, recentTimer, recentGeneration = 0;
   var watched = [], historyDirty = false, historyWrittenAt = 0;
-  var recentButtons = [];
+  var recentButtons = [], recentControls = [];
   var videoButtons = [];
   var current = null;
   var catalog = null;
@@ -26,10 +27,12 @@ if (typeof document !== 'undefined') (function () {
   var controlsTimer;
   var generation = 0;
   var scrubbing = false;
+  var timelineState = '';
   var player = KickPlayer(el('video-host'), { status: mediaStatus, change: function (next) {
     var transition = playback.phase !== next.phase || playback.paused !== next.paused;
     playback = next;
-    el('toggle').textContent = next.phase === 'error' ? 'Zkusit znovu' : next.paused ? 'Pokračovat' : 'Pozastavit';
+    var label = next.phase === 'error' ? 'Zkusit znovu' : next.paused ? 'Pokračovat' : 'Pozastavit';
+    if (el('toggle').textContent !== label) el('toggle').textContent = label;
     updateTimeline();
     if (next.paused) saveWatched();
     if (transition && screen === 'watch' && next.phase !== 'idle') showControls();
@@ -41,7 +44,7 @@ if (typeof document !== 'undefined') (function () {
   }
   function watchedVideo(item) {
     var key = videoKey(item);
-    return watched.filter(function (entry) { return entry.key === key; })[0];
+    for (var i = 0; i < watched.length; i++) if (watched[i].key === key) return watched[i];
   }
   function saveWatched() {
     if (!historyDirty) return;
@@ -51,10 +54,12 @@ if (typeof document !== 'undefined') (function () {
   function rememberVideo(position, duration, ended) {
     var key = videoKey(current), previous = watchedVideo(current);
     if (!key || ended && !previous || !isFinite(position) || position <= 0) return;
-    watched = [{ key: key, position: Math.min(position, 2592000),
-      duration: isFinite(duration) && duration > 0 ? Math.min(duration, 2592000) : 0,
-      finished: !!ended || !!(previous && previous.finished) }].concat(watched.filter(function (entry) {
-      return entry.key !== key;
+    var entry = previous || { key: key, finished: false };
+    entry.position = Math.min(position, 2592000);
+    entry.duration = isFinite(duration) && duration > 0 ? Math.min(duration, 2592000) : 0;
+    entry.finished = !!ended || entry.finished;
+    if (watched[0] !== entry) watched = [entry].concat(watched.filter(function (other) {
+      return other.key !== key;
     })).slice(0, 200);
     historyDirty = true;
     if (!previous || ended || Date.now() - historyWrittenAt >= 10000) saveWatched();
@@ -64,6 +69,7 @@ if (typeof document !== 'undefined') (function () {
     screen = name;
     ['home', 'catalog', 'watch'].forEach(function (id) { el(id).hidden = id !== name; });
     window.scrollTo(0, 0);
+    if (name === 'home') refreshRecentStatus(); else cancelRecentStatus();
   }
   function cancelRequest() {
     generation++;
@@ -89,20 +95,101 @@ if (typeof document !== 'undefined') (function () {
   function renderRecents() {
     var list = el('recent-channels');
     while (list.firstChild) list.removeChild(list.firstChild);
-    recentButtons = [];
+    recentButtons = []; recentControls = [];
     el('recent').hidden = !recents.length;
-    recents.forEach(function (name) {
+    var pages = Math.max(1, Math.ceil(recents.length / 6));
+    recentPage = Math.max(0, Math.min(recentPage, pages - 1));
+    recents.slice(recentPage * 6, recentPage * 6 + 6).forEach(function (name) {
+      var row = document.createElement('div'); row.className = 'recent-row';
       var button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = name;
+      button.type = 'button'; button.className = 'recent-play';
+      var label = document.createElement('span');
+      label.className = 'recent-name'; label.textContent = name; button.appendChild(label);
+      var live = document.createElement('span');
+      live.className = 'recent-live'; live.textContent = 'ŽIVĚ'; live.hidden = true; button.appendChild(live);
       button.addEventListener('click', function () { startChannel(name, true); });
-      list.appendChild(button);
-      recentButtons.push(button);
+      var remove = document.createElement('button');
+      remove.type = 'button'; remove.className = 'recent-remove'; remove.textContent = '×';
+      remove.setAttribute('aria-label', 'Odebrat kanál ' + name);
+      remove.setAttribute('title', 'Odebrat kanál');
+      remove.addEventListener('click', function () {
+        cancelRecentStatus();
+        var index = recentButtons.indexOf(button);
+        recents = recents.filter(function (item) { return item !== name; });
+        delete recentStatus[name]; saveRecents(); renderRecents();
+        if (input.value === name) input.value = recents[0] || '';
+        (recentButtons[Math.min(index, recentButtons.length - 1)] || input).focus();
+        refreshRecentStatus();
+      });
+      row.appendChild(button); row.appendChild(remove); list.appendChild(row);
+      recentButtons.push(button); recentControls.push(button, remove);
+    });
+    el('recent-pages').hidden = pages <= 1;
+    el('recent-previous').disabled = recentPage === 0;
+    el('recent-next').disabled = recentPage === pages - 1;
+    el('recent-page-number').textContent = (recentPage + 1) + ' / ' + pages;
+    showRecentStatus();
+  }
+  function showRecentStatus() {
+    recentButtons.forEach(function (button, index) {
+      var name = recents[recentPage * 6 + index], status = recentStatus[name];
+      var live = !!(status && status.live === true && Date.now() - status.at < 60000);
+      button.children[1].hidden = !live;
+      button.setAttribute('aria-label', name + (live ? ', právě vysílá' : ''));
     });
   }
+  function cancelRecentStatus() {
+    recentGeneration++; clearTimeout(recentTimer);
+    var request = recentRequest; recentRequest = null;
+    if (request) { try { request.cancel(); } catch (e) { /* The status connection may already be closed. */ } }
+  }
+  function refreshRecentStatus() {
+    cancelRecentStatus();
+    if (screen !== 'home' || document.hidden || !recents.length) return;
+    showRecentStatus();
+    var names = recents.slice(recentPage * 6, recentPage * 6 + 6).filter(function (name) {
+      return !recentStatus[name] || Date.now() - recentStatus[name].at >= 60000;
+    });
+    if (!names.length || navigator.onLine === false || typeof PalmServiceBridge === 'undefined') {
+      var delay = 60000;
+      if (!names.length) recents.slice(recentPage * 6, recentPage * 6 + 6).forEach(function (name) {
+        delay = Math.min(delay, Math.max(1, 60000 - (Date.now() - recentStatus[name].at)));
+      });
+      recentTimer = setTimeout(refreshRecentStatus, delay); return;
+    }
+    var token = recentGeneration;
+    function finish(data) {
+      if (token !== recentGeneration) return;
+      cancelRecentStatus();
+      names.forEach(function (name) { recentStatus[name] = { live: null, at: Date.now() }; });
+      if (data && data.returnValue && Array.isArray(data.statuses)) data.statuses.slice(0, 6).forEach(function (status) {
+        if (status && names.indexOf(status.channel) !== -1 && typeof status.live === 'boolean')
+          recentStatus[status.channel] = { live: status.live, at: Date.now() };
+      });
+      refreshRecentStatus();
+    }
+    try {
+      recentRequest = new PalmServiceBridge();
+      recentRequest.onservicecallback = function (response) {
+        var data;
+        try { if (typeof response === 'string' && response.length <= 4096) data = JSON.parse(response); } catch (e) { /* Show no status for malformed replies. */ }
+        finish(data);
+      };
+      recentTimer = setTimeout(function () { finish(null); }, 40000);
+      recentRequest.call('luna://cz.jirak.kicktv.service/statuses', JSON.stringify({ channels: names }));
+    } catch (e) { finish(null); }
+  }
+  function saveRecents() {
+    try {
+      localStorage.setItem('kick-recent-channels', JSON.stringify(recents));
+      localStorage.setItem('kick-channel', recents[0] || '');
+    } catch (e) { /* Optional storage. */ }
+  }
   function remember(name) {
-    recents = [name].concat(recents.filter(function (item) { return item !== name; })).slice(0, 6);
-    try { localStorage.setItem('kick-recent-channels', JSON.stringify(recents)); } catch (e) { /* Optional storage. */ }
+    recents = [name].concat(recents.filter(function (item) { return item !== name; })).slice(0, 50);
+    recentPage = 0;
+    Object.keys(recentStatus).forEach(function (key) { if (recents.indexOf(key) === -1) delete recentStatus[key]; });
+    saveRecents();
     renderRecents();
   }
   function showControls() {
@@ -129,6 +216,7 @@ if (typeof document !== 'undefined') (function () {
       if (token !== generation) return;
       var data;
       try {
+        if (typeof response !== 'string' || response.length > 1048576) throw new Error('response size');
         data = JSON.parse(response);
         if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('response');
       }
@@ -276,12 +364,12 @@ if (typeof document !== 'undefined') (function () {
   }
   function renderCatalog(data) {
     catalog = data; page = 0;
+    recentStatus[kickChannel(input.value)] = { live: !!data.live, at: Date.now() };
     data.videos = data.videos.filter(function (v) { return v && typeof v.url === 'string'; }).slice(0, 30);
     el('channel-status').textContent = data.live ? 'Právě vysílá' : 'Právě offline · Vyber si některý ze záznamů.';
     el('live').hidden = !data.live;
     el('catalog-retry').hidden = !data.videosError;
     el('videos-status').textContent = data.videosError || (data.videos.length ? '' : 'Kanál nemá dostupné veřejné záznamy.');
-    renderVideos();
   }
   function startChannel(value, autoplay) {
     var name = kickChannel(value);
@@ -347,19 +435,31 @@ if (typeof document !== 'undefined') (function () {
   }
   function updateTimeline() {
     if (!current || current.isLive) return;
+    var position = Math.floor(scrubbing ? Number(el('seek').value) : playback.position);
+    var duration = Math.floor(playback.duration);
+    var state = playback.ready + ':' + position + ':' + duration + ':' + scrubbing;
+    if (timelineState === state) return;
+    timelineState = state;
     el('seek').disabled = !playback.ready;
-    el('seek').max = Math.floor(playback.duration);
-    if (!scrubbing) el('seek').value = Math.floor(playback.position);
-    var position = scrubbing ? Number(el('seek').value) : playback.position;
-    el('seek-progress').max = playback.duration || 1;
+    el('seek').max = duration;
+    if (!scrubbing) el('seek').value = position;
+    el('seek-progress').max = duration || 1;
     el('seek-progress').value = position;
-    el('elapsed').textContent = formatTime(position);
-    el('duration').textContent = formatTime(playback.duration);
-    el('seek').setAttribute('aria-valuetext', formatTime(position) + ' z ' + formatTime(playback.duration));
+    var elapsed = formatTime(position), total = formatTime(duration);
+    el('elapsed').textContent = elapsed;
+    el('duration').textContent = total;
+    el('seek').setAttribute('aria-valuetext', elapsed + ' z ' + total);
   }
   el('channel-form').addEventListener('submit', function (event) { event.preventDefault(); startChannel(input.value, true); });
   el('recordings').addEventListener('click', function () { startChannel(input.value, false); });
   el('catalog-back').addEventListener('click', goHome);
+  function turnRecentPage(delta) {
+    cancelRecentStatus(); recentPage += delta; renderRecents();
+    if (recentButtons[0]) recentButtons[0].focus();
+    refreshRecentStatus();
+  }
+  el('recent-previous').addEventListener('click', function () { turnRecentPage(-1); });
+  el('recent-next').addEventListener('click', function () { turnRecentPage(1); });
   el('catalog-retry').addEventListener('click', function () { startChannel(input.value, false); });
   function turnPage(delta) { page += delta; renderVideos(); if (videoButtons[0]) videoButtons[0].focus(); }
   el('previous-page').addEventListener('click', function () { turnPage(-1); });
@@ -379,6 +479,7 @@ if (typeof document !== 'undefined') (function () {
   el('watch').addEventListener('mousemove', showControls);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
+      cancelRecentStatus();
       var interrupted = !!request;
       cancelRequest();
       preparing = false;
@@ -390,8 +491,10 @@ if (typeof document !== 'undefined') (function () {
         el('catalog-retry').hidden = false;
       }
     } else if (current) { showControls(); el('toggle').focus(); }
+    else if (screen === 'home') refreshRecentStatus();
   });
-  window.addEventListener('pagehide', function () { cancelRequest(); player.suspend(); });
+  window.addEventListener('pagehide', function () { cancelRecentStatus(); cancelRequest(); player.suspend(); });
+  window.addEventListener('online', refreshRecentStatus);
   document.addEventListener('keydown', function (event) {
     var key = event.keyCode;
     if (key === 461 || key === 27) {
@@ -422,17 +525,26 @@ if (typeof document !== 'undefined') (function () {
       if (key === 412 || key === 417) { event.preventDefault(); seek(key === 412 ? -10 : 10); return; }
       if (key >= 37 && key <= 40) showControls();
     }
-    var controls = screen === 'home' ? [input, el('play'), el('recordings')].concat(recentButtons) :
+    var controls = screen === 'home' ? [input, el('play'), el('recordings')].concat(recentControls,
+      el('recent-pages').hidden ? [] : [el('recent-previous'), el('recent-next')]) :
       screen === 'catalog' ? (el('live').hidden ? [] : [el('live')]).concat(videoButtons,
         el('catalog-retry').hidden ? [] : [el('catalog-retry')],
         el('pages').hidden ? [] : [el('previous-page'), el('next-page')].filter(function (b) { return !b.disabled; }), [el('catalog-back')]) :
       (current && current.isLive ? [] : [el('seek')]).concat([el('toggle'), el('watch-recordings'), el('back')]);
     controls = controls.filter(function (control) { return !control.disabled; });
     var index = controls.indexOf(event.target);
+    var recentIndex = recentControls.indexOf(event.target);
+    if (screen === 'home' && recentIndex >= 0 && (key === 38 || key === 40)) {
+      event.preventDefault();
+      var rowTarget = recentIndex + (key === 38 ? -2 : 2);
+      (rowTarget < 0 ? el('recordings') : recentControls[rowTarget] ||
+        (!el('recent-next').disabled ? el('recent-next') : recentControls[recentIndex])).focus();
+      return;
+    }
     var cardIndex = videoButtons.indexOf(event.target);
     if (screen === 'catalog' && cardIndex >= 0 && (key === 38 || key === 40)) {
       event.preventDefault();
-      var columns = window.innerWidth < 800 ? 2 : 3;
+      var columns = window.innerWidth <= 560 ? 1 : window.innerWidth <= 800 ? 2 : 3;
       var card = cardIndex + (key === 38 ? -columns : columns);
       var target = card < 0 ? (el('live').hidden ? el('catalog-back') : el('live')) :
         card >= videoButtons.length ? (!el('pages').hidden && !el('next-page').disabled ? el('next-page') : el('catalog-back')) : videoButtons[card];
@@ -459,10 +571,11 @@ if (typeof document !== 'undefined') (function () {
     });
   } catch (e) { /* Ignore corrupt or unavailable replay history. */ }
   try {
-    var saved = JSON.parse(localStorage.getItem('kick-recent-channels') || '[]');
+    var rawRecent = localStorage.getItem('kick-recent-channels') || '[]';
+    var saved = rawRecent.length <= 2048 ? JSON.parse(rawRecent) : [];
     if (Array.isArray(saved)) saved.forEach(function (value) {
       var name = kickChannel(value);
-      if (name && recents.indexOf(name) === -1 && recents.length < 6) recents.push(name);
+      if (name && recents.indexOf(name) === -1 && recents.length < 50) recents.push(name);
     });
   } catch (e) { /* Ignore corrupt or unavailable storage. */ }
   if (!recents.length) {

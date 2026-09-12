@@ -11,10 +11,10 @@ The interface is currently in Czech and uses Kick-inspired black and green styli
 ## Features
 
 - Live streams and public replays, including a replay picker when a channel is offline.
-- Six recent channels stored locally on the TV.
+- Up to 50 recent channels stored locally, six per page, with a **ŽIVĚ** badge for live channels and an individual remove button.
 - Replay thumbnails, titles, dates and durations, with six recordings per page.
 - Last-watched and previously watched replay badges, with the last played position stored locally.
-- A seek bar, pause/resume and remote controls; playback controls hide after six seconds of inactivity.
+- A seek bar without a focus rectangle, pause/resume and remote controls; playback controls hide after six seconds of inactivity.
 - Highest available quality up to 4K: 2160p → 1440p → 1080p → lower resolutions. Native adaptation remains enabled for slower connections.
 - Serialized seeking, bounded recovery after media errors, request timeouts and cleanup when leaving the player.
 
@@ -22,11 +22,11 @@ No chat, account login, private videos or analytics.
 
 ## Screenshots
 
-Captured from the running app on an LG webOS TV at 1920 × 1080.
+Captured from version **0.6.0** running on an LG 55NANO863NA at 1920 × 1080 on 12 September 2026.
 
 ![Channel selection and recent channels](docs/screenshots/home.png)
 
-![Astatoro replays with viewing history and correctly rendered symbols](docs/screenshots/replays.png)
+![Replay catalog with viewing history and correctly rendered symbols](docs/screenshots/replays.png)
 
 ![Native replay video with playback controls](docs/screenshots/player.png)
 
@@ -43,7 +43,7 @@ npm test
 npm run package
 ```
 
-The output is `dist/cz.jirak.kicktv_0.5.2_all.ipk`. It contains both the app (`cz.jirak.kicktv`) and its service (`cz.jirak.kicktv.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
+The output is `dist/cz.jirak.kicktv_0.6.0_all.ipk`. It contains both the app (`cz.jirak.kicktv`) and its service (`cz.jirak.kicktv.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
 
 The webOS CLI is a development dependency. The service uses the TV's built-in `webos-service` module and Node.js standard libraries; it does not ship npm dependencies. Service code remains compatible with Node.js 8.12.0 on the tested webOS 5 device.
 
@@ -63,6 +63,8 @@ Updates use the same app ID and preserve recent channels and replay history. Thi
 | Select a channel | Enter its name or `https://kick.com/channel` |
 | Start live playback | **Přehrát živě**, or select a recent channel |
 | Browse replays | **Záznamy**; arrows move through cards and page buttons |
+| Remove a saved channel | Select **×** beside its name; **← / →** moves between the channel and remove button |
+| More recent channels | Use the arrow buttons below the list |
 | Confirm | **OK** |
 | Pause/resume | **OK** on the video or seek bar; dedicated Play/Pause buttons also work |
 | Seek in a replay | **← / →** on the video or seek bar, in 10-second steps |
@@ -89,11 +91,15 @@ Tests use DOM and media substitutes to check validation, history, navigation, pa
 
 Version 0.4.1 was checked on an LG 55NANO863NA running firmware 04.64.00 and webOS 5.6.2 on 12 September 2026. Device checks covered live and replay video at 1080p/60, paused seeking, rapid seek and pause/play input, channel switching, pagination, hidden controls and background/resume behavior. A four-minute playback run after the input stress test kept one decoder active without an observed error.
 
-Version 0.5.0 was checked on the same TV for repeated emoji in Astatoro's replay titles, normal text spacing, replay badges and saved positions after restarting the app. Completion was checked by seeking the native player near the end and letting playback finish. The screenshots above show this version running on the TV. Supplementary symbols render separately to avoid the older webOS renderer corrupting repeated emoji.
+Version 0.5.0 was checked on the same TV for repeated emoji in Astatoro's replay titles, normal text spacing, replay badges and saved positions after restarting the app. Completion was checked by seeking the native player near the end and letting playback finish. Supplementary symbols render separately to avoid the older webOS renderer corrupting repeated emoji.
 
 Version 0.5.1 adds a bundled emoji fallback for missing glyphs such as Czechfather's 🪖 and 🫡. Native color emoji take precedence; missing glyphs use monochrome Noto Emoji. The fallback applies only to symbol spans and excludes letters, digits and spaces, preserving normal text spacing. Font coverage and the actual fallback glyphs were checked locally, alongside regression tests. This version has not yet been checked on the TV, which was powered off during the fix.
 
 Version 0.5.2 extends fallback routing to BMP emoji such as ⚔️, ⚠️, ⛽, ✍️, ❌ and ❣️, and keeps compound emoji intact. The [channel symbol audit](docs/symbol-audit.md) covers 681 titles from 35 channels, including 19 channels outside the initial sample. All 68 sampled emoji sequences were checked against the bundled font, rendered locally and added to catalog/player regressions. These local checks do not verify the TV renderer; the TV remained powered off.
+
+Version 0.6.0 was checked on the same TV for real live/replay playback, native seeking, the borderless seek bar, channel removal and LIVE badges. The screenshots above show this version. The [production audit](docs/production-audit.md) records security scan scope, rendering operation counts and layout checks executed in the TV's own browser. `test-layout.cjs` supplies the geometry checker for the installed app's Web Inspector; it does not open a local browser.
+
+Recent-channel status is refreshed while the home screen is visible, using channel metadata only. A failed lookup shows no LIVE badge. Checks use two workers per batch, leave request capacity for playback and stop polling when the app leaves the home screen. Removing a channel preserves its replay viewing history; opening that channel again adds it back to the recent list.
 
 This is not a guarantee of crash-free operation. Several-hour playback, router outages, screensaver behavior and actual 4K/1440p playback have not been verified. The TV reported an active, unmuted audio track; audible output was not independently checked. The quality label reports the source's highest available resolution, not a measurement of the current adaptive level.
 
@@ -106,6 +112,8 @@ This is not a guarantee of crash-free operation. Several-hour playback, router o
 The service uses Kick's web endpoints (`/api/v2/channels/{channel}` and `/videos`), which are not a stable documented public API. Kick may change or restrict them. HTTP errors are shown in the app. Only allowlisted Kick media and thumbnail hosts are accepted, TLS validation remains enabled, and remote titles render as text.
 
 Requests are limited to 1 MiB, 12 seconds and six concurrent connections. Playback recovery makes at most two attempts before asking the viewer to retry. These controls bound resource use and recovery; they cannot fix a platform outage or an unsupported TV decoder.
+
+The green launcher icon is documented in [icon-source.md](docs/icon-source.md).
 
 This project is not affiliated with or endorsed by Kick or LG.
 

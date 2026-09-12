@@ -1,0 +1,146 @@
+[
+  {
+    "case": "home-long-1920",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "errors": []
+  },
+  {
+    "case": "home-long-1280",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "errors": []
+  },
+  {
+    "case": "home-long-800",
+    "viewport": {
+      "width": 800,
+      "height": 600
+    },
+    "errors": []
+  },
+  {
+    "case": "home-long-560",
+    "viewport": {
+      "width": 560,
+      "height": 720
+    },
+    "errors": []
+  },
+  {
+    "case": "home-long-360",
+    "viewport": {
+      "width": 360,
+      "height": 640
+    },
+    "errors": []
+  },
+  {
+    "case": "catalog-long-1920",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "errors": []
+  },
+  {
+    "case": "catalog-long-1280",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "errors": []
+  },
+  {
+    "case": "catalog-long-800",
+    "viewport": {
+      "width": 800,
+      "height": 600
+    },
+    "errors": []
+  },
+  {
+    "case": "catalog-long-560",
+    "viewport": {
+      "width": 560,
+      "height": 720
+    },
+    "errors": []
+  },
+  {
+    "case": "catalog-long-360",
+    "viewport": {
+      "width": 360,
+      "height": 640
+    },
+    "errors": []
+  },
+  {
+    "case": "player-long-1920",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "errors": []
+  },
+  {
+    "case": "player-long-1280",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "errors": []
+  },
+  {
+    "case": "player-long-800",
+    "viewport": {
+      "width": 800,
+      "height": 600
+    },
+    "errors": []
+  },
+  {
+    "case": "player-long-560",
+    "viewport": {
+      "width": 560,
+      "height": 720
+    },
+    "errors": []
+  },
+  {
+    "case": "player-long-360",
+    "viewport": {
+      "width": 360,
+      "height": 640
+    },
+    "errors": []
+  },
+  {
+    "case": "player-error-1920",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "errors": []
+  },
+  {
+    "case": "player-error-1280",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "errors": []
+  },
+  {
+    "case": "player-error-360",
+    "viewport": {
+      "width": 360,
+      "height": 640
+    },
+    "errors": []
+  }
+]

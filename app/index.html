@@ -21,22 +21,36 @@
         <label for="channel">Kanál na Kicku</label>
         <input id="channel" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Název kanálu nebo odkaz kick.com/…" aria-describedby="error">
         <p id="error" role="alert"></p>
-        <button id="play" type="submit" class="primary">Přehrát živě <span aria-hidden="true">▶</span></button>
-        <button id="recordings" type="button">Záznamy</button>
+        <div class="home-actions">
+          <button id="play" type="submit" class="primary">Přehrát živě <span aria-hidden="true">▶</span></button>
+          <button id="recordings" type="button">Záznamy</button>
+        </div>
       </form>
     </section>
     <section id="recent" aria-labelledby="recent-heading" hidden>
       <h2 id="recent-heading">Naposledy spuštěné</h2>
       <div id="recent-channels"></div>
+      <nav id="recent-pages" aria-label="Stránky nedávných kanálů" hidden>
+        <button id="recent-previous" type="button" aria-label="Předchozí kanály">←</button>
+        <span id="recent-page-number"></span>
+        <button id="recent-next" type="button" aria-label="Další kanály">→</button>
+      </nav>
     </section>
     </div>
-    <footer><span>↑ ↓ Výběr &nbsp; OK Potvrdit &nbsp; Zpět Návrat</span><small>Neoficiální přehrávač pro Kick · Bez chatu</small></footer>
+    <footer><span>↑ ↓ Výběr &nbsp; OK Potvrdit &nbsp; Zpět Návrat</span><small>Neoficiální přehrávač pro Kick · Bez chatu · <span id="app-version">v0.6.0</span></small></footer>
   </main>
   <section id="catalog" aria-labelledby="catalog-heading" hidden>
-    <p class="eyebrow">Kanál na Kicku</p>
-    <h1 id="catalog-heading"></h1>
-    <p id="channel-status" role="status"></p>
-    <button id="live" type="button" class="primary" hidden><span class="live-dot" aria-hidden="true"></span>Přehrát živě</button>
+    <div class="catalog-header">
+      <div class="catalog-description">
+        <p class="eyebrow">Kanál na Kicku</p>
+        <h1 id="catalog-heading"></h1>
+        <p id="channel-status" role="status"></p>
+      </div>
+      <div class="catalog-actions">
+        <button id="catalog-back" type="button">Změnit kanál</button>
+        <button id="live" type="button" class="primary" hidden><span class="live-dot" aria-hidden="true"></span>Přehrát živě</button>
+      </div>
+    </div>
     <h2>Záznamy vysílání</h2>
     <p id="videos-status" role="status"></p>
     <button id="catalog-retry" type="button" hidden>Zkusit znovu</button>
@@ -46,7 +60,6 @@
       <span id="page-number"></span>
       <button id="next-page" type="button">Další →</button>
     </nav>
-    <button id="catalog-back" type="button">Změnit kanál</button>
   </section>
   <section id="watch" aria-label="Přehrávač" tabindex="-1" hidden>
     <div id="video-host"></div>

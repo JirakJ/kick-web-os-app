@@ -21,12 +21,14 @@ console.log('Channel validation: passed (valid names, links, length, URL injecti
 
 const vm = require('node:vm');
 const fs = require('node:fs');
-let elements, document, window, navigator, bridges, timers, clock;
+const appVersion=JSON.parse(fs.readFileSync('app/appinfo.json','utf8')).version;
+assert.equal(fs.readFileSync('app/index.html','utf8').match(/id="app-version">v([^<]+)</)[1],appVersion,'Footer must match the packaged app version');
+let elements, document, window, navigator, bridges, timers, clock, created, textWrites;
 function element(id = '') {
   return {
     id, hidden: false, disabled: false, value: '', _text: '', children: [], attrs: {}, handlers: {},
     get textContent(){return this._text+this.children.map(c=>c.textContent).join('');},
-    set textContent(value){this._text=String(value);this.children.forEach(c=>{c.parentNode=null;});this.children=[];},
+    set textContent(value){textWrites[id]=(textWrites[id]||0)+1;this._text=String(value);this.children.forEach(c=>{c.parentNode=null;});this.children=[];},
     paused: true, _time: 0, duration: 300, readyState: 0, seeking: false, seeks: [],
     get currentTime() { return this._time; },
     set currentTime(value) { this._time = value; this.seeks.push(value); this.seeking = true; },
@@ -50,9 +52,9 @@ function element(id = '') {
 const stored = new Map();
 const storage = {getItem(key){return stored.get(key)||null;},setItem(key,value){stored.set(key,value);}};
 function boot(localStorage = storage, bridgeMode = 'ok') {
-  elements = {}; bridges = []; timers = new Map(); clock = 1000;
+  elements = {}; bridges = []; timers = new Map(); clock = 1000; created = {}; textWrites = {};
   document = {hidden:false,activeElement:null,handlers:{},
-    getElementById(id){return elements[id];},createElement(){return element();},
+    getElementById(id){return elements[id];},createElement(tag){created[tag]=(created[tag]||0)+1;return element();},
     addEventListener(name,fn){this.handlers[name]=fn;}};
   for(const [,id] of fs.readFileSync('app/index.html','utf8').matchAll(/id="([^"]+)"/g)) elements[id]=element(id);
   window={innerWidth:1920,handlers:{},addEventListener(name,fn){this.handlers[name]=fn;},scrollTo(){}};
@@ -94,7 +96,7 @@ function respond(data={},prepare=true){
 function submit(value){elements.channel.value=value;elements['channel-form'].handlers.submit({preventDefault(){}});}
 function click(id){elements[id].handlers.click();}
 function key(keyCode){document.handlers.keydown({keyCode,target:document.activeElement,preventDefault(){}});}
-function names(){return elements['recent-channels'].children.map(b=>b.textContent);}
+function names(){return elements['recent-channels'].children.map(row=>row.firstChild.firstChild.textContent);}
 function startVOD(){click('watch-recordings');elements.videos.firstChild.handlers.click();qualityResponse();ready();}
 
 boot({getItem(){throw Error('Denied');},setItem(){throw Error('Full');}});
@@ -177,7 +179,7 @@ boot();
 for(let i=0;i<8;i++){submit('channel-'+i);respond();click('back');}
 assert.deepEqual(names(),['channel-7','channel-6','channel-5','channel-4','channel-3','channel-2']);
 boot();assert.equal(elements.channel.value,'channel-7');
-elements['recent-channels'].children[2].handlers.click();respond();assert.equal(names()[0],'channel-5');
+elements['recent-channels'].children[2].firstChild.handlers.click();respond();assert.equal(names()[0],'channel-5');
 window.handlers.pagehide();assert.equal(videoSource(),undefined);
 stored.set('kick-channel','legacy');
 for(const bad of ['{broken','{}','null','false']){stored.set('kick-recent-channels',bad);boot();assert.deepEqual(names(),['legacy']);}
@@ -302,21 +304,86 @@ for(const symbol of sampledSymbols.concat(compoundSymbols)){
  openReplay();checkSymbols(elements['video-title']);key(461);click('catalog-back');
 }
 console.log('Title symbols: passed (68 sampled sequences, 8 compound cases, catalog/player isolation and ordinary text spacing).');
+const performanceReplays=Array.from({length:30},(_,i)=>({...vod,id:'perf-'+i,thumbnail:'https://files.kick.com/'+i+'.jpg'}));
+boot();submit('example');respond({live:null,videos:performanceReplays});
+assert.equal(created.img,6,'Render only the six visible thumbnails, once per catalog load');
+const perfImages=created.img;
+boot();submit('example');respond({videos:performanceReplays});
+assert.equal(created.img||0,0,'Autoplay must not construct a hidden catalog');
+click('watch-recordings');assert.equal(created.img,6);
+openReplay();
+const beforeTimeWrites=textWrites.elapsed||0,beforeToggleWrites=textWrites.toggle||0;
+for(let i=1;i<=240;i++){node()._time=i/4;node().handlers.timeupdate();}
+const timelineWrites=textWrites.elapsed-beforeTimeWrites,toggleWrites=textWrites.toggle-beforeToggleWrites;
+assert.ok(timelineWrites<=60,'Timeline text changes at most once per second during continuous playback');
+assert.equal(toggleWrites,0,'Steady playback never rewrites the pause label');
+assert.equal(elements.elapsed.textContent,'1:00');
+assert.equal(elements['seek-progress'].value,60);
+click('toggle');assert.equal(elements.toggle.textContent,'Pokračovat','Transitions update immediately');
+for(const [width,columns] of [[560,1],[800,2],[1280,3]]){
+ boot();window.innerWidth=width;submit('example');respond({live:null,videos:performanceReplays});
+ elements.videos.firstChild.focus();key(40);assert.equal(document.activeElement,elements.videos.children[columns]);
+}
+boot({getItem(key){return key==='kick-recent-channels'?'["'+'x'.repeat(4096)+'"]':null;},setItem(){}});
+assert.deepEqual(names(),[],'Oversized recent history is ignored');
+submit('example');bridges.at(-1).onservicecallback(' '.repeat(1048577));
+assert.match(elements['channel-status'].textContent,/neplatnou/,'Oversized bridge payload fails visibly');
+console.log('Performance budgets: '+JSON.stringify({catalogThumbnails:perfImages,timelineTextWritesPerMinute:timelineWrites,pauseLabelWritesDuringPlayback:toggleWrites}));
+
+// Recent channels: page-local status requests, removal, persistence and stale callbacks.
+const recentStore=new Map([['kick-recent-channels',JSON.stringify(Array.from({length:50},(_,i)=>'saved-'+i))],['kick-channel','legacy']]);
+const recentStorage={getItem:k=>recentStore.get(k)||null,setItem:(k,v)=>recentStore.set(k,v)};
+const recentRow=i=>elements['recent-channels'].children[i];
+const statusReply=(bridge,live)=>bridge.onservicecallback(JSON.stringify({returnValue:true,statuses:bridge.payload.channels.map(channel=>({channel,live}))}));
+boot(recentStorage);
+assert.equal(names().length,6);assert.equal(elements['recent-page-number'].textContent,'1 / 9');
+assert.equal(bridges[0].payload.channels.length,6);assert.match(bridges[0].uri,/statuses$/);
+const obsoleteStatus=bridges[0];click('recent-next');assert.equal(obsoleteStatus.cancelled,true);
+statusReply(obsoleteStatus,true);assert.equal(recentRow(0).firstChild.children[1].hidden,true);
+statusReply(bridges.at(-1),true);assert.equal(recentRow(0).firstChild.children[1].hidden,false);
+assert.match(recentRow(0).firstChild.attrs['aria-label'],/právě vysílá/);
+recentRow(0).firstChild.focus();key(39);assert.equal(document.activeElement,recentRow(0).children[1]);
+key(40);assert.equal(document.activeElement,recentRow(1).children[1]);
+recentRow(0).children[1].handlers.click();assert.equal(names()[0],'saved-7');
+assert.equal(JSON.parse(recentStore.get('kick-recent-channels')).includes('saved-6'),false);
+assert.equal(document.activeElement,recentRow(0).firstChild);
+advance(60000);assert.equal(recentRow(0).firstChild.children[1].hidden,true,'Expired status is hidden while refreshing');
+statusReply(bridges.at(-1),false);assert.equal(recentRow(0).firstChild.children[1].hidden,true);
+click('recent-previous');const pendingStatus=bridges.at(-1);submit('new-channel');
+assert.equal(pendingStatus.cancelled,true);respond({live:null});
+assert.equal(JSON.parse(recentStore.get('kick-recent-channels')).length,50);
+click('catalog-back');submit('newer-channel');respond({live:null});
+assert.equal(JSON.parse(recentStore.get('kick-recent-channels')).length,50);
+boot(recentStorage);assert.equal(names()[0],'newer-channel');
+for(let i=0;i<8;i++)click('recent-next');
+assert.equal(names().length,2);recentRow(1).children[1].handlers.click();recentRow(0).children[1].handlers.click();
+assert.equal(elements['recent-page-number'].textContent,'8 / 8','Deleting the final row clamps the page');
+recentStore.set('kick-recent-channels','["only"]');boot(recentStorage);
+recentRow(0).children[1].handlers.click();assert.equal(elements.recent.hidden,true);assert.equal(document.activeElement,elements.channel);
+boot(recentStorage);assert.deepEqual(names(),[],'Deleted channels are not restored by legacy migration');
+recentStore.set('kick-recent-channels','["only"]');boot(recentStorage);
+bridges.at(-1).onservicecallback('x'.repeat(4097));assert.equal(recentRow(0).firstChild.children[1].hidden,true);
+advance(60000);const timeoutStatus=bridges.at(-1);advance(40000);assert.equal(timeoutStatus.cancelled,true);
+document.hidden=true;document.handlers.visibilitychange();const hiddenRequests=bridges.length;
+advance(120000);assert.equal(bridges.length,hiddenRequests,'No background status polling while hidden');
+console.log('Recent channels: passed (50 stored, six per page, LIVE status, expiry, cancellation, removal and restart).');
 
 async function testService() {
   const {EventEmitter}=require('node:events');
-  let handlers={}, calls=[], replies=[], status=200, transport='ok', waiting=[];
+  let handlers={}, calls=[], replies=[], status=200, transport='ok', waiting=[], aborted=0;
+  const serviceTimers=new Map();
   const responseData={slug:'example',playback_url:live.url,livestream:{is_live:true,session_title:'Live'}};
   const good={is_live:false,source:vod.url,session_title:'Public',duration:60000,thumbnail:{src:'https://files.kick.com/test.jpg'},video:{uuid:'fd0d9069-63ca-42b2-b7b9-4d23134506b1',is_private:false,status:'public'}};
   let recordings=[good,{...good,video:{is_private:true,status:'public'}},{...good,is_live:true},{...good,source:'https://evil.test/x.m3u8'},{...good,video:{is_private:false,status:'public',deleted_at:'now'}}];
   let playlist='#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=7000000,RESOLUTION=1920x1080,FRAME-RATE=60\n1080.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=18000000,RESOLUTION=3840x2160,FRAME-RATE=30\n4k.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=11000000,RESOLUTION=2560x1440,FRAME-RATE=60\n1440.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=90000000,RESOLUTION=7680x4320\n8k.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=200000\naudio.m3u8';
   const https={get(options, callback){
     calls.push(options);
-    const req=new EventEmitter();req.abort=()=>{};
+    const req=new EventEmitter();req.abort=()=>{aborted++;};
     const deliver=()=>{
       const res=new EventEmitter();res.statusCode=status;res.resume=()=>{};res.setEncoding=()=>{};
       callback(res);
       if(transport==='aborted'){res.emit('aborted');return;}
+      if(transport==='response-error'){res.emit('error',Error('response failed'));return;}
       if(transport==='large'){res.emit('data','ž'.repeat(600000));res.emit('end');return;}
       if(transport==='invalid'){res.emit('data','null');res.emit('end');return;}
       res.emit('data',options.hostname==='kick.com' ? JSON.stringify(options.path.endsWith('/videos')?recordings:responseData) : playlist);res.emit('end');
@@ -325,7 +392,8 @@ async function testService() {
     return req;
   }};
   function Service(name){assert.equal(name,'cz.jirak.kicktv.service');this.register=(name,fn)=>{handlers[name]=fn;};}
-  vm.runInNewContext(fs.readFileSync('service/index.js','utf8'),{require(name){return name==='https'?https:name==='url'?require('node:url'):Service;},Promise,Buffer,setTimeout,clearTimeout});
+  vm.runInNewContext(fs.readFileSync('service/index.js','utf8'),{require(name){return name==='https'?https:name==='url'?require('node:url'):Service;},Promise,Buffer,
+    setTimeout(fn,ms){assert.equal(ms,12000);const id={};serviceTimers.set(id,fn);return id;},clearTimeout(id){serviceTimers.delete(id);}});
   const send=payload=>handlers.channel({payload,respond(data){replies.push(data);}});
   for(const channel of [undefined,null,'../admin','https://evil.test','foo?bar','A','a'.repeat(26)])send({channel});
   assert.equal(calls.length,0,'Invalid channels never reach the network');
@@ -349,6 +417,7 @@ async function testService() {
   assert.equal(replies[0].live,null);
   replies=[];status=403;send({channel:'example'});await new Promise(r=>setImmediate(r));
   assert.equal(replies[0].returnValue,false);assert.match(replies[0].errorText,/403/);
+  assert.equal(aborted,2,'Both HTTP error responses release their network connections');
   replies=[];status=200;
   handlers.prepare({payload:{url:vod.url},respond(d){replies.push(d);}});
   await new Promise(r=>setImmediate(r));
@@ -361,6 +430,9 @@ async function testService() {
     await new Promise(r=>setImmediate(r));
     assert.equal(replies[0].best.height,height,'Select the next available resolution when higher variants are absent');
   }
+  playlist='#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=7000000,RESOLUTION=1920x1080,FRAME-RATE='+('9'.repeat(400))+'\nx.m3u8';
+  replies=[];handlers.prepare({payload:{url:vod.url},respond(d){replies.push(d);}});await new Promise(r=>setImmediate(r));
+  assert.equal(replies[0].best.fps,0,'Invalid frame rates never reach UI labels');
   const before=calls.length;
   for(const url of ['http://stream.kick.com/x.m3u8','https://stream.kick.com.evil.test/x.m3u8','https://user@stream.kick.com/x.m3u8','https://127.0.0.1/x.m3u8','file:///tmp/a.m3u8']) handlers.prepare({payload:{url},respond(d){assert.equal(d.returnValue,false);}});
   assert.equal(calls.length,before,'Playlist endpoint rejects untrusted origins before any request');
@@ -374,13 +446,39 @@ async function testService() {
   assert.equal(calls.length-bounded,6,'At most six network requests may be active');
   transport='ok';waiting.splice(0).forEach(fn=>fn());await new Promise(r=>setImmediate(r));
   assert.equal(replies.length,10);assert.ok(replies.some(r=>/Probíhá/.test(r.errorText)));
-  for(const [mode,pattern] of [['aborted',/přerušil/],['large',/velká/],['invalid',/nevrátil/]]){
+  transport='wait';replies=[];const beforeTimeout=aborted;
+  send({channel:'example'});assert.equal(serviceTimers.size,2);
+  [...serviceTimers.values()].forEach(fn=>fn());await new Promise(r=>setImmediate(r));
+  assert.equal(serviceTimers.size,0);assert.equal(aborted-beforeTimeout,2);
+  assert.equal(replies.length,1);assert.match(replies[0].errorText,/včas/);
+  waiting.splice(0);
+  for(const [mode,pattern] of [['aborted',/přerušil/],['response-error',/response failed/],['large',/velká/],['invalid',/nevrátil/]]){
+    const beforeAborted=aborted;
     replies=[];transport=mode;send({channel:'example'});await new Promise(r=>setImmediate(r));
     assert.equal(replies.length,1);assert.match(replies[0].errorText,pattern);
+    if(mode!=='invalid')assert.equal(aborted-beforeAborted,2,'Failed or oversized transfers are aborted');
   }
   transport='ok';handlers.channel({payload:{channel:'example'},respond(){throw Error('client closed');}});
   await new Promise(r=>setImmediate(r));
   replies=[];send({channel:'example'});await new Promise(r=>setImmediate(r));assert.equal(replies[0].returnValue,true);
+  const statuses=channels=>handlers.statuses({payload:{channels},respond(d){replies.push(d);}});
+  replies=[];const invalidStart=calls.length;
+  for(const channels of [null,[],['../bad'],['example','example'],Array.from({length:7},(_,i)=>'c'+i)])statuses(channels);
+  assert.equal(calls.length,invalidStart);assert.ok(replies.every(r=>!r.returnValue));
+  replies=[];responseData.livestream={is_live:true};const statusStart=calls.length;
+  statuses(['example','missing']);await new Promise(r=>setImmediate(r));
+  assert.equal(replies[0].statuses[0].live,true);assert.equal(replies[0].statuses[1].live,null);
+  assert.ok(calls.slice(statusStart).every(c=>!c.path.endsWith('/videos')));
+  replies=[];responseData.livestream=null;statuses(['example']);await new Promise(r=>setImmediate(r));
+  assert.equal(replies[0].statuses[0].live,false);
+  transport='wait';replies=[];const backgroundStart=calls.length;
+  statuses(['one','two','three','four','five','six']);
+  assert.equal(calls.length-backgroundStart,2,'One status batch uses two workers');
+  statuses(['seven','eight']);statuses(['nine','ten']);
+  assert.equal(calls.length-backgroundStart,4,'Background requests leave two foreground slots');
+  send({channel:'example'});assert.equal(calls.length-backgroundStart,6,'Foreground channel lookup retains capacity');
+  transport='ok';waiting.splice(0).forEach(fn=>fn());await new Promise(r=>setImmediate(r));
+  assert.equal(serviceTimers.size,0);
   console.log('TV service: passed (channel validation, fixed API origin, public replays only, media URL validation, offline and HTTP errors).');
 }
 testService().catch(e=>{console.error(e);process.exitCode=1;});
