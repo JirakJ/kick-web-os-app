@@ -254,12 +254,22 @@ document.hidden=false;document.handlers.visibilitychange();key(461);assert.ok(re
 console.log('Replay history: passed (actual progress, stable IDs, last-viewed badges, completion, restarts, bounded storage and storage failures).');
 boot();submit('astatoro');respond({live:null,videos:[{...vod,title:'x'.repeat(199)+'🔴tail'}]});
 assert.equal(elements.videos.firstChild.children[1].textContent,'x'.repeat(199)+'🔴','UI title limits preserve complete emoji');
-const symbolTitle='🔴ONE🔴TWO🔴 👩🏽‍💻 🇨🇿 <img src=x>';
+const symbolTitle='🔴ONE🔴TWO🔴 👩🏽‍💻 🇨🇿 🪖Kdo mi bude krýt záda? 778-037 🫡 <img src=x>';
 click('catalog-back');submit('astatoro');respond({live:null,videos:[{...vod,title:symbolTitle}]});
 const renderedTitle=elements.videos.firstChild.children[1];
 assert.equal(renderedTitle.textContent,symbolTitle,'Untrusted titles stay plain text');
-assert.deepEqual(renderedTitle.children.filter(c=>c.className==='title-symbol').map(c=>c.textContent),['🔴','🔴','🔴','👩🏽‍💻','🇨🇿']);
+assert.deepEqual(renderedTitle.children.filter(c=>c.className==='title-symbol').map(c=>c.textContent),['🔴','🔴','🔴','👩🏽‍💻','🇨🇿','🪖','🫡']);
+assert.ok(renderedTitle.children.filter(c=>!c.className).some(c=>c.textContent.includes('778-037 ')),'Text and spaces must stay outside emoji spans');
 openReplay();assert.equal(elements['video-title'].textContent,symbolTitle,'Catalog and player use the same symbol rendering');
+// The pinned font has locally verified helmet/saluting-face glyphs; retain it in every IPK.
+const emojiFont=fs.readFileSync('app/fonts/NotoEmoji-Regular.woff2');
+assert.equal(require('node:crypto').createHash('sha256').update(emojiFont).digest('hex'),'72149441d478acb7e5e4fe27adbabde4330f86affed8b3301e4bc4c4d92d53c1');
+assert.match(fs.readFileSync('app/fonts/OFL.txt','utf8'),/SIL OPEN FONT LICENSE Version 1.1/);
+const css=fs.readFileSync('app/style.css','utf8');
+assert.match(css,/\.title-symbol\s*\{[^}]*font-family:[^}]*"Kick Emoji"/);
+assert.doesNotMatch(css.match(/body, input, button\s*\{[^}]*\}/)[0],/Emoji/,'Body text must keep its original font metrics');
+assert.match(css,/unicode-range:\s*U\+200D, U\+FE0E-FE0F, U\+10000-10FFFF/,'The fallback cannot change ASCII spacing');
+assert.match(fs.readFileSync('app/index.html','utf8'),/font-src 'self' file:/,'Packaged local fonts must be allowed by CSP');
 
 async function testService() {
   const {EventEmitter}=require('node:events');
