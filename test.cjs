@@ -36,6 +36,7 @@ function element(id = '') {
     appendChild(child) { this.children.push(child); child.parentNode = this; if (child.id) elements[child.id] = child; },
     removeChild(child) { this.children.splice(this.children.indexOf(child), 1); child.parentNode = null; },
     setAttribute(name, value) { this.attrs[name] = value; },
+    getAttribute(name) { return name in this.attrs ? this.attrs[name] : null; },
     removeAttribute(name) { delete this.attrs[name]; },
     addEventListener(name, fn) { this.handlers[name] = fn; },
     focus() {
@@ -51,15 +52,23 @@ function element(id = '') {
 }
 const stored = new Map();
 const storage = {getItem(key){return stored.get(key)||null;},setItem(key,value){stored.set(key,value);}};
-function boot(localStorage = storage, bridgeMode = 'ok') {
+function boot(localStorage = storage, bridgeMode = 'ok', locale = 'cs-CZ') {
   elements = {}; bridges = []; timers = new Map(); clock = 1000; created = {}; textWrites = {};
+  const labelled=[];
   document = {hidden:false,activeElement:null,handlers:{},
     getElementById(id){return elements[id];},createElement(tag){created[tag]=(created[tag]||0)+1;return element();},
+    querySelectorAll(selector){assert.equal(selector,'[data-i18n],[data-i18n-attr]');return labelled;},
     addEventListener(name,fn){this.handlers[name]=fn;}};
-  for(const [,id] of fs.readFileSync('app/index.html','utf8').matchAll(/id="([^"]+)"/g)) elements[id]=element(id);
+  for(const [tag] of fs.readFileSync('app/index.html','utf8').matchAll(/<[a-z0-9]+\s[^>]*>/g)){
+    const attrs=Object.fromEntries([...tag.matchAll(/([a-z0-9-]+)="([^"]*)"/g)].map(([,n,v])=>[n,v]));
+    if(!attrs.id&&!attrs['data-i18n']&&!attrs['data-i18n-attr'])continue;
+    const node=element(attrs.id||'');if(attrs.id)elements[attrs.id]=node;
+    for(const name of ['data-i18n','data-i18n-attr','placeholder','aria-label'])if(name in attrs)node.attrs[name]=attrs[name];
+    if(attrs['data-i18n']||attrs['data-i18n-attr'])labelled.push(node);
+  }
   window={innerWidth:1920,handlers:{},addEventListener(name,fn){this.handlers[name]=fn;},scrollTo(){}};
-  navigator={onLine:true};
-  const context={document,window,navigator,localStorage,Date:{now:()=>clock},
+  navigator={onLine:true,language:locale};
+  const context={document,window,navigator,localStorage,Date:{now:()=>clock},webOSSystem:{locale,platformBack(){}},
     setTimeout(fn,ms){const id={};timers.set(id,{fn,ms,at:clock+ms});return id;},clearTimeout(id){timers.delete(id);}};
   if(bridgeMode!=='missing')context.PalmServiceBridge=function(){
     if(bridgeMode==='throw')throw Error('bridge unavailable');
@@ -67,7 +76,9 @@ function boot(localStorage = storage, bridgeMode = 'ok') {
     this.call=(uri,payload)=>{this.uri=uri;this.payload=JSON.parse(payload);};
     this.cancel=()=>{this.cancelled=true;};
   };
+  if(locale===null){delete context.webOSSystem;delete navigator.language;}
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync('app/i18n.js','utf8'),context);
   vm.runInContext(fs.readFileSync('app/player.js','utf8'),context);
   vm.runInContext(fs.readFileSync('app/app.js','utf8'),context);
 }
@@ -368,9 +379,91 @@ document.hidden=true;document.handlers.visibilitychange();const hiddenRequests=b
 advance(120000);assert.equal(bridges.length,hiddenRequests,'No background status polling while hidden');
 console.log('Recent channels: passed (50 stored, six per page, LIVE status, expiry, cancellation, removal and restart).');
 
+// UI language follows the TV locale; every language covers every key with identical placeholders.
+const i18n=require('./app/i18n.js');
+const baseKeys=Object.keys(i18n.strings.en).sort();
+const placeholders=text=>(text.match(/\{[a-z]+\}/g)||[]).sort();
+assert.ok(i18n.languages.length>=13&&i18n.languages.includes('cs')&&i18n.languages.includes('en'));
+for(const lang of i18n.languages){
+ assert.deepEqual(Object.keys(i18n.strings[lang]).sort(),baseKeys,lang+' must translate every key');
+ for(const key of baseKeys){
+  const text=i18n.strings[lang][key];
+  assert.ok(typeof text==='string'&&text.length>0&&text.length<=200,lang+'.'+key);
+  assert.deepEqual(placeholders(text),placeholders(i18n.strings.en[key]),lang+'.'+key+' placeholders');
+  assert.doesNotMatch(text,/[<>]/,'Translations never carry markup');
+ }
+ const resource=JSON.parse(fs.readFileSync('app/resources/'+lang+'/appinfo.json','utf8'));
+ assert.deepEqual(resource,{title:i18n.strings[lang].title,appDescription:i18n.strings[lang].footer_note},'Launcher title for '+lang);
+}
+assert.equal(fs.readdirSync('app/resources').sort().join(),[...i18n.languages].sort().join(),'No stray launcher resources');
+const appinfo=JSON.parse(fs.readFileSync('app/appinfo.json','utf8'));
+assert.equal(appinfo.title,i18n.strings.en.title);assert.equal(appinfo.appDescription,i18n.strings.en.footer_note);
+assert.equal(JSON.parse(fs.readFileSync('package.json','utf8')).version,appVersion);
+assert.equal(JSON.parse(fs.readFileSync('service/package.json','utf8')).version,appVersion,'App, service and package versions stay in step');
+// Markup declares its keys; the English defaults in index.html must match the dictionary so the HTML never drifts.
+const html=fs.readFileSync('app/index.html','utf8');let labelledCount=0;
+for(const [,tag,inner] of html.matchAll(/(<[a-z0-9]+\s[^>]*>)([^<]*)/g)){
+ const attrs=Object.fromEntries([...tag.matchAll(/([a-z0-9-]+)="([^"]*)"/g)].map(([,n,v])=>[n,v]));
+ if(attrs['data-i18n']){labelledCount++;assert.ok(baseKeys.includes(attrs['data-i18n']),attrs['data-i18n']);
+  assert.equal(inner.replace(/&nbsp;/g,'\u00A0'),i18n.strings.en[attrs['data-i18n']],'HTML default for '+attrs['data-i18n']);}
+ if(attrs['data-i18n-attr'])for(const pair of attrs['data-i18n-attr'].split(';')){labelledCount++;const [name,key]=pair.split(':');
+  assert.ok(baseKeys.includes(key),key);assert.equal(attrs[name],i18n.strings.en[key],'HTML default attribute '+name+' for '+key);}
+}
+assert.ok(labelledCount>=28,'Static labels are declared in markup');
+for(const [candidates,expected] of [[['cs-CZ'],'cs'],[['sk_SK'],'sk'],[['SK'],'sk'],[['pt-BR'],'pt'],[['zh-Hans-CN','de-AT'],'de'],[['xx'],'en'],[[null,42,{}],'en'],[['a'.repeat(40)],'en'],[[],'en'],[['en-GB','cs'],'en'],[['tr-TR'],'tr'],[['uk'],'uk']])
+ assert.equal(i18n.language(candidates),expected,JSON.stringify(candidates));
+assert.equal(i18n.detect({webOSSystem:{locale:'de-DE'},navigator:{language:'cs'}}),'de','webOS locale wins');
+assert.equal(i18n.detect({PalmSystem:{locale:'sk-SK'},navigator:{language:'cs'}}),'sk');
+assert.equal(i18n.detect({navigator:{language:'xx',languages:['yy','pl-PL']}}),'pl');
+assert.equal(i18n.detect({}),'en');assert.equal(i18n.detect({get webOSSystem(){throw Error('denied');}}),'en');
+const cs=i18n.translator('cs');
+assert.equal(cs('p_media_error',{code:3}),'TV nemůže přehrát video (chyba 3).');
+assert.equal(cs('svc_http',{}),'Kick API: HTTP {status}');assert.equal(cs('missing_key'),'missing_key');
+assert.equal(i18n.translator('xx')('retry'),'Try again');assert.equal(i18n.translator('xx').language,'xx');
+boot(storage,'ok','en-US');
+assert.equal(elements.heading.textContent,'What will you watch?');assert.equal(elements.channel.attrs.placeholder,'Channel name or kick.com/… link');
+assert.equal(elements['play-label'].textContent,'Play live');assert.equal(elements['live-label'].textContent,'Play live');
+assert.equal(elements.seek.attrs['aria-label'],'Replay position');assert.equal(elements.toggle.textContent,'Pause');
+assert.equal(document.title,'Stream for Kick');
+submit('example');respond({live:null,videos:[{...vod,title:''}],videosError:{errorCode:'videos_unavailable',errorParams:{},errorText:'x'}});
+assert.equal(elements['channel-status'].textContent,'Offline · Choose one of the replays.');
+assert.equal(elements['videos-status'].textContent,'The replay list is not available.');assert.equal(elements['catalog-retry'].hidden,false);
+assert.equal(elements.videos.firstChild.children[1].textContent,'Replay','Empty titles use the localized fallback');
+assert.match(elements.videos.firstChild.children[2].textContent,/0 h 10 min/);
+elements.videos.firstChild.handlers.click();qualityResponse();ready();
+assert.equal(elements.quality.textContent,'Highest available: 1080p · 60 fps');
+node().handlers.ended();assert.equal(elements['playback-status'].textContent,'The replay has ended. Choose another.');
+assert.equal(elements.toggle.textContent,'Resume');
+click('toggle');ready();node().error={code:3};node().handlers.error();advance(600);node().error={code:3};node().handlers.error();advance(600);
+node().error={code:3};node().handlers.error();advance(600);
+assert.equal(elements['playback-status'].textContent,'The TV cannot play this video (error 3). Select Try again or another replay.');
+assert.equal(elements.toggle.textContent,'Try again');
+click('back');
+for(const [reply,expected] of [[{errorCode:'http',errorParams:{status:403},errorText:'Kick API: HTTP 403'},'Kick API: HTTP 403'],
+ [{errorCode:'busy',errorText:'x'},'Another download is in progress. Try again in a moment.'],
+ [{errorCode:'<script>',errorText:'y'.repeat(500)},'y'.repeat(200)],
+ [{errorCode:'not_a_key',errorText:''},'The channel could not be loaded. Try again.'],
+ [{errorCode:'http',errorParams:{status:'<b>'.repeat(40)},errorText:''},'Kick API: HTTP {status}'],
+ [{errorCode:'http',errorParams:{status:{}},errorText:''},'Kick API: HTTP {status}'],
+ [{errorCode:'internal',errorParams:{},errorText:'raw engine text'},'The data from Kick could not be processed.']]){
+ submit('failed');respond({returnValue:false,...reply});assert.equal(elements['channel-status'].textContent,expected);click('catalog-back');
+}
+navigator.onLine=false;submit('example');assert.equal(elements.error.textContent,'The TV is not connected to the internet. Check the connection.');navigator.onLine=true;
+submit('example');respond({live:null,videos:[],videosError:'legacy string'});assert.equal(elements['videos-status'].textContent,'This channel has no public replays.','Only object-shaped replay errors are rendered');click('catalog-back');
+assert.equal(elements.pages.attrs['aria-label'],'Replay pages');assert.equal(elements['videos-heading'].textContent,'Stream replays');
+boot(storage,'ok','sk-SK');assert.equal(elements.heading.textContent,'Čo si pustíš?');
+submit('failed');respond({returnValue:false,errorCode:'timeout',errorText:'late'});assert.equal(elements['channel-status'].textContent,'Kick neodpovedal včas. Skúste to znova.');
+boot(storage,'ok','tlh');assert.equal(elements.heading.textContent,'What will you watch?','Unsupported TV languages fall back to English');
+boot(storage,'ok',null);assert.equal(elements.heading.textContent,'What will you watch?','No locale source still renders');
+boot(storage,'missing','fr-FR');submit('example');assert.equal(elements['channel-status'].textContent,'La lecture nécessite l’installation de l’application avec son service sur le téléviseur.');
+boot();assert.equal(elements.heading.textContent,'Co si pustíš?');
+console.log('Localization: passed ('+i18n.languages.length+' languages, key coverage, placeholder parity, locale detection, launcher resources, service error codes).');
+
 async function testService() {
   const {EventEmitter}=require('node:events');
-  let handlers={}, calls=[], replies=[], status=200, transport='ok', waiting=[], aborted=0;
+  let handlers={}, calls=[], replies=[], status=200, transport='ok', waiting=[], aborted=0, agents=[], resets={};
+  const settle=async(condition)=>{const until=Date.now()+5000;while(!condition()&&Date.now()<until)await new Promise(r=>setImmediate(r));assert.ok(condition(),'Reply arrived');};
+  const gzip=text=>require('node:zlib').gzipSync(Buffer.from(text,'utf8'));
   const serviceTimers=new Map();
   const responseData={slug:'example',playback_url:live.url,livestream:{is_live:true,session_title:'Live'}};
   const good={is_live:false,source:vod.url,session_title:'Public',duration:60000,thumbnail:{src:'https://files.kick.com/test.jpg'},video:{uuid:'fd0d9069-63ca-42b2-b7b9-4d23134506b1',is_private:false,status:'public'}};
@@ -378,10 +471,20 @@ async function testService() {
   let playlist='#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=7000000,RESOLUTION=1920x1080,FRAME-RATE=60\n1080.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=18000000,RESOLUTION=3840x2160,FRAME-RATE=30\n4k.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=11000000,RESOLUTION=2560x1440,FRAME-RATE=60\n1440.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=90000000,RESOLUTION=7680x4320\n8k.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=200000\naudio.m3u8';
   const https={get(options, callback){
     calls.push(options);
+    assert.ok(/^[a-z0-9.-]+$/.test(options.hostname)&&options.path.startsWith('/'),'Host and path are split safely');
     const req=new EventEmitter();req.abort=()=>{aborted++;};
     const deliver=()=>{
-      const res=new EventEmitter();res.statusCode=status;res.resume=()=>{};res.setEncoding=()=>{};
+      const resetCount=resets[options.path]||0;
+      if(transport==='reset-once'&&resetCount<1||transport==='reset-twice'&&resetCount<2){resets[options.path]=resetCount+1;const e=Error('socket hang up');e.code='ECONNRESET';req.emit('error',e);return;}
+      const res=new EventEmitter();res.statusCode=status;res.resume=()=>{};res.setEncoding=()=>{};res.headers={};
+      res.pipe=dest=>{res.on('data',c=>dest.write(c));res.on('end',()=>dest.end());return dest;};
+      if(transport.startsWith('gzip'))res.headers['content-encoding']='gzip';
+      if(transport==='unsupported-encoding')res.headers['content-encoding']='br';
       callback(res);
+      if(transport==='gzip'){const packed=gzip(JSON.stringify(options.path.endsWith('/videos')?recordings:responseData));res.emit('data',packed.subarray(0,5));res.emit('data',packed.subarray(5));res.emit('end');return;}
+      if(transport==='gzip-large'){res.emit('data',gzip(' '.repeat(2097152)));res.emit('end');return;}
+      if(transport==='gzip-bad'){res.emit('data',Buffer.from('not gzip at all'));res.emit('end');return;}
+      if(transport==='unsupported-encoding'){res.emit('data','{}');res.emit('end');return;}
       if(transport==='aborted'){res.emit('aborted');return;}
       if(transport==='response-error'){res.emit('error',Error('response failed'));return;}
       if(transport==='large'){res.emit('data','ž'.repeat(600000));res.emit('end');return;}
@@ -392,7 +495,8 @@ async function testService() {
     return req;
   }};
   function Service(name){assert.equal(name,'cz.jirak.kicktv.service');this.register=(name,fn)=>{handlers[name]=fn;};}
-  vm.runInNewContext(fs.readFileSync('service/index.js','utf8'),{require(name){return name==='https'?https:name==='url'?require('node:url'):Service;},Promise,Buffer,
+  https.Agent=function(options){agents.push(options);};
+  vm.runInNewContext(fs.readFileSync('service/index.js','utf8'),{require(name){return name==='https'?https:name==='url'?require('node:url'):name==='zlib'?require('node:zlib'):Service;},Promise,Buffer,
     setTimeout(fn,ms){assert.equal(ms,12000);const id={};serviceTimers.set(id,fn);return id;},clearTimeout(id){serviceTimers.delete(id);}});
   const send=payload=>handlers.channel({payload,respond(data){replies.push(data);}});
   for(const channel of [undefined,null,'../admin','https://evil.test','foo?bar','A','a'.repeat(26)])send({channel});
@@ -402,7 +506,17 @@ async function testService() {
   assert.equal(replies[0].returnValue,true);assert.equal(replies[0].videos.length,1);
   assert.equal(replies[0].videos[0].thumbnail,'https://files.kick.com/test.jpg');
   assert.equal(replies[0].videos[0].duration,60);assert.equal(replies[0].live.url,live.url);
-  assert.equal(replies[0].videos[0].id,good.video.uuid);
+  assert.equal(replies[0].videos[0].id,good.video.uuid);assert.equal(replies[0].videosError,null);
+  replies=[];recordings=null;send({channel:'example'});await new Promise(r=>setImmediate(r));
+  assert.equal(replies[0].videosError.errorCode,'videos_unavailable');assert.equal(replies[0].videos.length,0);
+  replies=[];recordings={error:'Rate limited'};send({channel:'example'});await new Promise(r=>setImmediate(r));
+  assert.equal(replies[0].videosError.errorCode,'videos_unavailable','A Kick-supplied error object is not treated as an internal failure');
+  replies=[];recordings={marker:{},error:{code:'busy',params:{},message:'spoof'}};send({channel:'example'});await new Promise(r=>setImmediate(r));
+  assert.equal(replies[0].videosError.errorCode,'videos_unavailable','Only the private marker identifies internal failures');
+  replies=[];recordings=[{...good,session_title:{toString:1}}];send({channel:'example'});await new Promise(r=>setImmediate(r));
+  assert.equal(replies[0].returnValue,false);assert.equal(replies[0].errorCode,'internal');assert.match(replies[0].errorText,/could not be processed/);
+  recordings=[good,{...good,session_title:''}];replies=[];send({channel:'example'});await new Promise(r=>setImmediate(r));
+  assert.equal(replies[0].videos[1].title,'','Missing titles stay empty for the app to localize');recordings.pop();
   assert.ok(calls.every(c=>c.hostname==='kick.com'&&c.rejectUnauthorized!==false));
   replies=[];good.session_title='🔴ONE🔴TWO🔴 𝕋𝕍 e\u030c';responseData.livestream.session_title=good.session_title;
   send({channel:'example'});await new Promise(r=>setImmediate(r));
@@ -417,7 +531,27 @@ async function testService() {
   assert.equal(replies[0].live,null);
   replies=[];status=403;send({channel:'example'});await new Promise(r=>setImmediate(r));
   assert.equal(replies[0].returnValue,false);assert.match(replies[0].errorText,/403/);
+  assert.equal(replies[0].errorCode,'http');assert.equal(replies[0].errorParams.status,403);
   assert.equal(aborted,2,'Both HTTP error responses release their network connections');
+  assert.ok(calls.every(c=>c.headers['Accept-Encoding']==='gzip'&&c.agent instanceof https.Agent),'Requests accept gzip on a keep-alive agent');
+  assert.equal(JSON.stringify(agents),JSON.stringify([{keepAlive:true,keepAliveMsecs:15000,maxSockets:6,maxFreeSockets:2}]));
+  replies=[];status=200;transport='gzip';send({channel:'example'});await settle(()=>replies.length);
+  assert.equal(replies[0].returnValue,true);assert.equal(replies[0].videos.length,1,'Compressed responses are inflated');
+  for(const [mode,code] of [['gzip-large','too_large'],['gzip-bad','decode'],['unsupported-encoding','decode']]){
+    const beforeAborted=aborted;replies=[];transport=mode;send({channel:'example'});
+    await settle(()=>replies.length&&aborted-beforeAborted>=2);
+    assert.equal(replies.length,1);assert.equal(replies[0].errorCode,code,mode);assert.equal(replies[0].returnValue,false);
+    assert.equal(aborted-beforeAborted,2,mode+' aborts both transfers');
+  }
+  // A kept-alive socket reset by the server is retried once on a fresh connection; a second reset fails.
+  transport='reset-once';resets={};replies=[];const resetStart=calls.length;send({channel:'example'});await settle(()=>replies.length);
+  assert.equal(replies[0].returnValue,true);assert.equal(calls.length-resetStart,4,'Each of the two reset requests is retried exactly once');
+  transport='reset-twice';resets={};replies=[];send({channel:'example'});await settle(()=>replies.length);
+  assert.equal(replies[0].errorCode,'connect');
+  transport='ok';resets={};
+  replies=[];handlers.prepare({payload:{url:'https://stream.kick.com/a/{b}|c.m3u8?x=%20y'},respond(d){replies.push(d);}});
+  await new Promise(r=>setImmediate(r));
+  assert.equal(calls.at(-1).hostname,'stream.kick.com');assert.equal(calls.at(-1).path,'/a/%7Bb%7D|c.m3u8?x=%20y','Unsafe path characters are percent-encoded without double-encoding');
   replies=[];status=200;
   handlers.prepare({payload:{url:vod.url},respond(d){replies.push(d);}});
   await new Promise(r=>setImmediate(r));
@@ -445,17 +579,17 @@ async function testService() {
   for(let i=0;i<10;i++)send({channel:'channel'+i});
   assert.equal(calls.length-bounded,6,'At most six network requests may be active');
   transport='ok';waiting.splice(0).forEach(fn=>fn());await new Promise(r=>setImmediate(r));
-  assert.equal(replies.length,10);assert.ok(replies.some(r=>/Probíhá/.test(r.errorText)));
+  assert.equal(replies.length,10);assert.ok(replies.some(r=>r.errorCode==='busy'));
   transport='wait';replies=[];const beforeTimeout=aborted;
   send({channel:'example'});assert.equal(serviceTimers.size,2);
   [...serviceTimers.values()].forEach(fn=>fn());await new Promise(r=>setImmediate(r));
   assert.equal(serviceTimers.size,0);assert.equal(aborted-beforeTimeout,2);
-  assert.equal(replies.length,1);assert.match(replies[0].errorText,/včas/);
+  assert.equal(replies.length,1);assert.equal(replies[0].errorCode,'timeout');
   waiting.splice(0);
-  for(const [mode,pattern] of [['aborted',/přerušil/],['response-error',/response failed/],['large',/velká/],['invalid',/nevrátil/]]){
+  for(const [mode,code,pattern] of [['aborted','aborted',/interrupted/],['response-error','transfer',/response failed/],['large','too_large',/too large/],['invalid','wrong_channel',/requested channel/]]){
     const beforeAborted=aborted;
     replies=[];transport=mode;send({channel:'example'});await new Promise(r=>setImmediate(r));
-    assert.equal(replies.length,1);assert.match(replies[0].errorText,pattern);
+    assert.equal(replies.length,1);assert.match(replies[0].errorText,pattern);assert.equal(replies[0].errorCode,code);
     if(mode!=='invalid')assert.equal(aborted-beforeAborted,2,'Failed or oversized transfers are aborted');
   }
   transport='ok';handlers.channel({payload:{channel:'example'},respond(){throw Error('client closed');}});

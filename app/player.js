@@ -1,4 +1,4 @@
-/* Native webOS media lifecycle. No network proxy or browser player library. */
+/* Native webOS media lifecycle. No network proxy or browser player library. Status messages are i18n keys. */
 function KickPlayer(host, events) {
   'use strict';
   var media = null, item = null, epoch = 0, ready = false;
@@ -17,11 +17,11 @@ function KickPlayer(host, events) {
       isLive: !!(item && item.isLive), seeking: queuedSeek !== null || activeSeek !== null };
   }
   function changed() { events.change(state()); }
-  function status(text) { events.status(text); }
+  function status(key, params) { events.status(key, params); }
   function clearDeadline() { clearTimeout(deadline); deadline = null; }
   function armDeadline() {
     clearDeadline();
-    deadline = setTimeout(function () { recover('Video neodpovídá.'); }, 20000);
+    deadline = setTimeout(function () { recover('p_stalled'); }, 20000);
   }
   function dispose() {
     epoch++;
@@ -40,20 +40,20 @@ function KickPlayer(host, events) {
       if (previous.parentNode === host) host.removeChild(previous);
     }
   }
-  function recover(reason) {
+  function recover(reason, params) {
     if (!item || retryTimer || phase === 'error' || document.hidden) return;
     position = target();
     dispose(); healthySince = 0;
     if (navigator.onLine === false) {
       phase = 'error'; wantPlay = false;
-      status('TV není připojená k internetu. Po připojení zvolte Zkusit znovu.'); changed(); return;
+      status('p_offline'); changed(); return;
     }
     if (retries >= 2) {
       phase = 'error'; wantPlay = false;
-      status(reason + ' Zvolte Zkusit znovu nebo jiný záznam.'); changed(); return;
+      status('p_failed_final', { reason: reason, reasonParams: params }); changed(); return;
     }
     retries++; phase = 'recovering';
-    status('Obnovování přehrávání (' + retries + '/2)…'); changed();
+    status('p_recovering', { attempt: retries }); changed();
     var token = epoch;
     retryTimer = setTimeout(function () {
       retryTimer = null;
@@ -74,24 +74,24 @@ function KickPlayer(host, events) {
         if (!wantPlay || error && error.name === 'AbortError') return;
         if (error && error.name === 'NotAllowedError') {
           wantPlay = false; phase = 'paused'; clearDeadline();
-          status('Pro spuštění stiskněte OK.'); changed();
-        } else recover('Přehrávání se nepodařilo spustit.');
+          status('p_press_ok'); changed();
+        } else recover('p_play_failed');
       });
       else playPending = false;
-    } catch (e) { playPending = false; recover('Přehrávání se nepodařilo spustit.'); }
+    } catch (e) { playPending = false; recover('p_play_failed'); }
   }
   function commitSeek() {
     seekTimer = null;
     if (!media || !ready || activeSeek !== null || queuedSeek === null || media.seeking) return;
     activeSeek = queuedSeek; queuedSeek = null; phase = 'seeking';
-    status('Přesouvání v záznamu…'); changed(); armDeadline();
+    status('p_seeking'); changed(); armDeadline();
     try { media.currentTime = activeSeek; }
-    catch (e) { recover('Pozici záznamu se nepodařilo změnit.'); }
+    catch (e) { recover('p_seek_failed'); }
   }
   function mount() {
     if (!item || document.hidden) return;
     dispose();
-    phase = 'loading'; status('Načítání videa…');
+    phase = 'loading'; status('p_loading');
     var node = document.createElement('video');
     node.id = 'video'; node.preload = 'auto'; node.setAttribute('playsinline', '');
     media = node;
@@ -151,17 +151,17 @@ function KickPlayer(host, events) {
       healthySince = 0;
       if (wantPlay || activeSeek !== null) {
         phase = activeSeek === null ? 'buffering' : 'seeking';
-        status(activeSeek === null ? 'Načítání videa…' : 'Přesouvání v záznamu…');
+        status(activeSeek === null ? 'p_loading' : 'p_seeking');
         if (!deadline) armDeadline();
         changed();
       }
     });
-    on('error', function () { recover('TV nemůže přehrát video (chyba ' + (node.error ? node.error.code : '?') + ').'); });
+    on('error', function () { recover('p_media_error', { code: node.error && typeof node.error.code === 'number' ? node.error.code : '?' }); });
     on('ended', function () {
-      if (item.isLive) { recover('Živé vysílání se přerušilo.'); return; }
+      if (item.isLive) { recover('p_live_interrupted'); return; }
       wantPlay = false; phase = 'ended'; position = duration;
       if (events.progress) events.progress(position, duration, true);
-      clearDeadline(); status('Záznam skončil. Vyberte další.'); changed();
+      clearDeadline(); status('p_ended'); changed();
     });
     on('click', function () { if (events.interact) events.interact(); });
     try {
@@ -178,7 +178,7 @@ function KickPlayer(host, events) {
       node.appendChild(source); host.appendChild(node); node.load();
       armDeadline(); changed();
       if (wantPlay) requestPlay();
-    } catch (e) { recover('Přehrávač se nepodařilo načíst.'); }
+    } catch (e) { recover('p_mount_failed'); }
   }
   function stop() {
     item = null; wantPlay = false; dispose();
@@ -187,7 +187,7 @@ function KickPlayer(host, events) {
   }
   function load(value) {
     stop();
-    if (!value || !validURL(value.url)) { phase = 'error'; status('Neplatná adresa videa.'); changed(); return false; }
+    if (!value || !validURL(value.url)) { phase = 'error'; status('p_invalid_url'); changed(); return false; }
     item = value; duration = finite(value.duration) && value.duration > 0 ? value.duration : 0;
     wantPlay = true; mount(); return true;
   }
@@ -201,7 +201,7 @@ function KickPlayer(host, events) {
   function pause() {
     wantPlay = false;
     playAttempt++; playPending = false;
-    if (media) { try { media.pause(); } catch (e) { recover('Přehrávání se nepodařilo pozastavit.'); } }
+    if (media) { try { media.pause(); } catch (e) { recover('p_pause_failed'); } }
     if (activeSeek === null && ready) { clearDeadline(); phase = 'paused'; }
     changed();
   }
@@ -212,7 +212,7 @@ function KickPlayer(host, events) {
   }
   function suspend() {
     position = target(); wantPlay = false; dispose(); phase = item ? 'paused' : 'idle';
-    if (item) status('Přehrávání je pozastavené. Zvolte Pokračovat.');
+    if (item) status('p_suspended');
     changed();
   }
   return { load: load, stop: stop, play: play, pause: pause, suspend: suspend, state: state,
