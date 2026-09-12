@@ -1,0 +1,5 @@
+{
+  "id": "cz.jirak.kicktv.service",
+  "description": "Public Kick channel and replay information",
+  "services": [{ "name": "cz.jirak.kicktv.service" }]
+}

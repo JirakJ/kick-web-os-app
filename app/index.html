@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' file:; style-src 'self' file:; img-src 'self' file: https://files.kick.com https://images.kick.com; media-src https://stream.kick.com https://*.live-video.net; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Stream pro Kick</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="player.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main id="home">
+    <header><span class="brand">KICK</span><span class="tv-label">TV</span><span class="header-note">Živé vysílání a záznamy</span></header>
+    <div class="content">
+    <section class="selection" aria-labelledby="heading">
+      <p class="eyebrow">Tvoje kanály. Tvoje obrazovka.</p>
+      <h1 id="heading">Co si pustíš?</h1>
+      <p>Zadej kanál, nebo se vrať k některému z posledních.</p>
+      <form id="channel-form" novalidate>
+        <label for="channel">Kanál na Kicku</label>
+        <input id="channel" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Název kanálu nebo odkaz kick.com/…" aria-describedby="error">
+        <p id="error" role="alert"></p>
+        <button id="play" type="submit" class="primary">Přehrát živě <span aria-hidden="true">▶</span></button>
+        <button id="recordings" type="button">Záznamy</button>
+      </form>
+    </section>
+    <section id="recent" aria-labelledby="recent-heading" hidden>
+      <h2 id="recent-heading">Naposledy spuštěné</h2>
+      <div id="recent-channels"></div>
+    </section>
+    </div>
+    <footer><span>↑ ↓ Výběr &nbsp; OK Potvrdit &nbsp; Zpět Návrat</span><small>Neoficiální přehrávač pro Kick · Bez chatu</small></footer>
+  </main>
+  <section id="catalog" aria-labelledby="catalog-heading" hidden>
+    <p class="eyebrow">Kanál na Kicku</p>
+    <h1 id="catalog-heading"></h1>
+    <p id="channel-status" role="status"></p>
+    <button id="live" type="button" class="primary" hidden><span class="live-dot" aria-hidden="true"></span>Přehrát živě</button>
+    <h2>Záznamy vysílání</h2>
+    <p id="videos-status" role="status"></p>
+    <button id="catalog-retry" type="button" hidden>Zkusit znovu</button>
+    <div id="videos"></div>
+    <nav id="pages" aria-label="Stránky záznamů" hidden>
+      <button id="previous-page" type="button">← Předchozí</button>
+      <span id="page-number"></span>
+      <button id="next-page" type="button">Další →</button>
+    </nav>
+    <button id="catalog-back" type="button">Změnit kanál</button>
+  </section>
+  <section id="watch" aria-label="Přehrávač" tabindex="-1" hidden>
+    <div id="video-host"></div>
+    <p id="playback-status" role="status"></p>
+    <div id="playback-controls">
+      <p id="video-title"></p>
+      <p id="quality">Nejvyšší dostupná kvalita</p>
+      <div id="timeline">
+        <label for="seek">Pozice v záznamu</label>
+        <div class="seek-row">
+          <span id="elapsed">0:00</span>
+          <div class="seek-track">
+            <progress id="seek-progress" max="1" value="0" aria-hidden="true"></progress>
+            <input id="seek" type="range" min="0" max="0" value="0" step="1" aria-label="Pozice v záznamu" disabled>
+          </div>
+          <span id="duration">0:00</span>
+        </div>
+      </div>
+      <button id="toggle" type="button">Pozastavit</button>
+      <button id="watch-recordings" type="button">Záznamy kanálu</button>
+    </div>
+    <button id="back" type="button">Změnit kanál</button>
+  </section>
+</body>
+</html>

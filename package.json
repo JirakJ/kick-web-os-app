@@ -1,0 +1,23 @@
+{
+  "name": "kick-web-os-app",
+  "version": "0.4.1",
+  "private": true,
+  "packageManager": "npm@12.0.2",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
+    "npm": ">=12.0.0"
+  },
+  "scripts": {
+    "test": "node test.cjs",
+    "start": "python3 -m http.server 8080 --bind 127.0.0.1 --directory app",
+    "package": "ares-package app service --outdir dist"
+  },
+  "devDependencies": {
+    "@webos-tools/cli": "3.2.6"
+  },
+  "overrides": {
+    "@webos-tools/cli": {
+      "qs": "6.16.0"
+    }
+  }
+}
