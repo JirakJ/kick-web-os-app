@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # Only trusted pushes to this repository's main branch may publish artifacts.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - name: Publish tested IPK and version tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+          CI_RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./package.json").version')
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          notes="docs/releases/$version.md"
+          # A checked-in release note opts this version into publication.
+          if [[ ! -f "$notes" ]]; then
+            echo "No release notes for $version; skipping publication."
+            exit 0
+          fi
+          tag="v$version"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $tag already exists."
+            exit 0
+          fi
+          gh run download "$CI_RUN_ID" --repo "$GITHUB_REPOSITORY" --name kick-webos-ipk --dir dist
+          ipk="cz.jirak.kicktv_${version}_all.ipk"
+          test -s "dist/$ipk"
+          (cd dist && sha256sum "$ipk" > SHA256SUMS)
+          gh release create "$tag" "dist/$ipk" dist/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SHA" \
+            --title "$tag — Legacy LG TV compatibility" --notes-file "$notes" --latest
