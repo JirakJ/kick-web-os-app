@@ -44,7 +44,7 @@ npm test
 npm run package
 ```
 
-The output is `dist/com.jakubjirak_0.7.2_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
+The output is `dist/com.jakubjirak_0.7.3_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
 
 The webOS CLI is a development dependency. The service uses the TV's built-in `webos-service` module and Node.js standard libraries; it does not ship npm dependencies. The service runtime target is Node.js **0.12.2 or newer**, including the runtime reported on LG UJ6307 (2017) / webOS 3.5. The build-tool Node/npm requirements above apply to the development computer, not the TV. The existing webOS 5 device uses Node.js 8.12.0.
 
