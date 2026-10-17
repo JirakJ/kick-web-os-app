@@ -2,7 +2,7 @@
 var https = require('https');
 var zlib = require('zlib');
 var Service = require('webos-service');
-var service = new Service('cz.jirak.kicktv.service');
+var service = new Service('com.jakubjirak.service');
 var pending = Object.create(null);
 var activeRequests = 0;
 // Reuse TLS connections between channel, replay and status lookups on the same host.

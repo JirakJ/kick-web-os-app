@@ -28,7 +28,7 @@ var server = http.createServer(function (req, res) {
 var agent = new http.Agent({ keepAlive: true });
 function loadService() {
   handlers = {};
-  function Service() { this.register = function (name, handler) { handlers[name] = handler; }; }
+  function Service(name) { assert.strictEqual(name, 'com.jakubjirak.service'); this.register = function (name, handler) { handlers[name] = handler; }; }
   var context = vm.createContext({
     require: function (name) {
       if (name === 'webos-service') return Service;

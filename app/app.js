@@ -192,7 +192,7 @@ if (typeof document !== 'undefined') (function () {
         finish(data);
       };
       recentTimer = setTimeout(function () { finish(null); }, 40000);
-      recentRequest.call('luna://cz.jirak.kicktv.service/statuses', JSON.stringify({ channels: names }));
+      recentRequest.call('luna://com.jakubjirak.service/statuses', JSON.stringify({ channels: names }));
     } catch (e) { finish(null); }
   }
   function saveRecents() {
@@ -245,7 +245,7 @@ if (typeof document !== 'undefined') (function () {
       cancelRequest();
       callback({ errorText: t('no_response') });
     }, 18000);
-    try { request.call('luna://cz.jirak.kicktv.service/' + method, JSON.stringify(payload)); }
+    try { request.call('luna://com.jakubjirak.service/' + method, JSON.stringify(payload)); }
     catch (e) {
       cancelRequest();
       callback({ errorText: t('service_unavailable') });

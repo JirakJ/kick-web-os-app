@@ -21,7 +21,14 @@ console.log('Channel validation: passed (valid names, links, length, URL injecti
 
 const vm = require('node:vm');
 const fs = require('node:fs');
-const appVersion=JSON.parse(fs.readFileSync('app/appinfo.json','utf8')).version;
+const appManifest=JSON.parse(fs.readFileSync('app/appinfo.json','utf8'));
+const appVersion=appManifest.version;
+const serviceId=appManifest.id+'.service';
+assert.equal(appManifest.id,'com.jakubjirak');
+const serviceManifest=JSON.parse(fs.readFileSync('service/services.json','utf8'));
+assert.equal(serviceManifest.id,serviceId);
+assert.deepEqual(serviceManifest.services.map(s=>s.name),[serviceId]);
+assert.equal(JSON.parse(fs.readFileSync('service/package.json','utf8')).name,serviceId);
 assert.equal(fs.readFileSync('app/index.html','utf8').match(/id="app-version">v([^<]+)</)[1],appVersion,'Footer must match the packaged app version');
 let elements, document, window, navigator, bridges, timers, clock, created, textWrites;
 function element(id = '') {
@@ -73,7 +80,7 @@ function boot(localStorage = storage, bridgeMode = 'ok', locale = 'cs-CZ') {
   if(bridgeMode!=='missing')context.PalmServiceBridge=function(){
     if(bridgeMode==='throw')throw Error('bridge unavailable');
     bridges.push(this);
-    this.call=(uri,payload)=>{this.uri=uri;this.payload=JSON.parse(payload);};
+    this.call=(uri,payload)=>{assert.ok(uri.startsWith('luna://'+serviceId+'/'),'UI targets the packaged service');this.uri=uri;this.payload=JSON.parse(payload);};
     this.cancel=()=>{this.cancelled=true;};
   };
   if(locale===null){delete context.webOSSystem;delete navigator.language;}
@@ -495,7 +502,7 @@ async function testService() {
     if(transport==='wait')waiting.push(deliver);else queueMicrotask(deliver);
     return req;
   }};
-  function Service(name){assert.equal(name,'cz.jirak.kicktv.service');this.register=(name,fn)=>{handlers[name]=fn;};}
+  function Service(name){assert.equal(name,'com.jakubjirak.service');this.register=(name,fn)=>{handlers[name]=fn;};}
   https.Agent=function(options){agents.push(options);};
   const serviceContext=vm.createContext({require(name){if(name==='https')return https;if(name==='zlib')return require('node:zlib');if(name==='webos-service')return Service;throw Error('Unexpected dependency: '+name);},Promise,Buffer,
     setTimeout(fn,ms){assert.equal(ms,12000);const id={};serviceTimers.set(id,fn);return id;},clearTimeout(id){serviceTimers.delete(id);}});
