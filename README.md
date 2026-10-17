@@ -44,9 +44,19 @@ npm test
 npm run package
 ```
 
-The output is `dist/cz.jirak.kicktv_0.7.0_all.ipk`. It contains both the app (`cz.jirak.kicktv`) and its service (`cz.jirak.kicktv.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
+The output is `dist/cz.jirak.kicktv_0.7.1_all.ipk`. It contains both the app (`cz.jirak.kicktv`) and its service (`cz.jirak.kicktv.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
 
-The webOS CLI is a development dependency. The service uses the TV's built-in `webos-service` module and Node.js standard libraries; it does not ship npm dependencies. Service code remains compatible with Node.js 8.12.0 on the tested webOS 5 device.
+The webOS CLI is a development dependency. The service uses the TV's built-in `webos-service` module and Node.js standard libraries; it does not ship npm dependencies. The service runtime target is Node.js **0.12.2 or newer**, including the runtime reported on LG UJ6307 (2017) / webOS 3.5. The build-tool Node/npm requirements above apply to the development computer, not the TV. The existing webOS 5 device uses Node.js 8.12.0.
+
+Version 0.7.1 fixes Claire's [legacy-TV report (#2)](https://github.com/JirakJ/kick-web-os-app/issues/2): it removes `Array.from` from the service and UI, avoids the unavailable WHATWG `url.URL`, preserves complete emoji when truncating titles, and tolerates TV builds without Unicode normalization. A flexbox replay layout preserves the 3/2/1-column remote navigation on engines without CSS Grid. Signed playlist query strings keep their existing percent escapes. TLS verification and exact media-host allowlists remain enabled; redirects remain disabled. Connection-reset retries use a fresh connection instead of another socket from the stale keep-alive pool.
+
+`npm test` includes `test-service-legacy.js`, an ES5-only service integration test with real local HTTP streams and gzip. CI also runs that script directly on Node.js 0.12.2 and 8.12.0 without installing modern build dependencies. To repeat the legacy check locally:
+
+```sh
+/path/to/node-v0.12.2/bin/node test-service-legacy.js
+```
+
+The local test replaces only the HTTPS transport and Luna service registration; it does not verify Kick's live TLS endpoint, native video decoding or Developer Mode installation. Installation, live playback and replays on LG UJ6307 / webOS 3.5 still need an on-device check.
 
 ## Install on a TV
 

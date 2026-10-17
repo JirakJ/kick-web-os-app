@@ -152,3 +152,18 @@ footer > * { min-width: 0; max-width: 100%; }
  .seek-track { margin: 0 12px; }
 }
 @media (prefers-reduced-motion: reduce) { button { transition: none; } }
+/* Chromium 38 on webOS 3 predates CSS Grid. Keep remote navigation's 3/2/1 columns. */
+@supports not (display: grid) {
+ #videos { display: flex; flex-wrap: wrap; }
+ #videos button { width: calc(33.333333% - 15px); margin: 0 22px 22px 0; }
+ #videos button:nth-child(3n) { margin-right: 0; }
+ @media (max-width: 800px) {
+  #videos button { width: calc(50% - 11px); }
+  #videos button:nth-child(3n) { margin-right: 22px; }
+  #videos button:nth-child(2n) { margin-right: 0; }
+ }
+ @media (max-width: 560px) {
+  #videos button { width: 100%; margin-right: 0; }
+  #videos button:nth-child(3n) { margin-right: 0; }
+ }
+}

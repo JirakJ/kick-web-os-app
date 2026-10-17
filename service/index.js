@@ -1,7 +1,6 @@
 'use strict';
 var https = require('https');
 var zlib = require('zlib');
-var URL = require('url').URL;
 var Service = require('webos-service');
 var service = new Service('cz.jirak.kicktv.service');
 var pending = Object.create(null);
@@ -10,8 +9,17 @@ var activeRequests = 0;
 var agent = new https.Agent({ keepAlive: true, keepAliveMsecs: 15000, maxSockets: 6, maxFreeSockets: 2 });
 
 function titleText(value, fallback) {
-  // Limit Unicode code points, never half of an emoji's UTF-16 surrogate pair.
-  return Array.from(String(value || fallback || '').normalize('NFKC')).slice(0, 200).join('');
+  var text = String(value || fallback || '');
+  // Some TV builds omit ICU normalization; keep readable text on those builds.
+  if (typeof text.normalize === 'function') text = text.normalize('NFKC');
+  // Node 0.12 has no Array.from. Count code points without splitting emoji.
+  var end = 0, count = 0;
+  while (end < text.length && count < 200) {
+    var first = text.charCodeAt(end++), second = text.charCodeAt(end);
+    if (first >= 0xD800 && first <= 0xDBFF && second >= 0xDC00 && second <= 0xDFFF) end++;
+    count++;
+  }
+  return text.slice(0, end);
 }
 
 // Errors carry a stable code that the app translates; the message is an English fallback.
@@ -66,7 +74,7 @@ function getText(hostname, path, background) {
     function attempt() {
       var responded = false;
       // No caller-supplied host, redirects, credentials, or disabled TLS checks.
-      req = https.get({ hostname: hostname, path: path, agent: agent,
+      req = https.get({ hostname: hostname, path: path, agent: retried ? false : agent,
         headers: { Accept: '*/*', 'Accept-Encoding': 'gzip', 'Cache-Control': 'no-cache' } }, function (res) {
         responded = true;
         if (res.statusCode !== 200) {
@@ -154,9 +162,17 @@ service.register('prepare', function (message) {
     respond(message, errorReply(failure('bad_url', 'Video address not allowed.')));
     return;
   }
-  // mediaURL already restricted the origin; the WHATWG parser percent-encodes unsafe path characters.
-  var url = new URL(source);
-  getText(url.hostname, url.pathname + url.search).then(function (body) {
+  // Split only after the exact HTTPS host allowlist has accepted the source.
+  // Avoid WHATWG URL (absent in Node 0.12) and legacy parser host ambiguities.
+  var parts = source.match(/^https:\/\/([^/]+)(\/.*)$/), path;
+  try {
+    // Encode unsafe characters once, preserving signed query strings and existing escapes.
+    path = encodeURI(parts[2]).replace(/%25([a-f0-9]{2})/gi, '%$1');
+  } catch (e) {
+    respond(message, errorReply(failure('bad_url', 'Video address not allowed.')));
+    return;
+  }
+  getText(parts[1], path).then(function (body) {
     if (body.trim().indexOf('#EXTM3U') !== 0) throw failure('bad_playlist', 'Invalid video playlist.');
     var variants = [];
     body.split(/\r?\n/).forEach(function (line) {

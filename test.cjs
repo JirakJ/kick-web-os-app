@@ -78,6 +78,7 @@ function boot(localStorage = storage, bridgeMode = 'ok', locale = 'cs-CZ') {
   };
   if(locale===null){delete context.webOSSystem;delete navigator.language;}
   vm.createContext(context);
+  vm.runInContext('Array.from = undefined;', context);
   vm.runInContext(fs.readFileSync('app/i18n.js','utf8'),context);
   vm.runInContext(fs.readFileSync('app/player.js','utf8'),context);
   vm.runInContext(fs.readFileSync('app/app.js','utf8'),context);
@@ -496,8 +497,10 @@ async function testService() {
   }};
   function Service(name){assert.equal(name,'cz.jirak.kicktv.service');this.register=(name,fn)=>{handlers[name]=fn;};}
   https.Agent=function(options){agents.push(options);};
-  vm.runInNewContext(fs.readFileSync('service/index.js','utf8'),{require(name){return name==='https'?https:name==='url'?require('node:url'):name==='zlib'?require('node:zlib'):Service;},Promise,Buffer,
+  const serviceContext=vm.createContext({require(name){if(name==='https')return https;if(name==='zlib')return require('node:zlib');if(name==='webos-service')return Service;throw Error('Unexpected dependency: '+name);},Promise,Buffer,
     setTimeout(fn,ms){assert.equal(ms,12000);const id={};serviceTimers.set(id,fn);return id;},clearTimeout(id){serviceTimers.delete(id);}});
+  vm.runInContext('Array.from = undefined;',serviceContext);
+  vm.runInContext(fs.readFileSync('service/index.js','utf8'),serviceContext);
   const send=payload=>handlers.channel({payload,respond(data){replies.push(data);}});
   for(const channel of [undefined,null,'../admin','https://evil.test','foo?bar','A','a'.repeat(26)])send({channel});
   assert.equal(calls.length,0,'Invalid channels never reach the network');
@@ -546,12 +549,13 @@ async function testService() {
   // A kept-alive socket reset by the server is retried once on a fresh connection; a second reset fails.
   transport='reset-once';resets={};replies=[];const resetStart=calls.length;send({channel:'example'});await settle(()=>replies.length);
   assert.equal(replies[0].returnValue,true);assert.equal(calls.length-resetStart,4,'Each of the two reset requests is retried exactly once');
+  assert.equal(calls.slice(resetStart).filter(c=>c.agent===false).length,2,'Retries bypass the stale keep-alive pool');
   transport='reset-twice';resets={};replies=[];send({channel:'example'});await settle(()=>replies.length);
   assert.equal(replies[0].errorCode,'connect');
   transport='ok';resets={};
   replies=[];handlers.prepare({payload:{url:'https://stream.kick.com/a/{b}|c.m3u8?x=%20y'},respond(d){replies.push(d);}});
   await new Promise(r=>setImmediate(r));
-  assert.equal(calls.at(-1).hostname,'stream.kick.com');assert.equal(calls.at(-1).path,'/a/%7Bb%7D|c.m3u8?x=%20y','Unsafe path characters are percent-encoded without double-encoding');
+  assert.equal(calls.at(-1).hostname,'stream.kick.com');assert.equal(calls.at(-1).path,'/a/%7Bb%7D%7Cc.m3u8?x=%20y','Unsafe path characters are percent-encoded without double-encoding');
   replies=[];status=200;
   handlers.prepare({payload:{url:vod.url},respond(d){replies.push(d);}});
   await new Promise(r=>setImmediate(r));

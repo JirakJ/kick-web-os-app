@@ -251,6 +251,16 @@ if (typeof document !== 'undefined') (function () {
       callback({ errorText: t('service_unavailable') });
     }
   }
+  // Chromium 38 on webOS 3 has no Array.from; preserve complete surrogate pairs.
+  function titleSlice(text) {
+    var end = 0, count = 0;
+    while (end < text.length && count < 200) {
+      var first = text.charCodeAt(end++), second = text.charCodeAt(end);
+      if (first >= 0xD800 && first <= 0xDBFF && second >= 0xDC00 && second <= 0xDFFF) end++;
+      count++;
+    }
+    return text.slice(0, end);
+  }
   // Service failures carry a code for translation; free text is the bounded fallback.
   function serviceError(reply, fallbackKey) {
     var code = reply && reply.errorCode, params = reply && reply.errorParams, text = reply && reply.errorText;
@@ -263,7 +273,7 @@ if (typeof document !== 'undefined') (function () {
       });
       return t('svc_' + code, safe);
     }
-    return typeof text === 'string' && text ? Array.from(text.slice(0, 400)).slice(0, 200).join('') : t(fallbackKey);
+    return typeof text === 'string' && text ? titleSlice(text) : t(fallbackKey);
   }
   function mediaStatus(key, params) {
     // Player statuses are i18n keys; a nested reason key is translated before substitution.
@@ -284,7 +294,7 @@ if (typeof document !== 'undefined') (function () {
     return new RegExp('[#*0-9]\\uFE0F?\\u20E3|(?:\\uD83C[\\uDDE6-\\uDDFF]){2}|' + part + '(?:\\u200D' + part + ')*', 'g');
   }());
   function setVideoTitle(node, value) {
-    var text = Array.from(String(value || t('replay'))).slice(0, 200).join('');
+    var text = titleSlice(String(value || t('replay')));
     node.textContent = '';
     var index = 0, match;
     symbols.lastIndex = 0;

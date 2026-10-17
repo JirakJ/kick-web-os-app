@@ -1,3 +1,51 @@
+# Legacy runtime compatibility audit for 0.7.1
+
+Checked locally on 18 October 2026 (Europe/Prague). Fixes Claire's report in
+[issue #2](https://github.com/JirakJ/kick-web-os-app/issues/2).
+
+- Confirmed the 0.7.0 service uses `Array.from` during channel/replay title
+  processing and `require('url').URL` during playlist preparation; both are
+  absent in the reported Node.js 0.12.2 runtime.
+- Removed both dependencies. Titles use an ES5 surrogate-pair-aware loop,
+  with NFKC normalization only when available. The UI uses the same counting
+  strategy, because webOS 3's Chromium 38 also lacks `Array.from`.
+- Playlist origins pass the existing exact HTTPS allowlist before host/path
+  splitting. `encodeURI` escapes unsafe request characters while preserving
+  existing percent escapes, including signed query values. Invalid surrogate
+  sequences return `bad_url` before opening a connection. Redirects remain
+  disabled and TLS verification remains enabled.
+- Native Node.js 0.12.2 integration checks exposed stale pooled sockets after
+  aborted compressed transfers. The one permitted connection-reset retry now
+  bypasses the pool (`agent: false`) to guarantee a fresh connection.
+- Added a flexbox replay layout for engines without CSS Grid; it retains the
+  existing 3/2/1-column keyboard navigation breakpoints. This fallback has been
+  reviewed in source but still needs a visual check on the old TV engine.
+
+| Local check | Result |
+| --- | --- |
+| `npm test` on Node.js 24.19.0 | Passed UI, history, i18n, service and integration regressions |
+| `node test-service-legacy.js` on actual Node.js 0.12.2 | Passed |
+| Same script on actual Node.js 8.12.0 | Passed |
+| JavaScript syntax compilation on Node.js 0.12.2 | Passed service and all three app scripts |
+| `npm run package` with official webOS CLI 3.2.6 | Built 0.7.1 IPK |
+| `git diff --check` | Passed |
+
+The ES5 integration test uses built-in modules, real loopback HTTP streams,
+gzip, and a Luna registration stub. It covers channel data, public replays,
+status lookup, HLS metadata, signed URL escaping, emoji truncation, optional
+normalization, host rejection, decoded-size limits, malformed gzip/JSON,
+HTTP errors, interrupted transfers, and recovery after failures. The existing
+UI suite runs with `Array.from` removed from its isolated browser context.
+CI adds actual Node.js 0.12.2 and 8.12.0 jobs without build dependencies.
+
+No LG UJ6307 was available. Developer Mode installation, live Kick HTTPS/TLS,
+native media playback, seeking and old-engine visual layout remain unverified
+on webOS 3.5. Local build used npm 11.9.0 with the engine requirement relaxed
+for dependency installation; CI retains the project's npm 12.0.2 setup.
+Security scanner results below are historical, not rerun for this patch.
+
+---
+
 # Production audit for 0.7.0
 
 Checked on 12 September 2026 using local regression tests and the packaged IPK.
