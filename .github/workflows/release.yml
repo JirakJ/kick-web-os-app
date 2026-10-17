@@ -52,9 +52,10 @@ jobs:
             exit 0
           fi
           gh run download "$CI_RUN_ID" --repo "$GITHUB_REPOSITORY" --name kick-webos-ipk --dir dist
-          ipk="cz.jirak.kicktv_${version}_all.ipk"
+          app_id=$(node -p 'require("./app/appinfo.json").id')
+          ipk="${app_id}_${version}_all.ipk"
           test -s "dist/$ipk"
           (cd dist && sha256sum "$ipk" > SHA256SUMS)
           gh release create "$tag" "dist/$ipk" dist/SHA256SUMS \
             --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SHA" \
-            --title "$tag — Legacy LG TV compatibility" --notes-file "$notes" --latest
+            --title "$tag — Stream for Kick" --notes-file "$notes" --latest

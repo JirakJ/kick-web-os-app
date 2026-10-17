@@ -44,7 +44,7 @@ npm test
 npm run package
 ```
 
-The output is `dist/cz.jirak.kicktv_0.7.1_all.ipk`. It contains both the app (`cz.jirak.kicktv`) and its service (`cz.jirak.kicktv.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
+The output is `dist/com.jakubjirak_0.7.2_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
 
 The webOS CLI is a development dependency. The service uses the TV's built-in `webos-service` module and Node.js standard libraries; it does not ship npm dependencies. The service runtime target is Node.js **0.12.2 or newer**, including the runtime reported on LG UJ6307 (2017) / webOS 3.5. The build-tool Node/npm requirements above apply to the development computer, not the TV. The existing webOS 5 device uses Node.js 8.12.0.
 
@@ -65,7 +65,7 @@ Install the IPK with [webOS Dev Manager](https://github.com/webosbrew/dev-manage
 - On an already rooted webOSbrew TV, use its SSH/Homebrew connection. The tested installation runs without the timed LG Developer Mode application.
 - On a TV using LG Developer Mode, the normal session and installation expiry rules apply.
 
-Updates use the same app ID and preserve recent channels and replay history. This IPK is an application package, not an LG firmware update, and does not root or modify TV firmware. The app has not been published in the LG Content Store; store distribution requires LG approval.
+Version 0.7.2 uses application ID `com.jakubjirak` and service ID `com.jakubjirak.service`. This is a new application identity compared with 0.7.1 and earlier (`cz.jirak.kicktv`): it installs alongside the old application and starts with its own recent channels and replay history. Existing data remains with the old application; there is no automatic migration. Subsequent updates using the new ID preserve the new application's data. This IPK is an application package, not an LG firmware update, and does not root or modify TV firmware. The app has not been published in the LG Content Store; store distribution requires LG approval.
 
 ## Controls
 
