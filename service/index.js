@@ -83,10 +83,16 @@ function getText(hostname, path, background) {
       var responded = false;
       // No caller-supplied host, redirects, credentials, or disabled TLS checks.
       req = https.get({ hostname: hostname, path: path, agent: retried ? false : agent,
-        headers: { Accept: '*/*', 'Accept-Encoding': 'gzip', 'Cache-Control': 'no-cache' } }, function (res) {
+        headers: hostname === 'api.github.com' ? { Accept: 'application/vnd.github+json', 'User-Agent': 'Stream-for-Kick-webOS', 'X-GitHub-Api-Version': '2026-03-10', 'Accept-Encoding': 'gzip' } : { Accept: '*/*', 'Accept-Encoding': 'gzip', 'Cache-Control': 'no-cache' } }, function (res) {
         responded = true;
         if (res.statusCode !== 200) {
-          finish(failure('http', 'Kick API: HTTP ' + res.statusCode, { status: res.statusCode }));
+          var retryAt = 0;
+          if (hostname === 'api.github.com' && res.headers) {
+            var after = Number(res.headers['retry-after']), reset = Number(res.headers['x-ratelimit-reset']) * 1000;
+            if (isFinite(after) && after > 0) retryAt = Date.now() + after * 1000;
+            if (isFinite(reset) && reset > retryAt) retryAt = reset;
+          }
+          finish(failure('http', 'Kick API: HTTP ' + res.statusCode, { status: res.statusCode, retryAt: retryAt }));
           return;
         }
         var encoding = String(res.headers && res.headers['content-encoding'] || '').trim().toLowerCase();
@@ -273,5 +279,36 @@ service.register('channel', function (message) {
       videosError: videosError ? errorReply(videosError) : null });
   }).catch(function (e) {
     respond(message, errorReply(e));
+  });
+});
+
+  function versionParts(value) {
+    var match = typeof value === 'string' && value.length <= 96 && value.match(/^v?((?:0|[1-9][0-9]{0,3}))\.((?:0|[1-9][0-9]{0,3}))\.((?:0|[1-9][0-9]{0,3}))(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/);
+    return match ? [+match[1], +match[2], +match[3]] : null;
+  }
+  function compareVersions(a, b) {
+    a = versionParts(a); b = versionParts(b);
+    if (!a || !b) return null;
+    for (var i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i] ? 1 : -1;
+    return 0;
+  }
+var updateCache = null, updateCacheUntil = 0, updateRetryAt = 0;
+service.register('updates', function (message) {
+  var now = Date.now();
+  if (updateCache && now < updateCacheUntil) { respond(message, { returnValue: true, release: updateCache, cached: true }); return; }
+  if (now < updateRetryAt) { respond(message, { returnValue: false, errorCode: 'updates_unavailable', retryAt: updateRetryAt }); return; }
+  getText('api.github.com', '/repos/JirakJ/kick-web-os-app/releases/latest').then(function (body) {
+    // GitHub's stable-specific endpoint is independent of prerelease/pagination windows.
+    var selected = JSON.parse(body);
+    if (!selected || selected.draft !== false || selected.prerelease !== false || !versionParts(selected.tag_name) ||
+      selected.html_url !== 'https://github.com/JirakJ/kick-web-os-app/releases/tag/' + selected.tag_name) throw new Error('stable release');
+    updateCache = { version: selected.tag_name.replace(/^v/, ''), url: selected.html_url,
+      notes: typeof selected.body === 'string' ? titleText(selected.body, '') : '', checkedAt: Date.now() };
+    updateCacheUntil = Date.now() + 21600000; updateRetryAt = 0;
+    respond(message, { returnValue: true, release: updateCache, cached: false });
+  }).catch(function (error) {
+    var params = error && error.params, limited = params && (params.status === 403 || params.status === 429);
+    updateRetryAt = Math.max(Date.now() + (limited ? 21600000 : 60000), params && typeof params.retryAt === 'number' && isFinite(params.retryAt) ? params.retryAt : 0);
+    respond(message, { returnValue: false, errorCode: 'updates_unavailable', retryAt: updateRetryAt });
   });
 });

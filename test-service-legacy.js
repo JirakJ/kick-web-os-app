@@ -18,6 +18,7 @@ var server = http.createServer(function (req, res) {
   if (mode === 'http') { res.writeHead(403); res.end(); return; }
   if (mode === 'aborted') { res.writeHead(200, { 'Content-Length': 10000 }); res.write('{'); setImmediate(function () { res.destroy(); }); return; }
   var body = req.url.indexOf('/api/') === 0 ? JSON.stringify(/\/videos$/.test(req.url) ? recordings : channel) : playlist;
+  if (req.url.indexOf('/repos/') === 0) body = JSON.stringify({tag_name:'v0.10.0',html_url:'https://github.com/JirakJ/kick-web-os-app/releases/tag/v0.10.0',body:'Public release',draft:false,prerelease:false});
   if (mode === 'invalid') body = '{bad json';
   if (mode === 'large') body = new Array(1048578).join('x');
   if (mode === 'gzip' || mode === 'large' || mode === 'gzip-bad') {
@@ -139,6 +140,8 @@ function test() {
     return invoke('channel', { channel: 'example' });
   }).then(function (reply) {
     assert.strictEqual(reply.returnValue, true, 'Service still works after failed transfers');
+    return invoke('updates',{}).then(function (update) { assert.strictEqual(update.returnValue,true); assert.strictEqual(update.release.version,'0.10.0'); assert.strictEqual(requests[requests.length-1].hostname,'api.github.com'); });
+  }).then(function () {
     console.log('Legacy service: passed on ' + process.version + ' (channel, replays, statuses, HLS, Unicode, gzip, limits and failures).');
   });
 }
