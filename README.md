@@ -118,6 +118,8 @@ Version 0.7.0 selects the interface language from `webOSSystem.locale` (falling 
 
 Version 0.7.4 was checked on the LG 55NANO863NA / webOS 5.6.2 for Czech localization, real live and replay playback at native 1080p/60, pause, paused and rapid seeking, remote navigation, pagination, hidden controls and decoder cleanup. Its installed app/service payload matched the IPK, and the service integration suite also passed on the TV's Node.js 8.12.0. See the [current audit](docs/production-audit.md) for scope and limits.
 
+Version 0.7.5 fixes seek targets lost during decoder recovery, orphan seek timers and retained video resources. On the same TV, 16 replay start/return cycles and 50 pagination cycles kept settled catalog counts at 334 DOM nodes and 43 listeners. Returning home released replay thumbnails and the decoder. Controlled tests reduced watchdog allocations from 240 to 3 per simulated minute and bounded idle HTTPS sockets to two across 25 origins. The [current audit](docs/production-audit.md) records the measurements and remaining device coverage limits.
+
 Recent-channel status is refreshed while the home screen is visible, using channel metadata only. A failed lookup shows no LIVE badge. Checks use two workers per batch, leave request capacity for playback and stop polling when the app leaves the home screen. Removing a channel preserves its replay viewing history; opening that channel again adds it back to the recent list.
 
 This is not a guarantee of crash-free operation. Several-hour playback, router outages, screensaver behavior and actual 4K/1440p playback have not been verified. The TV reported an active, unmuted audio track; audible output was not independently checked. The quality label reports the source's highest available resolution, not a measurement of the current adaptive level.
@@ -127,6 +129,8 @@ This is not a guarantee of crash-free operation. Several-hour playback, router o
 - `app/`: HTML/CSS, remote navigation, the native media controller and `i18n.js` with the interface strings for every supported language.
 - `service/`: validated HTTPS requests for channel information, public replays and HLS quality metadata.
 - `test.cjs`: local regression and failure-path checks.
+- `test-player-resources.cjs`: retired-video collection with an unresolved play promise.
+- `test-service-resources.js`: real-socket origin and keep-alive resource limits.
 
 The service uses Kick's web endpoints (`/api/v2/channels/{channel}` and `/videos`), which are not a stable documented public API. Kick may change or restrict them. HTTP errors are shown in the app. Only allowlisted Kick media and thumbnail hosts are accepted, TLS validation remains enabled, and remote titles render as text.
 

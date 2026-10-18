@@ -1,7 +1,7 @@
 /* Native webOS media lifecycle. No network proxy or browser player library. Status messages are i18n keys. */
 function KickPlayer(host, events) {
   'use strict';
-  var media = null, item = null, epoch = 0, ready = false;
+  var media = null, listeners = [], item = null, epoch = 0, ready = false;
   var wantPlay = false, phase = 'idle', position = 0, duration = 0;
   var queuedSeek = null, activeSeek = null, seekTimer, deadline, deadlineAt = 0, retryTimer;
   var retries = 0, healthySince = 0, playPending = false, playAttempt = 0;
@@ -36,15 +36,22 @@ function KickPlayer(host, events) {
     clearDeadline(); clearTimeout(seekTimer); clearTimeout(retryTimer);
     seekTimer = retryTimer = null;
     ready = false; playPending = false; activeSeek = queuedSeek = null;
-    var previous = media;
-    media = null;
+    var previous = media, previousListeners = listeners;
+    media = null; listeners = [];
+    if (previous) previousListeners.forEach(function (listener) {
+      previous.removeEventListener(listener.name, listener.callback);
+    });
     if (previous) {
+      try { previous.pause(); } catch (e) { /* Still clear a failed native decoder. */ }
+      var cleared = false;
       try {
-        previous.pause(); previous.removeAttribute('src');
+        previous.removeAttribute('src');
         while (previous.firstChild) previous.removeChild(previous.firstChild);
-        previous.load();
+        cleared = true;
       } catch (e) { /* Still detach a failed native decoder. */ }
       if (previous.parentNode === host) host.removeChild(previous);
+      // On webOS 5, removing media after an empty load retains native pending activity.
+      if (cleared) try { previous.load(); } catch (e) { /* The failed decoder is already detached. */ }
     }
   }
   function recover(reason, params) {
@@ -69,14 +76,15 @@ function KickPlayer(host, events) {
   }
   function requestPlay() {
     if (!media || playPending) return;
-    var node = media, token = epoch, attempt = ++playAttempt;
+    // A native play promise can outlive disposal; do not capture its video.
+    var token = epoch, attempt = ++playAttempt;
     playPending = true;
     try {
-      var result = node.play();
+      var result = media.play();
       if (result && result.then) result.then(function () {
         if (token === epoch && attempt === playAttempt) playPending = false;
       }, function (error) {
-        if (token !== epoch || node !== media || attempt !== playAttempt) return;
+        if (token !== epoch || attempt !== playAttempt) return;
         playPending = false;
         if (!wantPlay || error && error.name === 'AbortError') return;
         if (error && error.name === 'NotAllowedError') {
@@ -106,9 +114,11 @@ function KickPlayer(host, events) {
     media = node;
     var token = epoch;
     function on(name, callback) {
-      node.addEventListener(name, function () {
+      var listener = function () {
         if (node === media && token === epoch && item) callback();
-      });
+      };
+      listeners.push({ name: name, callback: listener });
+      node.addEventListener(name, listener);
     }
     on('loadedmetadata', function () {
       if (finite(node.duration) && node.duration > 0) duration = node.duration;

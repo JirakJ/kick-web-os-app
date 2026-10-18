@@ -36,7 +36,7 @@ function element(id = '') {
     id, hidden: false, disabled: false, value: '', _text: '', children: [], attrs: {}, handlers: {},
     get textContent(){return this._text+this.children.map(c=>c.textContent).join('');},
     set textContent(value){textWrites[id]=(textWrites[id]||0)+1;this._text=String(value);this.children.forEach(c=>{c.parentNode=null;});this.children=[];},
-    paused: true, _time: 0, duration: 300, readyState: 0, seeking: false, seeks: [],
+    paused: true, _time: 0, duration: 300, readyState: 0, seeking: false, seeks: [], loads: [],
     get currentTime() { return this._time; },
     set currentTime(value) { this._time = value; this.seeks.push(value); this.seeking = true; },
     get firstChild() { return this.children[0]; },
@@ -46,6 +46,7 @@ function element(id = '') {
     getAttribute(name) { return name in this.attrs ? this.attrs[name] : null; },
     removeAttribute(name) { delete this.attrs[name]; },
     addEventListener(name, fn) { this.handlers[name] = fn; },
+    removeEventListener(name, fn) { if (this.handlers[name] === fn) delete this.handlers[name]; },
     focus() {
       const old = document.activeElement;
       document.activeElement = this;
@@ -54,7 +55,7 @@ function element(id = '') {
     scrollIntoView() {},
     pause() { const changed = !this.paused; this.paused = true; if (changed) this.handlers.pause?.(); },
     play() { this.paused = false; return { then: (resolve,reject) => { this.rejectPlay = reject; } }; },
-    load() {}
+    load() { this.loads.push({sources:this.children.length,connected:!!this.parentNode,paused:this.paused,listeners:Object.keys(this.handlers).length}); }
   };
 }
 const stored = new Map();
@@ -106,6 +107,7 @@ function node(){return elements['video-host'].firstChild;}
 function videoSource(){return node()?.firstChild?.attrs.src;}
 function options(){return JSON.parse(decodeURI(node().firstChild.attrs.type.split('mediaOption=')[1]));}
 function ready(){const v=node();v.readyState=2;v.handlers.loadedmetadata();v.handlers.loadeddata();if(!v.paused)v.handlers.playing();}
+function disposed(video){assert.deepEqual(Object.keys(video.handlers),[],'Retired media listeners are removed');assert.deepEqual(video.loads.at(-1),{sources:0,connected:false,paused:true,listeners:0},'Reset empty media after detaching to avoid native pending activity');}
 function seeked(){node().seeking=false;node().handlers.seeked();}
 function qualityResponse(){bridges.at(-1).onservicecallback(JSON.stringify({returnValue:true,best:{width:1920,height:1080,fps:60,bitrate:7000000}}));}
 function respond(data={},prepare=true){
@@ -130,11 +132,12 @@ advance(6000);assert.equal(elements.back.hidden,true);assert.equal(elements['pla
 key(40);assert.equal(elements.back.hidden,false);
 click('toggle');assert.equal(node().paused,true);click('toggle');assert.equal(node().paused,false);
 node().handlers.playing();
-const oldLive=node();document.hidden=true;document.handlers.visibilitychange();
+const oldLive=node(), oldError=oldLive.handlers.error;document.hidden=true;document.handlers.visibilitychange();
 assert.equal(videoSource(),undefined,'No decoder or background audio after leaving');
 document.hidden=false;document.handlers.visibilitychange();assert.equal(videoSource(),undefined);
 click('toggle');ready();assert.equal(videoSource(),live.url);
-oldLive.handlers.error();oldLive.rejectPlay({name:'NotAllowedError'});
+disposed(oldLive);
+oldError();oldLive.rejectPlay({name:'NotAllowedError'});
 assert.equal(elements['playback-status'].hidden,true,'Old media callbacks cannot change current playback');
 startVOD();assert.equal(videoSource(),vod.url);
 assert.equal(elements.timeline.hidden,false);
@@ -158,9 +161,10 @@ document.hidden=true;document.handlers.visibilitychange();document.hidden=false;
 click('toggle');assert.equal(options().option.transmission.playTime.start,180000);ready();
 // Decoder recovery retains the requested seek position and has a strict retry limit.
 elements.seek.value=220;elements.seek.handlers.change();advance(300);
-const broken=node();broken.error={code:3};broken.handlers.error();assert.equal(videoSource(),undefined);
+const broken=node(), oldPlaying=broken.handlers.playing;broken.error={code:3};broken.handlers.error();assert.equal(videoSource(),undefined);
 advance(600);assert.notEqual(node(),broken);assert.equal(options().option.transmission.playTime.start,220000);
-broken.handlers.playing();assert.match(elements['playback-status'].textContent,/Načítání/);
+disposed(broken);
+oldPlaying();assert.match(elements['playback-status'].textContent,/Načítání/);
 node().error={code:3};node().handlers.error();advance(600);
 node().error={code:3};node().handlers.error();advance(60000);
 assert.equal(videoSource(),undefined);assert.match(elements['playback-status'].textContent,/chyba 3/);
@@ -236,7 +240,18 @@ boot();submit('example');respond();startVOD();elements.watch.focus();key(39);adv
 advance(50);key(39);advance(50);seeked();advance(50);seeked();advance(50);key(39);
 advance(299);assert.deepEqual(node().seeks,[10,20],'An old debounce cannot start the next seek early');
 advance(1);assert.deepEqual(node().seeks,[10,20,30]);seeked();
+const retired=node();assert.equal(Object.keys(retired.handlers).length,11);
 click('watch-recordings');assert.equal(timers.size,0,'Leaving playback cancels every media timer');
+disposed(retired);
+// Failed native operations must never reload an uncleared source during disposal.
+for(const operation of ['pause','removeAttribute']){
+ boot();submit('example');respond();const failed=node();
+ failed[operation]=()=>{throw Error('failed decoder');};
+ click('watch-recordings');assert.equal(videoSource(),undefined);
+ assert.deepEqual(Object.keys(failed.handlers),[]);assert.equal(timers.size,0);
+ if(operation==='pause')assert.equal(failed.loads.at(-1).sources,0,'Purge the source even if native pause fails');
+ else assert.equal(failed.loads.length,1,'Never reload a source whose purge failed');
+}
 console.log('Player and TV UI: passed (serialized seeking, bounded recovery, stale events, stalled/failed media, lifecycle, API failures, history, grid navigation).');
 
 // Replay history follows actual media progress, survives restarts, and never stores signed URLs.
@@ -255,7 +270,7 @@ click('toggle');progressAt(150.25);assert.equal(history()[0].position,150.25);
 assert.equal(history()[0].key,'astatoro:replay-a');assert.equal(historyWrites,1);
 advance(3000);progressAt(153.25);assert.equal(historyWrites,1,'Do not write storage on every timeupdate');
 click('toggle');assert.equal(history()[0].position,153.25,'Pause flushes the latest played position');
-const previousReplay=node();key(461);
+const previousReplay=node(), oldProgress=previousReplay.handlers.timeupdate;key(461);
 assert.equal(replayBadge(0,'last-watched').textContent,'Naposledy sledované');
 assert.equal(replayBadge(0,'watched-badge').textContent,'Sledováno · 2:33');
 assert.match(elements.videos.firstChild.attrs['aria-label'],/Naposledy sledované, Sledováno/);
@@ -264,7 +279,7 @@ openReplay(1);node().handlers.error();key(461);
 assert.equal(replayBadge(1,'watched-badge'),undefined,'A failed start is not viewing');
 openReplay(1);progressAt(2);advance(1000);progressAt(3);window.handlers.pagehide();
 assert.equal(history()[0].key,'astatoro:replay-b');assert.equal(history()[0].position,3);
-previousReplay.handlers.timeupdate();assert.equal(history()[0].key,'astatoro:replay-b','Old decoder events cannot reorder history');
+oldProgress();assert.equal(history()[0].key,'astatoro:replay-b','Old decoder events cannot reorder history');
 assert.ok(history().every(h=>Object.keys(h).sort().join(',')==='duration,finished,key,position'));
 boot(historyStorage);submit('astatoro');respond({live:null,videos:[{...replayA,url:replayA.url+'?token=changed'},replayB]});
 assert.equal(replayBadge(0,'watched-badge').textContent,'Sledováno · 2:33','Stable IDs survive refreshed stream URLs');
