@@ -8,7 +8,7 @@ The interface follows the TV's system language (Czech, Slovak, English, German, 
 
 [Download the latest installable IPK](https://github.com/JirakJ/kick-web-os-app/releases/latest).
 
-**Development candidate: 0.8.0.** The latest published stable release is 0.7.5. New features are being delivered sequentially with GHA checks; real-TV acceptance is planned for the owner's afternoon session. No 0.8.0 release is published before that acceptance.
+**0.8.0 has completed TV acceptance.** All eight features passed sequential PR/main GHA checks and scoped native verification. The release workflow publishes the IPK and checksums only after every main-branch CI job succeeds. See the [device audit](docs/production-audit.md#tv-acceptance-for-080) for measurements and remaining hardware coverage limits.
 
 ## Features
 
@@ -19,11 +19,11 @@ The interface follows the TV's system language (Czech, Slovak, English, German, 
 - Replay thumbnails, titles, dates and durations, with six recordings per page.
 - Last-watched and previously watched replay badges, with the last played position stored locally.
 - A seek bar without a focus rectangle, pause/resume and remote controls; playback controls hide after six seconds of inactivity.
-- Accessibility settings persist app-only text size and high contrast, with remote controls and reset. Large text uses a two-column replay grid; focus and statuses have visible text/semantics. Voice Guide support requires TV verification.
+- Accessibility settings persist app-only text size and high contrast, with remote controls and reset. Large text uses a two-column replay grid; focus and statuses have visible text/semantics. Voice Guide is off on the tested TV; spoken output remains unverified.
 - About and updates shows installed/latest stable versions and short plain-text release notes. Checks are viewer initiated against the fixed official GitHub repository, cached for six hours with persisted failure/rate-limit deadlines that survive idle service exit. It provides Dev Manager/existing Homebrew installation and rollback guidance; no in-app installer. Offline saved results are labelled as potentially outdated.
 - Go to time accepts hours/minutes/seconds, previews a duration-clamped target and offers Confirm/Cancel. Fast-forward/rewind opens a ±10-minute preview; short timeline arrows remain ±10 seconds.
 - Find saved channels locally; search replay titles, filter by viewing history and sort newest/oldest within the loaded catalog of up to 30 public replays. Six visible results per page; Back cancels changes and restores focus.
-- Network reconnect refreshes validated live/replay sources with two bounded attempts; offline flapping retains the budget. Pause, hide and Back cancel pending recovery. Manual Reconnect preserves pause intent. Real outage acceptance remains pending.
+- Network reconnect refreshes validated live/replay sources with two bounded attempts; offline flapping retains the budget. Pause, hide and Back cancel pending recovery. Manual Reconnect preserves pause intent. A 55-second TV-only internet outage, paused reconnect and cancellation passed on webOS 5; physical Wi-Fi/router restart remains unverified.
 - Auto quality up to 4K: 2160p → 1440p → 1080p → lower resolutions. Native adaptation remains enabled for slower connections. The quality menu also offers validated self-contained HLS renditions; fixed quality preserves position/pause, while playlists with separate audio require Auto. Preferences are local; missing renditions fall back explicitly to Auto. Actual decoder resolution/FPS is unavailable through the supported app API.
 - Serialized seeking, bounded recovery after media errors, request timeouts and cleanup when leaving the player.
 
@@ -132,6 +132,8 @@ Version 0.7.5 fixes seek targets lost during decoder recovery, orphan seek timer
 
 Recent-channel status is refreshed while the home screen is visible, using channel metadata only. A failed lookup shows no LIVE badge. Checks use two workers per batch, leave request capacity for playback and stop polling when the app leaves the home screen. Removing a channel preserves its replay viewing history; opening that channel again adds it back to the recent list.
 
+Version 0.8.0 adds replay resume, favorites, fixed quality, fresh-source reconnect, local search/filtering, long seek previews, update guidance and app accessibility settings. Native TV acceptance covered real live/replay 1080p/60 and fixed 720p/60, restart/storage, native keyboard input, a 55-second TV-only internet outage and 16 playback/50 pagination cycles with stable settled DOM/listener counts. Testing found and fixed a paused native start-position race. The [0.8.0 audit](docs/production-audit.md#tv-acceptance-for-080) records the exact package, measurements and coverage limits.
+
 This is not a guarantee of crash-free operation. Several-hour playback, router outages, screensaver behavior and actual 4K/1440p playback have not been verified. The TV reported an active, unmuted audio track; audible output was not independently checked. The quality label reports the source's highest available resolution, not a measurement of the current adaptive level.
 
 ## Architecture and limits
@@ -154,6 +156,6 @@ The bundled [Noto Emoji font](app/fonts/README.md) is Copyright 2013 Google LLC 
 
 References: [LG JavaScript services](https://webostv.developer.lge.com/develop/guides/js-service-usage), [HLS support](https://webostv.developer.lge.com/faq/streaming-http-live-streaming-hls-troubleshooting), [media options](https://webostv.developer.lge.com/develop/guides/mediaoption-parameter), [resuming media](https://webostv.developer.lge.com/develop/guides/resuming-media-with-mediaoption).
 
-Update metadata uses the [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release). SHA256SUMS checks integrity, not publisher signatures. Same-ID installation preserves app storage; actual upgrade/rollback acceptance remains a TV check.
+Update metadata uses the [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release). SHA256SUMS checks integrity, not publisher signatures. Same-ID upgrades from 0.7.5 and between 0.8.0 candidates preserved app storage on the tested TV. Keep the previous IPK for rollback; no downgrade was required.
 
 Browser checks run with `npx playwright install chromium` followed by `npm run test:browser` (or `PLAYWRIGHT_CHANNEL=chrome npm run test:browser` for an installed local Chrome). CI verifies all 13 locales at 1280×720 and 1920×1080 in all four size/contrast combinations and retains screenshots/results. Luna/media fixtures exercise actual DOM/CSS/focus, not native decoding or Voice Guide. The ES5/Node0.12 suites and CSS fallback review preserve legacy compatibility; an actual pre-Grid TV engine remains a separate device check.

@@ -1,3 +1,67 @@
+# TV acceptance for 0.8.0
+
+Checked on 18 October 2026 on LG 55NANO863NA, firmware 04.64.00 / webOS 5.6.2,
+Chromium 68 and service Node.js 8.12.0. The owner authorized this device session
+after implementation was complete. The accepted code is
+`2bc60b3cd192dbe22f9dc580aba8eb3cec30bf58`; all four jobs in
+[main CI 39117493975](https://github.com/JirakJ/kick-web-os-app/actions/runs/39117493975)
+passed. Its IPK SHA256 is
+`889f37a87f567041234991c88a1a948ec3cfb400e5b02c92f164946c28dc4e1a`.
+All 27 installed app/service files matched the IPK. Release publication uses the
+existing CI-gated workflow; release documentation changes no runtime payload.
+The public package has its own SHA256SUMS.
+
+| Feature | Native observation |
+| --- | --- |
+| Continue/resume | Actual process restart retained history; resume, start over, history removal, six-row pages, natural replay completion and starting a completed replay over passed. |
+| Favorites | Seven saved channels, cross-page reorder, Save/Back cancellation and restart persistence passed. LIVE, offline and unknown states were observed. |
+| Quality | Public live and replay streams decoded at 1920×1080/60 fps; fixed 720p decoded at 1280×720/60 fps. Auto/fixed changes kept one pipeline at sampled checkpoints and an active unmuted audio track. |
+| Reconnect | A 55-second actual TV-only internet routing outage exhausted bounded retries. The original route table was restored exactly; paused reconnect retained position and required explicit Play. The router and other devices were unchanged. |
+| Search | Saved-channel and replay-title queries, empty results, reset/order/filter cancellation, TV native IME text entry and directional focus passed. Search remains limited to loaded public data. |
+| Go to time | Preview/cancel/confirm at 2:03:04, fast-key previews and pause/play transport inside the dialog passed. |
+| About/updates | Actual official stable-release metadata, offline saved-result copy, process-persistent cache and same-ID upgrades passed. It provides manual installation guidance. |
+| Accessibility | App text/contrast persisted/reset. Eight native-browser size/contrast/viewport combinations passed layout and matching 2/3-column directional navigation. 720p used a Web Inspector viewport override; physical output remained 1920×1080. |
+
+Device testing found a defect missed by the original fixtures: webOS can load a
+positive native `playTime` while reporting an initial zero HTML media clock in
+pause. That reset app position, so a second quality change started at zero.
+[PR 25](https://github.com/JirakJ/kick-web-os-app/pull/25) adds a failing-before,
+passing-after regression and preserves the native start until the media clock
+acknowledges it. Explicit seek-to-zero remains authoritative. Independent review,
+all local tests, all 1,144 browser screens and PR/main CI passed. Native retesting
+kept 2:03:04 through fixed 720p, Auto and paused reconnect, then continued from the
+correct position. Offline Pause while Go to time was open prevented automatic
+restart; leaving pending recovery left no decoder. Offline/online event cases
+used Web Inspector network emulation, separately from the real routing outage.
+
+| Bounded native stress after forced GC | Observation |
+| --- | --- |
+| Warm catalog, 50 pagination cycles, then three batches of five playback returns | 665 DOM nodes and 117 listeners at every settled catalog sample |
+| JS heap after playback batches 5/10/15 | 2,229,188 bytes at each sample |
+| Home after 16 total start/return cycles | 601 nodes, 105 listeners, zero videos/thumbnails and no active app media pipeline |
+| Installed minified service on the TV's Node.js 8.12.0 | Legacy and actual-socket resource suites passed |
+
+[Recorded measurements and provenance](validation/tv-0.8.0.json) retain these
+observations, CI/source/package binding and local evidence hashes. Screenshots,
+raw native pipeline data, pre-upgrade storage backups and test logs are retained
+locally under `artifacts/tv-0.8.0-20261018/`; the backups are not published.
+
+Limits: navigation was automated through Web Inspector key/pointer events and
+native IME text entry; no physical handset was used. Voice Guide is off and TV-wide
+settings were unchanged, so spoken accessibility output is unverified. Native
+audio was active/unmuted; audible output was not independently checked. Physical
+Wi-Fi association loss/router reboot, naturally expired signed sources,
+multi-hour soak and actual 4K/1440p decoding remain unverified. Deleted/private
+items, denied storage, malformed metadata and rate-limit extremes have controlled
+regressions; those fixtures are not native fault-injection evidence. The 13-locale
+browser matrix also uses media/Luna fixtures. An actual pre-Grid engine remains
+untested. The older Chromium geometry check counts an 8px collapsed trailing
+quality-list margin as scroll overflow; that case was excluded only after every
+painted button fit its container and the native screenshot was checked.
+Stable v0.7.5 IPK/checksums were retained for rollback; no downgrade was needed.
+
+---
+
 # Playback performance and memory audit for 0.7.5
 
 Checked on 18 October 2026 using the packaged app on LG 55NANO863NA,

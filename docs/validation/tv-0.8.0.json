@@ -1,0 +1,341 @@
+{
+  "date": "2026-10-18",
+  "status": "accepted_with_documented_limits",
+  "source": "2bc60b3cd192dbe22f9dc580aba8eb3cec30bf58",
+  "ci": "https://github.com/JirakJ/kick-web-os-app/actions/runs/39117493975",
+  "fixPr": "https://github.com/JirakJ/kick-web-os-app/pull/25",
+  "candidate": {
+    "filename": "com.jakubjirak_0.8.0_all.ipk",
+    "sha256": "889f37a87f567041234991c88a1a948ec3cfb400e5b02c92f164946c28dc4e1a",
+    "installedPayloadFilesMatched": 27,
+    "applicationId": "com.jakubjirak",
+    "serviceId": "com.jakubjirak.service"
+  },
+  "device": {
+    "model": "LG 55NANO863NA",
+    "firmware": "04.64.00",
+    "webOS": "5.6.2",
+    "browser": "Chromium 68",
+    "serviceNode": "8.12.0",
+    "physicalResolution": "1920x1080"
+  },
+  "controls": {
+    "webInspectorKeys": true,
+    "nativeImeTextEntry": true,
+    "trustedPointerKeyboardActivation": true,
+    "physicalHandsetUsed": false
+  },
+  "storage": {
+    "sameId075UpgradePreservedOriginalKeys": true,
+    "candidateUpgradePreservedAll8Keys": true,
+    "actualProcessRestartPreservedAllKeysAndLargeText": true
+  },
+  "playback": {
+    "replay1080p": {
+      "width": 1920,
+      "height": 1080,
+      "fps": 60,
+      "audioActive": true,
+      "audioMuted": false,
+      "nativeTimeMs": 14957894
+    },
+    "replayFixed720pPaused": {
+      "width": 1280,
+      "height": 720,
+      "fps": 60,
+      "audioActive": true,
+      "audioMuted": false,
+      "nativeTimeMs": 7384000
+    },
+    "replayAutoAfterPausedChanges": {
+      "width": 1920,
+      "height": 1080,
+      "fps": 60,
+      "audioActive": true,
+      "audioMuted": false,
+      "nativeTimeMs": 7387167
+    },
+    "live1080p": {
+      "width": 1920,
+      "height": 1080,
+      "fps": 60,
+      "audioActive": true,
+      "audioMuted": false,
+      "nativeTimeMs": 23709
+    },
+    "liveFixed720p": {
+      "width": 1280,
+      "height": 720,
+      "fps": 60,
+      "audioActive": true,
+      "audioMuted": false,
+      "nativeTimeMs": 21891
+    }
+  },
+  "network": {
+    "actualTvInternetOutageSeconds": 55,
+    "method": "Temporary TV-only unreachable internet routes; LAN/SSH and router unchanged",
+    "routeTableRestoredExactly": true,
+    "boundedExhaustionAndManualReconnect": true,
+    "pausedIntentPreserved": true,
+    "positionBeforeSeconds": 7387.167,
+    "webInspectorOfflineOnlineLiveAndReplay": true,
+    "pauseInsideJumpPreventsAutoResume": true,
+    "leavingPendingRecoveryLeavesNoPipeline": true
+  },
+  "resources": {
+    "status": "passed",
+    "playbackCycles": 16,
+    "paginationCycles": 50,
+    "samples": [
+      {
+        "stage": "warm-catalog",
+        "at": "2026-10-18T10:07:44.322Z",
+        "dom": {
+          "documents": 1,
+          "nodes": 665,
+          "jsEventListeners": 117
+        },
+        "heap": {
+          "usedSize": 1814384,
+          "totalSize": 4349952
+        },
+        "videos": 0,
+        "replayImages": 6
+      },
+      {
+        "stage": "after-50-page-cycles",
+        "at": "2026-10-18T10:07:48.018Z",
+        "dom": {
+          "documents": 1,
+          "nodes": 665,
+          "jsEventListeners": 117
+        },
+        "heap": {
+          "usedSize": 2227804,
+          "totalSize": 5365760
+        },
+        "videos": 0,
+        "replayImages": 6
+      },
+      {
+        "stage": "after-5-playback-cycles",
+        "at": "2026-10-18T10:08:06.890Z",
+        "dom": {
+          "documents": 1,
+          "nodes": 665,
+          "jsEventListeners": 117
+        },
+        "heap": {
+          "usedSize": 2229188,
+          "totalSize": 5365760
+        },
+        "videos": 0,
+        "replayImages": 6
+      },
+      {
+        "stage": "after-10-playback-cycles",
+        "at": "2026-10-18T10:08:22.576Z",
+        "dom": {
+          "documents": 1,
+          "nodes": 665,
+          "jsEventListeners": 117
+        },
+        "heap": {
+          "usedSize": 2229188,
+          "totalSize": 5365760
+        },
+        "videos": 0,
+        "replayImages": 6
+      },
+      {
+        "stage": "after-15-playback-cycles",
+        "at": "2026-10-18T10:08:37.693Z",
+        "dom": {
+          "documents": 1,
+          "nodes": 665,
+          "jsEventListeners": 117
+        },
+        "heap": {
+          "usedSize": 2229188,
+          "totalSize": 5365760
+        },
+        "videos": 0,
+        "replayImages": 6
+      },
+      {
+        "stage": "home-after-stress",
+        "at": "2026-10-18T10:08:39.567Z",
+        "dom": {
+          "documents": 1,
+          "nodes": 601,
+          "jsEventListeners": 105
+        },
+        "heap": {
+          "usedSize": 2213808,
+          "totalSize": 5365760
+        },
+        "videos": 0,
+        "replayImages": 0
+      }
+    ]
+  },
+  "nativeLayout": {
+    "status": "passed",
+    "engine": "TV Chromium68",
+    "mode": "Web Inspector viewport override; physical display1920x1080 unchanged",
+    "checks": [
+      {
+        "width": 1920,
+        "mode": {
+          "large": false,
+          "high": false
+        },
+        "columns": 3,
+        "remoteDownIndex": 3,
+        "layout": []
+      },
+      {
+        "width": 1920,
+        "mode": {
+          "large": false,
+          "high": true
+        },
+        "columns": 3,
+        "remoteDownIndex": 3,
+        "layout": []
+      },
+      {
+        "width": 1920,
+        "mode": {
+          "large": true,
+          "high": false
+        },
+        "columns": 2,
+        "remoteDownIndex": 2,
+        "layout": []
+      },
+      {
+        "width": 1920,
+        "mode": {
+          "large": true,
+          "high": true
+        },
+        "columns": 2,
+        "remoteDownIndex": 2,
+        "layout": []
+      },
+      {
+        "width": 1280,
+        "mode": {
+          "large": false,
+          "high": false
+        },
+        "columns": 3,
+        "remoteDownIndex": 3,
+        "layout": []
+      },
+      {
+        "width": 1280,
+        "mode": {
+          "large": false,
+          "high": true
+        },
+        "columns": 3,
+        "remoteDownIndex": 3,
+        "layout": []
+      },
+      {
+        "width": 1280,
+        "mode": {
+          "large": true,
+          "high": false
+        },
+        "columns": 2,
+        "remoteDownIndex": 2,
+        "layout": []
+      },
+      {
+        "width": 1280,
+        "mode": {
+          "large": true,
+          "high": true
+        },
+        "columns": 2,
+        "remoteDownIndex": 2,
+        "layout": []
+      }
+    ]
+  },
+  "browserMatrix": {
+    "screens": 1144,
+    "locales": 13,
+    "resolutions": [
+      "1280x720",
+      "1920x1080"
+    ],
+    "sizeContrastModes": 4,
+    "nativePlayback": false
+  },
+  "limits": [
+    "System Voice Guide is off and unchanged; spoken accessibility output unverified.",
+    "Audio track active and unmuted; audible output not independently checked.",
+    "Physical handset, Wi-Fi association loss/router reboot, naturally expired signed source, multi-hour soak and native4K/1440p playback unverified.",
+    "720p UI check uses Web Inspector viewport override, not a physical display mode change.",
+    "Quality-list geometry audit excludes Chromium68 counting an8px collapsed trailing margin after verifying every painted child fits; screenshots checked.",
+    "Browser fixture edge cases (denied storage, deleted/private items, rate limits, malformed metadata) are not native fault-injection evidence."
+  ],
+  "evidenceHashes": {
+    "02-favorites.json": "9a9c5e5e22e1437b17c5bc2f977780e928f42450762542c931c3a5ecd514a990",
+    "03-accessibility.json": "e8de07ee2931317ea46f51ed1c7dd88a4d62d294d1a3b3bd2846cb23c7333e40",
+    "04-about.json": "621ba580b55817b887116a004328d0ab5a4240e454838bba2c2bc6e2c77e7f4e",
+    "05-search.json": "af1459d19f6fa1a3d6b4bc061b230f3ceac643acf597ab203f88750b3cafbdf8",
+    "06-replay.json": "96b1ed4346645412c3d5cbba160c18d01f8f0224f1a2821b415d1dce819917ff",
+    "08-fixed-720p.json": "749b499d6f35edee6e1cfe71917beb828fa43b8325b023d5da41341ba871c88d",
+    "08-quality-options.json": "cca778769c92314151789366843a6f193218c12aa66d4451f2c3dc50d6ad894e",
+    "09-seek-reconnect-pause.json": "38e1df862221c3ff10594007ab7a3672e15504503c38c27316d4df12a9e2166b",
+    "10-teardown.json": "6aec39504ff1fef9ad797ef169b3ccc9c8eeb6d67e91ade6c9293a4ec52f9566",
+    "11-live-fixed-720p.json": "472080d00617671330b0b5449a6cfa2f798a0b0e75449e3175e4a43c880762f0",
+    "11-live-options.json": "10fe9d87373d24f005512a37799eefeeef41303b799ec26fa12873277e7afb94",
+    "11-live.json": "c001f2cc4420f45d76723fe704cb9e2517d35292c9bd003449a3a22d8491c086",
+    "12-offline.json": "0ce23c5ffb60e91a878bdfa1bd2aa1b759d5e682a4103f174b34533c132c33ac",
+    "12-online-live.json": "4fb9a90e68b976babd96fe89d36464f2c3dd586baeb3f37b80d5857b927b2a01",
+    "13-persistence.json": "af83b8b4ef5f87ff578169e546812fe4afd450ba41b5bec6ba6beea5252de493",
+    "14-home-resume.json": "7edcb8506cf506e7fa361bb89f12561b856865d5161d1d6e39445a82fe969a54",
+    "14-remove-history.json": "5d0b0c81a5e9ce8a1c34dd69c7412bc90cd3455e951c99cff7cbbc4f50b90ebe",
+    "14-start-over.json": "e66e60f4560e0394b5c5300b97e94f765717a74abe8cc3d5377d15e970b9a831",
+    "15-manual-reconnect.json": "7e0bf80a78df26114c03ead32070b12003bcd275630ace28ceb7dc5edb5c28e2",
+    "15-outage-budget.json": "83ffcbf54d51199b431f0ec454c6561681f04597ab87552319858c2263ff1175",
+    "15-restored-no-autoplay.json": "b586185d7eaae9fddd2dbd1a02a103c2e0babb424b892b0df14f5c2946ede678",
+    "16-cancel-pending-recovery.json": "1bff11422bdc5ea5e175527d23de95a33e4bc4fed54403d3519de4539635ee21",
+    "16-offline-modal-pause.json": "ba4b4d034d7d046cc45afb458a35138263956c6e4139389bfbc0d1f6b138c572",
+    "17-completed-starts-over.json": "f6f32edb27f996871a08019126b3d5bf3e3fbf0fb67d03e5a12500f0afdf832d",
+    "17-completion.json": "a07847d0fc73c200bee0fdff4badc104741666742464f9fa6629cd24f7639102",
+    "18-native-layout-modes.json": "47a37b71e1c6fdb4e4f011319e7aec67b653851b13e6201d931c5cb7e19e4181",
+    "19-favorite-live.json": "c94eff3aa5643ea919b0bf654ba21c6ca6d279333d178e577341ea3866b7555b",
+    "19-offline-updates.json": "77b469820c625d7461d5ac0eae159f049b649a148cb3bd46d4d178154f50fade",
+    "20-native-ime.json": "b6505d41b129a968a09ceedcf3bb1efb1e2d4953eba73e903584fe7cc191a3d4",
+    "basic-failure.json": "b79c5288ca586779d170631524d7d901b5efc9edd496a0da28882d9e6976a431",
+    "device-info.json": "71a9475213f3f6d30b494092c81599606c5848799c1a5e07704539a7add5ceec",
+    "fix-pr-ci.json": "bde79aefada910d729c193d53db2ea2ea570c68128e866931d4cd0973f615962",
+    "fixed-main-ci.json": "6760495b2f7b9fffda6350502fd5532ec140fc791dd2e6d4f8ca9cc311d1d6fc",
+    "fixed-upgrade-storage.json": "ba8b31b85ceeefa89a62790b914cd362e358f539996a53e690981a27331e9a48",
+    "installed-fixed-payload.json": "160573b2e8612dda6f47f89c1ca0b66fdc3208bbf7fef0008dd4ad1b2d204cf7",
+    "installed-payload.json": "e69481503c70e3f5e704752761198bd9690d4f1fe5301f2cccc64c1b6ff0369d",
+    "issue-12.json": "a6a5b785bed989e4a3e20447e19ef62a0a4392d9b20812c1cb9b9e74059001af",
+    "issue-13.json": "f5099f706f0a63b97f13a0d153f0e6c0a09ccaf721c677a9161fa7057b1ab22d",
+    "issue-14.json": "2bbfaef323a43fa3b06dfd63659e284768ef9f69fb43845a7c679d61358f9f7c",
+    "issue-8.json": "8d4ef97f5e4994806293a45a739bd0ec69a4789a221239a9ca6fbfb2ffd83201",
+    "issue-9.json": "d76da69829dba814b451eec402b76d9867ddc984b99098458971a6e6fcc07800",
+    "legacy-layout-margin-note.json": "9631e4a85755c775cde79effd8042c52ed955a3c31b88fce4c02849daee684f2",
+    "live-failure.json": "79c678261ac830efaebb621ba2d2eb2271b684af888d73c5abee2c223e036b03",
+    "memory-stress-result.json": "423ebed1c0973c459d77545d3ce24aac3648c63863351e8d6de27290c754c3f1",
+    "quality-after-second-change.json": "72fbf8cb07dce9b997d42b46bfe410462bb8f38afa28c3b475e3beedc0b668c2",
+    "quality-before-second-change.json": "ac72229cacd2dfa09b245c6a8a6e8463f8dcdf9e237f4a73fafb2b6d47465a03",
+    "replay-failure.json": "ffcfbc7b55d5d9ecc7cad0f960b0cbe9b6f5c85fd6669af01b410f0860050d52",
+    "replay-rest-failure.json": "fcda4db042842e1fab892a3e285e66adde7ce0fc2000fdfeefbe83a3e81108d3",
+    "resume-start-failure.json": "c98c4bb9b7bfcf0159112f88a3f34edd676ba784f088f4202c9def210c29d7a1",
+    "tv-memory-stress.json": "2a537d8c220042da164cb0b2984d72fac1a4db205910aa0fac6e16ff698214af",
+    "voice-guide.json": "16e599910be16f414f1c7e3f9a673dd5b28e19b9a2bdb3b93d6eb2b7b2ea2b8d"
+  }
+}
