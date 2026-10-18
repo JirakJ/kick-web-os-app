@@ -339,10 +339,20 @@ node().currentTime=123;node().handlers.timeupdate();click('toggle');const qualit
 elements['quality-options'].children[2].handlers.click();
 assert.equal(videoSource(),variants[1].url);disposed(qualityOld);assert.equal(node().paused,true);
 assert.equal(options().option.transmission.playTime.start,123000);ready();
+// webOS 5 emits a zero DOM time while a paused native transmission start is already 123s.
+node()._time=0;node().handlers.timeupdate();
+assert.equal(elements.elapsed.textContent,'2:03','Paused quality mount keeps its requested position until native time acknowledges it');
 assert.equal(elements['video-host'].children.length,1);assert.equal(qualityStore.data['kick-quality-preference'],'720');
 assert.match(elements['quality-selection'].textContent,/720p/);assert.match(elements['quality-actual'].textContent,/unavailable/i);
 click('quality-button');elements['quality-options'].children[0].handlers.click();assert.equal(videoSource(),vod.url);
 assert.equal(node().paused,true);assert.equal(options().option.transmission.playTime.start,123000);
+ready();node()._time=0;node().handlers.timeupdate();assert.equal(elements.elapsed.textContent,'2:03');
+node()._time=123.25;node().handlers.timeupdate();assert.equal(elements.elapsed.textContent,'2:03','Native positive time acknowledges the transmission start');
+node()._time=124;node().handlers.timeupdate();assert.equal(elements.elapsed.textContent,'2:04','Acknowledged time updates remain authoritative while paused');
+click('quality-button');elements['quality-options'].children[2].handlers.click();ready();node()._time=0;node().handlers.timeupdate();
+elements.seek.value='0';elements.seek.handlers.input();elements.seek.handlers.change();advance(300);node().seeking=false;node().handlers.seeked();
+node()._time=0;node().handlers.timeupdate();assert.equal(elements.elapsed.textContent,'0:00','Explicit seek to zero acknowledges a new target while native start is pending');
+click('quality-button');elements['quality-options'].children[0].handlers.click();assert.equal(options().option.transmission,undefined,'The following source change preserves the deliberate seek to zero');
 click('quality-button');key(461);assert.equal(elements['quality-choice'].hidden,true);assert.equal(videoSource(),vod.url);
 click('quality-button');document.hidden=true;document.handlers.visibilitychange();assert.equal(elements['quality-choice'].hidden,true);
 qualityStore.data['kick-quality-preference']='1440';boot(qualityStore,'ok','en-US');submit('example');respond({live:null,videos:[vod]});

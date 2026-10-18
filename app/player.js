@@ -147,7 +147,7 @@ function KickPlayer(host, events) {
     var node = document.createElement('video');
     node.id = 'video'; node.preload = 'auto'; node.setAttribute('playsinline', '');
     media = node;
-    var token = epoch;
+    var token = epoch, startPending = !item.isLive && position > 0;
     function on(name, callback) {
       var listener = function () {
         if (node === media && token === epoch && item) callback();
@@ -175,6 +175,10 @@ function KickPlayer(host, events) {
     });
     on('timeupdate', function () {
       if (activeSeek === null && finite(node.currentTime)) {
+        // webOS can report zero before acknowledging a paused native playTime start.
+        // Keep that requested position across further source changes and suspension.
+        if (startPending && node.currentTime <= 0) return;
+        startPending = false;
         var delta = node.currentTime - position;
         var advanced = Math.abs(delta) > 0.05;
         position = Math.max(0, node.currentTime);
@@ -193,7 +197,7 @@ function KickPlayer(host, events) {
       changed();
     });
     on('seeked', function () {
-      if (activeSeek !== null) position = activeSeek;
+      if (activeSeek !== null) { position = activeSeek; startPending = false; }
       activeSeek = null;
       clearDeadline(); phase = wantPlay ? 'playing' : 'paused'; status('');
       if (!wantPlay) node.pause(); else armDeadline();
