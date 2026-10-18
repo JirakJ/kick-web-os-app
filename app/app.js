@@ -27,7 +27,7 @@ if (typeof document !== 'undefined') (function () {
   try { document.title = t('title'); if (document.documentElement) document.documentElement.lang = t.language; } catch (e) { /* Optional metadata. */ }
   var input = el('channel');
   var playback = { paused: true, phase: 'idle', position: 0, duration: 0, ready: false, seeking: false };
-  var preparing = false;
+  var preparing = false, qualityPreference = 'auto', qualityButtons = [];
   var hidingControls = false;
   var page = 0;
   var recents = [];
@@ -256,7 +256,7 @@ if (typeof document !== 'undefined') (function () {
   }
 
   function setScreen(name) {
-    closeFavoriteMove(false); closeResume(false); cancelContinue();
+    closeQuality(); closeFavoriteMove(false); closeResume(false); cancelContinue();
     screen = name;
     ['home', 'catalog', 'watch'].forEach(function (id) { el(id).hidden = id !== name; });
     window.scrollTo(0, 0);
@@ -273,7 +273,7 @@ if (typeof document !== 'undefined') (function () {
     saveWatched();
     clearTimeout(controlsTimer);
     preparing = false;
-    el('toggle').disabled = false;
+    el('toggle').disabled = false; el('quality-button').disabled = true; closeQuality();
     player.stop();
   }
   function goHome() {
@@ -403,7 +403,7 @@ if (typeof document !== 'undefined') (function () {
     el('playback-controls').hidden = false;
     el('back').hidden = false;
     clearTimeout(controlsTimer);
-    if (!playback.paused && !playback.seeking && !scrubbing && !preparing && el('playback-status').hidden) {
+    if (!playback.paused && !playback.seeking && !scrubbing && !preparing && el('quality-choice').hidden && el('playback-status').hidden) {
       controlsTimer = setTimeout(function () {
         hidingControls = true;
         el('watch').focus();
@@ -502,6 +502,48 @@ if (typeof document !== 'undefined') (function () {
     }
     append(text.slice(index), '');
   }
+  function closeQuality() {
+    el('quality-choice').hidden = true; qualityButtons = [];
+  }
+  function validVariant(v) {
+    return v && typeof v.url === 'string' && v.url.length < 4096 &&
+      /^https:\/\/(?:stream\.kick\.com|(?:[a-z0-9-]+\.)+live-video\.net)\/[^\s?#]+\.m3u8(?:\?[^\s#]*)?$/.test(v.url) &&
+      typeof v.height === 'number' && v.height > 0 && v.height <= 2160 && typeof v.width === 'number' && v.width > 0 && v.width <= 3840 &&
+      typeof v.bitrate === 'number' && v.bitrate > 0 && v.bitrate <= 200000000 && typeof v.fps === 'number' && v.fps >= 0 && v.fps <= 240;
+  }
+  function applyQuality(remount, choice) {
+    if (!current) return;
+    var selected = choice || null;
+    if (!selected && qualityPreference !== 'auto') current.variants.some(function (v) {
+      if (v.manual && String(v.height) === qualityPreference) { selected = v; return true; } return false;
+    });
+    current.playback = current.playback || { url: current.url, best: current.best, duration: current.duration, isLive: current.isLive, startAt: current.startAt };
+    var url = selected ? selected.url : current.url, best = selected || current.best;
+    el('quality-selection').textContent = selected ? t('quality_fixed', { quality: selected.height + 'p', fps: selected.fps || '?' }) :
+      qualityPreference === 'auto' ? t('quality_auto') : t('quality_fallback');
+    el('quality-actual').textContent = t('quality_actual_unavailable');
+    if (remount) player.changeSource(url, best);
+    current.playback.url = url; current.playback.best = best;
+  }
+  function openQuality() {
+    if (!current || preparing) return;
+    var list = el('quality-options'); while (list.firstChild) list.removeChild(list.firstChild);
+    qualityButtons = [];
+    function add(label, variant) {
+      var button = document.createElement('button'); button.type = 'button'; button.textContent = label;
+      button.disabled = !!variant && !variant.manual;
+      button.addEventListener('click', function () {
+        if (button.disabled) return;
+        qualityPreference = variant ? String(variant.height) : 'auto';
+        try { localStorage.setItem('kick-quality-preference', qualityPreference); } catch (e) { /* Session preference remains usable. */ }
+        applyQuality(true, variant); closeQuality(); showControls(); el('quality-button').focus();
+      });
+      list.appendChild(button); if (!button.disabled) qualityButtons.push(button);
+    }
+    add(t('quality_auto'), null);
+    current.variants.forEach(function (v) { add(v.height + 'p' + (v.fps ? ' · ' + v.fps + ' fps' : '') + (v.manual ? '' : ' · ' + t('quality_audio_unsupported')), v); });
+    qualityButtons.push(el('quality-cancel')); el('quality-choice').hidden = false; showControls(); qualityButtons[0].focus();
+  }
   function startVideo(item, startAt) {
     if (!item || typeof item.url !== 'string' ||
       !/^https:\/\/(?:stream\.kick\.com|(?:[a-z0-9-]+\.)+live-video\.net)\/[^\s?#]+\.m3u8(?:\?[^\s#]*)?$/.test(item.url)) {
@@ -521,7 +563,7 @@ if (typeof document !== 'undefined') (function () {
     unload();
     mediaStatus('loading_quality');
     preparing = true;
-    el('toggle').disabled = true;
+    el('toggle').disabled = true; el('quality-button').disabled = true;
     callService('prepare', { url: item.url }, function (data) {
       if (current !== item) return;
       preparing = false;
@@ -531,7 +573,9 @@ if (typeof document !== 'undefined') (function () {
         typeof best.height === 'number' && best.height > 0 && best.height <= 2160 ? best : null;
       if (item.best) el('quality').textContent = t('best_quality', { quality: item.best.height === 2160 ? '4K' : item.best.height + 'p' }) +
         (item.best.fps ? t('fps_suffix', { fps: item.best.fps }) : '');
-      if (!document.hidden) player.load(item);
+      item.variants = data.returnValue && Array.isArray(data.variants) ? data.variants.slice(0, 64).filter(validVariant) : [];
+      item.playback = null; applyQuality(false); el('quality-button').disabled = false;
+      if (!document.hidden) player.load(item.playback);
       else mediaStatus('playback_stopped');
     });
     el('watch').focus();
@@ -668,7 +712,7 @@ if (typeof document !== 'undefined') (function () {
   }
   function toggle() {
     if (!current || preparing) return;
-    if (playback.phase === 'idle') player.load(current); else player.toggle();
+    if (playback.phase === 'idle') player.load(current.playback || current); else player.toggle();
     showControls();
   }
   function seek(seconds) {
@@ -702,6 +746,9 @@ if (typeof document !== 'undefined') (function () {
   }
   el('resume-choice').hidden = true;
   el('favorite-move').hidden = true;
+  closeQuality();
+  el('quality-button').addEventListener('click', openQuality);
+  el('quality-cancel').addEventListener('click', function () { closeQuality(); showControls(); el('quality-button').focus(); });
   input.addEventListener('input', favoriteLabels);
   el('favorite-channel').addEventListener('click', toggleFavorite);
   el('catalog-favorite').addEventListener('click', toggleFavorite);
@@ -749,7 +796,7 @@ if (typeof document !== 'undefined') (function () {
   el('watch').addEventListener('mousemove', showControls);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
-      cancelRecentStatus(); cancelContinue(); closeFavoriteMove(false); closeResume(false);
+      cancelRecentStatus(); cancelContinue(); closeQuality(); closeFavoriteMove(false); closeResume(false);
       var interrupted = !!request;
       cancelRequest();
       preparing = false;
@@ -764,10 +811,19 @@ if (typeof document !== 'undefined') (function () {
     else if (screen === 'home') { renderContinue(); refreshRecentStatus(); }
     else if (screen === 'catalog') (videoButtons[0] || el('catalog-back')).focus();
   });
-  window.addEventListener('pagehide', function () { cancelContinue(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
+  window.addEventListener('pagehide', function () { cancelContinue(); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
   window.addEventListener('online', function () { if (screen === 'home' && !document.hidden) { renderContinue(); refreshRecentStatus(); } });
   document.addEventListener('keydown', function (event) {
     var key = event.keyCode;
+    if (!el('quality-choice').hidden) {
+      if (key === 461 || key === 27) { event.preventDefault(); closeQuality(); showControls(); el('quality-button').focus(); }
+      else if (key === 9 || key >= 37 && key <= 40) {
+        event.preventDefault(); var qualityIndex = qualityButtons.indexOf(event.target), direction = key === 9 ? event.shiftKey ? -1 : 1 : key === 37 || key === 38 ? -1 : 1;
+        var qualityTarget = qualityButtons[(Math.max(0, qualityIndex) + direction + qualityButtons.length) % qualityButtons.length];
+        qualityTarget.focus(); qualityTarget.scrollIntoView({ block: 'nearest' });
+      }
+      return;
+    }
     if (favoriteMove) {
       var moveControls = [el('favorite-move-up'), el('favorite-move-down'), el('favorite-move-save'), el('favorite-move-cancel')].filter(function (control) { return !control.disabled; });
       if (key === 461 || key === 27) { event.preventDefault(); closeFavoriteMove(false); }
@@ -810,7 +866,7 @@ if (typeof document !== 'undefined') (function () {
       if (key === 415 || key === 19 || key === 179 || (key === 13 && (event.target === el('watch') || event.target === el('seek')))) {
         event.preventDefault();
         if (preparing) return;
-        if (key === 415) { if (playback.phase === 'idle' && current) player.load(current); else player.play(); }
+        if (key === 415) { if (playback.phase === 'idle' && current) player.load(current.playback || current); else player.play(); }
         else if (key === 19) player.pause(); else toggle();
         showControls();
         return;
@@ -824,7 +880,7 @@ if (typeof document !== 'undefined') (function () {
       screen === 'catalog' ? (el('live').hidden ? [] : [el('live')]).concat(videoButtons,
         el('catalog-retry').hidden ? [] : [el('catalog-retry')],
         el('pages').hidden ? [] : [el('previous-page'), el('next-page')].filter(function (b) { return !b.disabled; }), [el('catalog-back'), el('catalog-favorite')]) :
-      (current && current.isLive ? [] : [el('seek')]).concat([el('toggle'), el('watch-recordings'), el('back')]);
+      (current && current.isLive ? [] : [el('seek')]).concat([el('toggle'), el('quality-button'), el('watch-recordings'), el('back')]);
     controls = controls.filter(function (control) { return !control.disabled; });
     var index = controls.indexOf(event.target);
     var recentIndex = recentControls.indexOf(event.target);
@@ -899,6 +955,7 @@ if (typeof document !== 'undefined') (function () {
       if (name && favorites.indexOf(name) === -1 && favorites.length < 50) favorites.push(name);
     });
   } catch (e) { /* Ignore corrupt or unavailable favorite storage. */ }
+  try { var savedQuality = localStorage.getItem('kick-quality-preference'); if (/^(?:auto|[1-9][0-9]{0,3})$/.test(savedQuality) && (savedQuality === 'auto' || +savedQuality <= 2160)) qualityPreference = savedQuality; } catch (e) { /* Auto default. */ }
   input.value = recents[0] || '';
   renderRecents(); renderFavorites();
   setScreen('home');

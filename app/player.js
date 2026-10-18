@@ -211,6 +211,10 @@ function KickPlayer(host, events) {
     position = finite(value.startAt) && value.startAt > 0 ? Math.min(value.startAt, duration ? Math.max(0, duration - 0.1) : 2592000) : 0;
     wantPlay = true; mount(); return true;
   }
+  function changeSource(url, best) {
+    if (!item || !validURL(url) || document.hidden) return false;
+    position = target(); item.url = url; item.best = best; mount(); return true;
+  }
   function play() {
     if (!item || document.hidden) return;
     wantPlay = true;
@@ -235,7 +239,7 @@ function KickPlayer(host, events) {
     if (item) status('p_suspended');
     changed();
   }
-  return { load: load, stop: stop, play: play, pause: pause, suspend: suspend, state: state,
+  return { load: load, changeSource: changeSource, stop: stop, play: play, pause: pause, suspend: suspend, state: state,
     toggle: function () { if (wantPlay) pause(); else play(); },
     seekTo: seekTo, seekBy: function (seconds) { if (finite(seconds)) seekTo(target() + seconds); } };
 }

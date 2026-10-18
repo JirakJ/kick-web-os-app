@@ -80,6 +80,7 @@
     <div id="playback-controls">
       <p id="video-title"></p>
       <p id="quality" data-i18n="quality_default">Highest available quality</p>
+      <p id="quality-selection"></p><p id="quality-actual"></p>
       <div id="timeline">
         <label id="seek-label" for="seek" data-i18n="seek_label">Replay position</label>
         <div class="seek-row">
@@ -92,10 +93,12 @@
         </div>
       </div>
       <button id="toggle" type="button" data-i18n="pause">Pause</button>
+      <button id="quality-button" type="button" data-i18n="quality_title">Playback quality</button>
       <button id="watch-recordings" type="button" data-i18n="channel_recordings">Channel replays</button>
     </div>
     <button id="back" type="button" data-i18n="change_channel">Change channel</button>
   </section>
+  <section id="quality-choice" class="modal" role="dialog" aria-modal="true" aria-labelledby="quality-heading" hidden><div class="modal-card"><h2 id="quality-heading" data-i18n="quality_title">Playback quality</h2><div id="quality-options"></div><button id="quality-cancel" type="button" data-i18n="cancel">Cancel</button></div></section>
   <section id="favorite-move" class="modal" role="dialog" aria-modal="true" aria-labelledby="favorite-move-heading" hidden><div class="modal-card">
     <h2 id="favorite-move-heading" data-i18n="favorite_move_title">Reorder favorite channels</h2><p id="favorite-move-info"></p>
     <button id="favorite-move-up" type="button" data-i18n="move_up">Move up</button><button id="favorite-move-down" type="button" data-i18n="move_down">Move down</button>

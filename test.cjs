@@ -322,6 +322,32 @@ const catalogFailure=elements['channel-status'].textContent;click('catalog-favor
 assert.equal(elements['channel-status'].textContent,catalogFailure,'Favoriting keeps the channel service error visible');
 console.log('Favorites: passed (canonicalization, independent history, ordering, cancel/save, bounds, status and storage failures).');
 
+// Quality choices change the native source, preserving paused replay position.
+const qualityStore={data:{},getItem(k){return this.data[k]||null;},setItem(k,v){this.data[k]=v;}};
+const variants=[{width:1920,height:1080,fps:60,bitrate:7000000,url:'https://stream.kick.com/a/1080.m3u8',manual:true},
+ {width:1280,height:720,fps:30,bitrate:3000000,url:'https://stream.kick.com/a/720.m3u8',manual:true},
+ {width:854,height:480,fps:30,bitrate:1000000,url:'https://stream.kick.com/a/480.m3u8',manual:false}];
+function preparedVariants(){bridges.at(-1).onservicecallback(JSON.stringify({returnValue:true,best:variants[0],variants}));ready();}
+boot(qualityStore,'ok','en-US');submit('example');respond({live:null,videos:[vod]});
+elements.videos.firstChild.handlers.click();preparedVariants();
+assert.equal(elements['quality-button'].disabled,false);click('quality-button');
+assert.equal(elements['quality-choice'].hidden,false);assert.equal(elements['quality-options'].children.length,4);
+advance(6001);assert.equal(document.activeElement,elements['quality-options'].children[0],'Controls must not steal modal focus');
+assert.equal(elements['quality-options'].children[3].disabled,true,'External audio rendition cannot silently lose sound');
+node().currentTime=123;node().handlers.timeupdate();click('toggle');const qualityOld=node();
+elements['quality-options'].children[2].handlers.click();
+assert.equal(videoSource(),variants[1].url);disposed(qualityOld);assert.equal(node().paused,true);
+assert.equal(options().option.transmission.playTime.start,123000);ready();
+assert.equal(elements['video-host'].children.length,1);assert.equal(qualityStore.data['kick-quality-preference'],'720');
+assert.match(elements['quality-selection'].textContent,/720p/);assert.match(elements['quality-actual'].textContent,/unavailable/i);
+click('quality-button');elements['quality-options'].children[0].handlers.click();assert.equal(videoSource(),vod.url);
+assert.equal(node().paused,true);assert.equal(options().option.transmission.playTime.start,123000);
+click('quality-button');key(461);assert.equal(elements['quality-choice'].hidden,true);assert.equal(videoSource(),vod.url);
+click('quality-button');document.hidden=true;document.handlers.visibilitychange();assert.equal(elements['quality-choice'].hidden,true);
+qualityStore.data['kick-quality-preference']='1440';boot(qualityStore,'ok','en-US');submit('example');respond({live:null,videos:[vod]});
+elements.videos.firstChild.handlers.click();preparedVariants();assert.equal(videoSource(),vod.url);assert.match(elements['quality-selection'].textContent,/unavailable.*Auto/i);
+console.log('Quality choices: passed (validated variants, paused position, Auto fallback, persistence and lifecycle).');
+
 // A new replay selection offers saved progress; dismissing it never mounts media.
 const resumeData=new Map([['kick-watched-videos',JSON.stringify([{key:'returner:resume-a',position:123,duration:600,finished:false}])]]);
 const resumeStorage={getItem:k=>resumeData.get(k)||null,setItem:(k,v)=>resumeData.set(k,v)};
@@ -759,6 +785,14 @@ async function testService() {
   await new Promise(r=>setImmediate(r));
   assert.equal(replies[0].best.height,2160,'Prefer 4K over 1440p and 1080p; exclude unsupported 8K and audio-only');
   assert.equal(replies[0].best.bitrate,18000000);
+  assert.ok(replies[0].variants.length>=3);assert.ok(replies[0].variants.every(v=>v.url.startsWith('https://')));
+  playlist='#EXTM3U\n#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="external",URI="audio.m3u8"\n#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="inband"\n#EXT-X-STREAM-INF:BANDWIDTH=3000000,RESOLUTION=1280x720,AUDIO="external"\n720.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=854x480,AUDIO="inband"\n../480.m3u8?token=a%2Fb\n#EXT-X-STREAM-INF:BANDWIDTH=500000,RESOLUTION=640x360\nhttps://evil.test/360.m3u8';
+  replies=[];handlers.prepare({payload:{url:vod.url},respond(d){replies.push(d);}});await new Promise(r=>setImmediate(r));
+  assert.equal(replies[0].variants.length,2);assert.equal(replies[0].variants[0].manual,false);assert.equal(replies[0].variants[1].manual,true);
+  assert.equal(replies[0].variants[1].url,'https://stream.kick.com/480.m3u8?token=a%2Fb');
+  playlist='#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=7000000,RESOLUTION=1920x1080\nx.m3u8';
+
+  playlist='#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=18000000,RESOLUTION=3840x2160\n4k.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=10000000,RESOLUTION=2560x1440\n1440.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=7000000,RESOLUTION=1920x1080\n1080.m3u8\n';
   for (const height of [1440,1080]) {
     playlist=playlist.replace(/#EXT-X-STREAM-INF:[^\n]*RESOLUTION=\d+x(\d+)[^\n]*\n[^\n]+\n?/g, (variant,h)=>Number(h)>height?'':variant);
     replies=[];

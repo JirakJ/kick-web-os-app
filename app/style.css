@@ -193,3 +193,7 @@ footer > * { min-width: 0; max-width: 100%; }
 
 .favorite-feedback { color: #ffb4b4; font-size: 22px; }
 .favorite-feedback:empty { display: none; }
+
+#quality-selection, #quality-actual { color: #c5cbd3; font-size: 18px; margin: 6px 0; }
+#quality-options button { display: block; width: 100%; margin: 8px 0; }
+.modal-card { max-height: 88vh; overflow-y: auto; }

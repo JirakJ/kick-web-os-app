@@ -19,7 +19,7 @@ The interface follows the TV's system language (Czech, Slovak, English, German, 
 - Replay thumbnails, titles, dates and durations, with six recordings per page.
 - Last-watched and previously watched replay badges, with the last played position stored locally.
 - A seek bar without a focus rectangle, pause/resume and remote controls; playback controls hide after six seconds of inactivity.
-- Highest available quality up to 4K: 2160p → 1440p → 1080p → lower resolutions. Native adaptation remains enabled for slower connections.
+- Auto quality up to 4K: 2160p → 1440p → 1080p → lower resolutions. Native adaptation remains enabled for slower connections. The quality menu also offers validated self-contained HLS renditions; fixed quality preserves position/pause, while playlists with separate audio require Auto. Preferences are local; missing renditions fall back explicitly to Auto. Actual decoder resolution/FPS is unavailable through the supported app API.
 - Serialized seeking, bounded recovery after media errors, request timeouts and cleanup when leaving the player.
 
 No chat, account login, private videos or analytics.

@@ -3,6 +3,12 @@ var KickI18n = (function () {
   'use strict';
   var strings = {
     en: {
+      quality_title: "Playback quality",
+      quality_auto: "Auto (adaptive)",
+      quality_fixed: "Selected: {quality} · {fps} fps (fixed rendition)",
+      quality_fallback: "Preferred rendition unavailable; using Auto.",
+      quality_actual_unavailable: "Actual decoded resolution/FPS: unavailable on this TV API.",
+      quality_audio_unsupported: "Separate audio: Auto required",
       favorites_heading: "Favorite channels",
       favorite_add: "Add favorite",
       favorite_remove: "Remove favorite",
@@ -67,6 +73,12 @@ var KickI18n = (function () {
       svc_internal: 'The data from Kick could not be processed.'
     },
     cs: {
+      quality_title: "Kvalita přehrávání",
+      quality_auto: "Auto (adaptivní)",
+      quality_fixed: "Vybráno: {quality} · {fps} fps (pevná varianta)",
+      quality_fallback: "Preferovaná varianta není dostupná; používá se Auto.",
+      quality_actual_unavailable: "Skutečné rozlišení/FPS dekodéru: API této TV je neposkytuje.",
+      quality_audio_unsupported: "Oddělený zvuk: vyžaduje Auto",
       favorites_heading: "Oblíbené kanály",
       favorite_add: "Přidat do oblíbených",
       favorite_remove: "Odebrat z oblíbených",
@@ -131,6 +143,12 @@ var KickI18n = (function () {
       svc_internal: 'Data z Kicku se nepodařilo zpracovat.'
     },
     sk: {
+      quality_title: "Kvalita prehrávania",
+      quality_auto: "Auto (adaptívna)",
+      quality_fixed: "Vybrané: {quality} · {fps} fps (pevný variant)",
+      quality_fallback: "Preferovaný variant nie je dostupný; používa sa Auto.",
+      quality_actual_unavailable: "Skutočné rozlíšenie/FPS dekodéra: API tejto TV ich neposkytuje.",
+      quality_audio_unsupported: "Oddelený zvuk: vyžaduje Auto",
       favorites_heading: "Obľúbené kanály",
       favorite_add: "Pridať medzi obľúbené",
       favorite_remove: "Odstrániť z obľúbených",
@@ -195,6 +213,12 @@ var KickI18n = (function () {
       svc_internal: 'Dáta z Kicku sa nepodarilo spracovať.'
     },
     de: {
+      quality_title: "Wiedergabequalität",
+      quality_auto: "Auto (adaptiv)",
+      quality_fixed: "Gewählt: {quality} · {fps} fps (feste Variante)",
+      quality_fallback: "Bevorzugte Variante nicht verfügbar; Auto wird verwendet.",
+      quality_actual_unavailable: "Tatsächlich dekodierte Auflösung/FPS: über diese TV-API nicht verfügbar.",
+      quality_audio_unsupported: "Separates Audio: Auto erforderlich",
       favorites_heading: "Lieblingskanäle",
       favorite_add: "Favorit hinzufügen",
       favorite_remove: "Favorit entfernen",
@@ -259,6 +283,12 @@ var KickI18n = (function () {
       svc_internal: 'Die Daten von Kick konnten nicht verarbeitet werden.'
     },
     pl: {
+      quality_title: "Jakość odtwarzania",
+      quality_auto: "Auto (adaptacyjna)",
+      quality_fixed: "Wybrano: {quality} · {fps} fps (stały wariant)",
+      quality_fallback: "Preferowany wariant niedostępny; wybrano Auto.",
+      quality_actual_unavailable: "Rzeczywista rozdzielczość/FPS dekodera: niedostępne w API TV.",
+      quality_audio_unsupported: "Osobny dźwięk: wymagane Auto",
       favorites_heading: "Ulubione kanały",
       favorite_add: "Dodaj do ulubionych",
       favorite_remove: "Usuń z ulubionych",
@@ -323,6 +353,12 @@ var KickI18n = (function () {
       svc_internal: 'Nie udało się przetworzyć danych z Kick.'
     },
     es: {
+      quality_title: "Calidad de reproducción",
+      quality_auto: "Auto (adaptativa)",
+      quality_fixed: "Seleccionada: {quality} · {fps} fps (variante fija)",
+      quality_fallback: "Variante preferida no disponible; se usa Auto.",
+      quality_actual_unavailable: "Resolución/FPS decodificados: no disponibles en esta API de TV.",
+      quality_audio_unsupported: "Audio separado: requiere Auto",
       favorites_heading: "Canales favoritos",
       favorite_add: "Añadir a favoritos",
       favorite_remove: "Quitar de favoritos",
@@ -387,6 +423,12 @@ var KickI18n = (function () {
       svc_internal: 'No se pudieron procesar los datos de Kick.'
     },
     pt: {
+      quality_title: "Qualidade de reprodução",
+      quality_auto: "Auto (adaptativa)",
+      quality_fixed: "Selecionada: {quality} · {fps} fps (variante fixa)",
+      quality_fallback: "Variante preferida indisponível; usando Auto.",
+      quality_actual_unavailable: "Resolução/FPS decodificados: indisponíveis nesta API da TV.",
+      quality_audio_unsupported: "Áudio separado: requer Auto",
       favorites_heading: "Canais favoritos",
       favorite_add: "Adicionar aos favoritos",
       favorite_remove: "Remover dos favoritos",
@@ -451,6 +493,12 @@ var KickI18n = (function () {
       svc_internal: 'Não foi possível processar os dados do Kick.'
     },
     fr: {
+      quality_title: "Qualité de lecture",
+      quality_auto: "Auto (adaptative)",
+      quality_fixed: "Sélection : {quality} · {fps} fps (variante fixe)",
+      quality_fallback: "Variante préférée indisponible ; mode Auto.",
+      quality_actual_unavailable: "Résolution/FPS décodés : indisponibles via cette API TV.",
+      quality_audio_unsupported: "Audio séparé : Auto requis",
       favorites_heading: "Chaînes favorites",
       favorite_add: "Ajouter aux favoris",
       favorite_remove: "Retirer des favoris",
@@ -515,6 +563,12 @@ var KickI18n = (function () {
       svc_internal: 'Les données de Kick n’ont pas pu être traitées.'
     },
     it: {
+      quality_title: "Qualità di riproduzione",
+      quality_auto: "Auto (adattiva)",
+      quality_fixed: "Selezionata: {quality} · {fps} fps (variante fissa)",
+      quality_fallback: "Variante preferita non disponibile; modalità Auto.",
+      quality_actual_unavailable: "Risoluzione/FPS decodificati: non disponibili tramite questa API TV.",
+      quality_audio_unsupported: "Audio separato: richiede Auto",
       favorites_heading: "Canali preferiti",
       favorite_add: "Aggiungi ai preferiti",
       favorite_remove: "Rimuovi dai preferiti",
@@ -579,6 +633,12 @@ var KickI18n = (function () {
       svc_internal: 'Impossibile elaborare i dati di Kick.'
     },
     hu: {
+      quality_title: "Lejátszási minőség",
+      quality_auto: "Auto (adaptív)",
+      quality_fixed: "Kiválasztva: {quality} · {fps} fps (rögzített változat)",
+      quality_fallback: "A kívánt változat nem érhető el; Auto mód.",
+      quality_actual_unavailable: "Tényleges dekódolt felbontás/FPS: a TV API nem közli.",
+      quality_audio_unsupported: "Külön hang: Auto szükséges",
       favorites_heading: "Kedvenc csatornák",
       favorite_add: "Hozzáadás a kedvencekhez",
       favorite_remove: "Eltávolítás a kedvencekből",
@@ -643,6 +703,12 @@ var KickI18n = (function () {
       svc_internal: 'A Kick adatait nem sikerült feldolgozni.'
     },
     uk: {
+      quality_title: "Якість відтворення",
+      quality_auto: "Авто (адаптивна)",
+      quality_fixed: "Вибрано: {quality} · {fps} fps (фіксований варіант)",
+      quality_fallback: "Бажаний варіант недоступний; використовується Авто.",
+      quality_actual_unavailable: "Фактична роздільність/FPS декодера: API телевізора не надає.",
+      quality_audio_unsupported: "Окреме аудіо: потрібне Авто",
       favorites_heading: "Улюблені канали",
       favorite_add: "Додати до улюблених",
       favorite_remove: "Видалити з улюблених",
@@ -707,6 +773,12 @@ var KickI18n = (function () {
       svc_internal: 'Не вдалося обробити дані з Kick.'
     },
     ru: {
+      quality_title: "Качество воспроизведения",
+      quality_auto: "Авто (адаптивное)",
+      quality_fixed: "Выбрано: {quality} · {fps} fps (фиксированный вариант)",
+      quality_fallback: "Предпочтительный вариант недоступен; используется Авто.",
+      quality_actual_unavailable: "Фактическое разрешение/FPS декодера: API ТВ не предоставляет.",
+      quality_audio_unsupported: "Отдельное аудио: требуется Авто",
       favorites_heading: "Избранные каналы",
       favorite_add: "Добавить в избранное",
       favorite_remove: "Удалить из избранного",
@@ -771,6 +843,12 @@ var KickI18n = (function () {
       svc_internal: 'Не удалось обработать данные с Kick.'
     },
     tr: {
+      quality_title: "Oynatma kalitesi",
+      quality_auto: "Otomatik (uyarlanabilir)",
+      quality_fixed: "Seçilen: {quality} · {fps} fps (sabit varyant)",
+      quality_fallback: "Tercih edilen varyant yok; Otomatik kullanılıyor.",
+      quality_actual_unavailable: "Gerçek çözümlenen çözünürlük/FPS: bu TV API'sinde yok.",
+      quality_audio_unsupported: "Ayrı ses: Otomatik gerekli",
       favorites_heading: "Favori kanallar",
       favorite_add: "Favorilere ekle",
       favorite_remove: "Favorilerden kaldır",
