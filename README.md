@@ -44,7 +44,9 @@ npm test
 npm run package
 ```
 
-The output is `dist/com.jakubjirak_0.7.3_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
+The output is `dist/com.jakubjirak_0.7.4_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
+
+Build dependencies pin security updates and two documented [local backports](vendor/security/README.md) for fixes that have no official release yet. `npm test` also checks the installed CLI dependencies against hostile brace patterns, proxy trust inputs and numeric precision values. These development dependencies are not shipped to the TV.
 
 The webOS CLI is a development dependency. The service uses the TV's built-in `webos-service` module and Node.js standard libraries; it does not ship npm dependencies. The service runtime target is Node.js **0.12.2 or newer**, including the runtime reported on LG UJ6307 (2017) / webOS 3.5. The build-tool Node/npm requirements above apply to the development computer, not the TV. The existing webOS 5 device uses Node.js 8.12.0.
 
@@ -113,6 +115,8 @@ Version 0.5.2 extends fallback routing to BMP emoji such as ⚔️, ⚠️, ⛽,
 Version 0.6.0 was checked on the same TV for real live/replay playback, native seeking, the borderless seek bar, channel removal and LIVE badges. The screenshots above show this version. The [production audit](docs/production-audit.md) records security scan scope, rendering operation counts and layout checks executed in the TV's own browser. `test-layout.cjs` supplies the geometry checker for the installed app's Web Inspector; it does not open a local browser.
 
 Version 0.7.0 selects the interface language from `webOSSystem.locale` (falling back to `PalmSystem.locale` and the browser language) and ships localized launcher titles in `app/resources/<language>/appinfo.json`. The service now negotiates gzip for Kick responses and reuses TLS connections; measured against Kick on 12 September 2026, the channel document shrank from 8.8 KB to 2.4 KB and a 30-replay list from 64 KB to 7.5 KB on the wire. Service errors carry stable codes that the app translates. The gzip and connection-reuse paths were also exercised on a real Node 8.12.0 binary, matching the TV's service runtime. Regression tests cover all 13 languages (key coverage, placeholder parity, locale detection, launcher resources, translated service errors, compressed and malformed transfers). The TV was unreachable during this release, so the language switch, launcher title resources and gzip path were verified locally and in the packaged IPK only, not on the device.
+
+Version 0.7.4 was checked on the LG 55NANO863NA / webOS 5.6.2 for Czech localization, real live and replay playback at native 1080p/60, pause, paused and rapid seeking, remote navigation, pagination, hidden controls and decoder cleanup. Its installed app/service payload matched the IPK, and the service integration suite also passed on the TV's Node.js 8.12.0. See the [current audit](docs/production-audit.md) for scope and limits.
 
 Recent-channel status is refreshed while the home screen is visible, using channel metadata only. A failed lookup shows no LIVE badge. Checks use two workers per batch, leave request capacity for playback and stop polling when the app leaves the home screen. Removing a channel preserves its replay viewing history; opening that channel again adds it back to the recent list.
 

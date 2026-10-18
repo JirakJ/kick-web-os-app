@@ -1,6 +1,6 @@
 {
   "name": "kick-web-os-app",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "private": true,
   "packageManager": "npm@12.0.2",
   "engines": {
@@ -8,16 +8,23 @@
     "npm": ">=12.0.0"
   },
   "scripts": {
-    "test": "node test.cjs && node test-service-legacy.js",
+    "test": "node test.cjs && node test-service-legacy.js && node test-build-deps.cjs",
     "start": "python3 -m http.server 8080 --bind 127.0.0.1 --directory app",
     "package": "ares-package app service --outdir dist"
   },
   "devDependencies": {
-    "@webos-tools/cli": "3.2.6"
+    "@webos-tools/cli": "3.2.6",
+    "braces": "file:./vendor/security/braces-3.0.4-security.2.tgz",
+    "sprintf-js": "file:./vendor/security/sprintf-js-1.1.4-security.1.tgz"
   },
   "overrides": {
+    "braces": "$braces",
+    "sprintf-js": "$sprintf-js",
     "@webos-tools/cli": {
-      "qs": "6.16.0"
+      "qs": "6.16.0",
+      "brace-expansion@^1.1.7": "1.1.21",
+      "brace-expansion@^5.0.8": "5.0.12",
+      "proxy-addr": "2.0.8"
     }
   }
 }
