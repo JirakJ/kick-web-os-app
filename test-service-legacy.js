@@ -78,7 +78,24 @@ function test() {
     return invoke('channel', { channel: 'example' });
   }).then(function (reply) {
     expectChannel(reply);
-    return invoke('statuses', { channels: ['example', 'missing'] });
+    return invoke('replay', {channel:'example',id:'abc-123'});
+  }).then(function(reply) {
+    assert.strictEqual(reply.video.id,'abc-123');
+    assert.strictEqual(reply.video.url,'https://stream.kick.com/a/master.m3u8');
+    recordings[0].video.is_private=true;
+    return invoke('replay',{channel:'example',id:'abc-123'});
+  }).then(function(reply) {
+    assert.strictEqual(reply.video,null,'Private replay never resolves from history');
+    recordings[0].video.is_private=false;
+    return invoke('replay',{channel:'example',id:'missing'});
+  }).then(function(reply) {
+    assert.strictEqual(reply.video,null,'Unavailable replay is explicit');
+    var before=requests.length;
+    return invoke('replay',{channel:'../evil',id:'abc-123'}).then(function(r){assert.strictEqual(r.errorCode,'invalid_replay');assert.strictEqual(requests.length,before);});
+  }).then(function(){
+    var original=recordings[0];
+    recordings=[];for(var i=0;i<31;i++){var clone=JSON.parse(JSON.stringify(original));clone.video.uuid='saved-'+i;recordings.push(clone);}
+    return invoke('replay',{channel:'example',id:'saved-30'}).then(function(r){assert.strictEqual(r.video&&r.video.id,'saved-30','History lookup is not capped to the latest 30');recordings=[original];return invoke('statuses', { channels: ['example', 'missing'] });});
   }).then(function (reply) {
     assert.strictEqual(reply.statuses[0].live, true);
     assert.strictEqual(reply.statuses[1].live, null);

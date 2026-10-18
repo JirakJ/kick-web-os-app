@@ -8,6 +8,8 @@ The interface follows the TV's system language (Czech, Slovak, English, German, 
 
 [Download the latest installable IPK](https://github.com/JirakJ/kick-web-os-app/releases/latest).
 
+**Development candidate: 0.8.0.** The latest published stable release is 0.7.5. New features are being delivered sequentially with GHA checks; real-TV acceptance is planned for the owner's afternoon session. No 0.8.0 release is published before that acceptance.
+
 ## Features
 
 - Live streams and public replays, including a replay picker when a channel is offline.
@@ -44,7 +46,7 @@ npm test
 npm run package
 ```
 
-The output is `dist/com.jakubjirak_0.7.5_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
+The output is `dist/com.jakubjirak_0.8.0_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
 
 Build dependencies pin security updates and two documented [local backports](vendor/security/README.md) for fixes that have no official release yet. `npm test` also checks the installed CLI dependencies against hostile brace patterns, proxy trust inputs and numeric precision values. These development dependencies are not shipped to the TV.
 
@@ -89,7 +91,7 @@ Button labels below are the English strings; the app shows them in the TV's lang
 
 Controls remain visible while paused or when an error needs attention. Leaving the app releases the decoder. On return, choose **Resume** to resume from the previous replay position within the same app session.
 
-Replay cards show **Last watched** on the most recently played recording, **Watched · time** for previous playback, and **Watched** (completed) when playback reached the end, including after seeking. The thumbnail bar shows the last played position, not watched-segment coverage. Selecting a replay starts it from the beginning; the saved time is a reference for the seek bar.
+Replay cards show **Last watched** on the most recently played recording, **Watched · time** for previous playback, and **Watched** (completed) when playback reached the end, including after seeking. The thumbnail bar shows the last played position, not watched-segment coverage. Selecting an unfinished replay offers **Continue from time** or **Start over**. Completed and near-end recordings start from the beginning. **Continue watching** on home shows six entries per page, resolves public metadata with two cancellable workers, and allows removing unavailable entries. Media addresses are refreshed when opening an item.
 
 History starts with version 0.5.0 and keeps the 200 most recently played replays on this TV. Opening a video or seeking while paused does not mark it as watched. Progress is saved every ten seconds and when pausing or leaving; an abrupt power loss can lose the latest few seconds. Only channel/video IDs, position, duration and completion state are stored, without titles or signed media URLs. Clearing app data removes this history.
 
