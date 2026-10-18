@@ -49,8 +49,9 @@ if (typeof document !== 'undefined') (function () {
   var scrubbing = false, jumpOpen = false;
   var timelineState = '';
   var player = KickPlayer(el('video-host'), { status: mediaStatus, change: function (next) {
-    var transition = playback.phase !== next.phase || playback.paused !== next.paused;
+    var transition = playback.phase !== next.phase || playback.paused !== next.paused, durationChanged = playback.duration !== next.duration;
     playback = next;
+    if (jumpOpen && durationChanged) jumpPreview();
     el('quality-button').disabled = preparing || !!next.network;
     if (next.network) closeQuality();
     var label = next.phase === 'error' ? t('retry') : next.paused ? t('resume') : t('pause');

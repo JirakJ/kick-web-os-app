@@ -440,6 +440,9 @@ boot(qualityStore,'ok','en-US');submit('example');respond();assert.equal(element
 boot(qualityStore,'ok','en-US');submit('example');respond({live:null,videos:[{...vod,id:'recover-jump'}]});openReplay();node().error={code:3};node().handlers.error();
 click('jump-time');elements['jump-hours'].value='0';elements['jump-minutes'].value='04';elements['jump-seconds'].value='00';click('jump-confirm');advance(600);
 assert.equal(options().option.transmission.playTime.start,240000);assert.equal(node().seeks.length,0);key(461);advance(60000);assert.equal(videoSource(),undefined);
+boot(qualityStore,'ok','en-US');submit('example');respond({live:null,videos:[{...vod,id:'duration-correction'}]});openReplay();
+node().duration=600;node().handlers.durationchange();click('jump-time');elements['jump-hours'].value='0';elements['jump-minutes'].value='09';elements['jump-seconds'].value='00';elements['jump-minutes'].handlers.input();assert.match(elements['jump-preview'].textContent,/9:00/);
+node().duration=300;node().handlers.durationchange();assert.match(elements['jump-preview'].textContent,/4:59/,'Preview follows corrected native duration before confirmation');key(461);
 console.log('Long replay jumps: passed (preview/confirm/cancel, validation, clamping, paused seeks and suspend/live guards).');
 
 // A new replay selection offers saved progress; dismissing it never mounts media.
