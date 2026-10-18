@@ -57,8 +57,10 @@ function KickPlayer(host, events) {
     }
   }
   function networkRetry(manual, resume) {
-    if (!item || document.hidden || retryTimer || refreshing) return;
-    if (manual) { retries = 0; if (resume) wantPlay = true; }
+    if (!item || document.hidden) return;
+    if (manual && resume) wantPlay = true;
+    if (retryTimer || refreshing) { changed(); return; }
+    if (manual) retries = 0;
     position = target(); dispose(); healthySince = 0; network = true;
     if (navigator.onLine === false) { phase = 'offline'; status('p_offline'); changed(); return; }
     if (!manual && !wantPlay) { phase = 'paused'; changed(); return; }
@@ -245,7 +247,7 @@ function KickPlayer(host, events) {
     wantPlay = true; mount(); return true;
   }
   function changeSource(url, best) {
-    if (!item || !validURL(url) || document.hidden) return false;
+    if (!item || network || !validURL(url) || document.hidden) return false;
     position = target(); item.url = url; item.best = best; mount(); return true;
   }
   function play() {

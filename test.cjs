@@ -216,7 +216,7 @@ click('back');
 // Offline errors stop immediately; retry is an explicit user action.
 boot();submit('example');respond();navigator.onLine=false;node().handlers.error();advance(60000);
 assert.equal(videoSource(),undefined);assert.match(elements['playback-status'].textContent,/internetu/);
-navigator.onLine=true;click('toggle');advance(600);finishReconnect(live);assert.equal(videoSource(),live.url);
+navigator.onLine=true;click('reconnect');advance(600);finishReconnect(live);assert.equal(videoSource(),live.url);
 startVOD();node().handlers.ended();advance(60000);assert.equal(elements.toggle.textContent,'Pokračovat');
 assert.match(elements['playback-status'].textContent,/skončil/);click('back');click('catalog-back');
 // Grid pagination bounds image/DOM load and supports vertical remote navigation.
@@ -386,6 +386,18 @@ const flapBridges=bridges.length;advance(60000);window.handlers.online();assert.
 click('reconnect');advance(600);const hiddenRecovery=bridges.at(-1);document.hidden=true;document.handlers.visibilitychange();
 assert.equal(hiddenRecovery.cancelled,true);hiddenRecovery.onservicecallback(JSON.stringify({returnValue:true,channel:'example',live,videos:[]}));
 document.hidden=false;document.handlers.visibilitychange();window.handlers.online();advance(60000);assert.equal(videoSource(),undefined);
+
+boot(qualityStore,'ok','en-US');submit('example');respond();navigator.onLine=false;window.handlers.offline();
+assert.equal(elements.toggle.textContent,'Pause');click('toggle');assert.equal(elements.toggle.textContent,'Resume');
+navigator.onLine=true;window.handlers.online();const offlinePauseRequests=bridges.length;advance(60000);assert.equal(bridges.length,offlinePauseRequests,'Offline Pause forbids automatic recovery');
+click('reconnect');advance(600);const pausedLookup=bridges.at(-1);click('toggle');assert.equal(bridges.at(-1),pausedLookup,'Play during a pending reconnect reuses the lookup');
+finishReconnect(live);assert.equal(node().paused,false,'Explicit Play updates intent while reconnect is pending');
+
+boot(qualityStore,'ok','en-US');submit('example');respond({},false);preparedVariants();click('quality-button');
+const obsoleteQuality=elements['quality-options'].firstChild;node().error={code:2};node().handlers.error();
+assert.equal(elements['quality-choice'].hidden,true,'Network entry closes old rendition choices');
+obsoleteQuality.handlers.click();assert.equal(videoSource(),undefined,'A stale quality choice cannot bypass source refresh');
+advance(600);finishReconnect({...live,url:'https://stream.kick.com/refreshed/master.m3u8'});assert.equal(elements['quality-button'].disabled,false);
 console.log('Network reconnect: passed (fresh sources, position, intent, single lookup, cancellation and bounded retries).');
 
 // A new replay selection offers saved progress; dismissing it never mounts media.

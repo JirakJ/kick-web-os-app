@@ -51,6 +51,7 @@ if (typeof document !== 'undefined') (function () {
     var transition = playback.phase !== next.phase || playback.paused !== next.paused;
     playback = next;
     el('quality-button').disabled = preparing || !!next.network;
+    if (next.network) closeQuality();
     var label = next.phase === 'error' ? t('retry') : next.paused ? t('resume') : t('pause');
     if (el('toggle').textContent !== label) el('toggle').textContent = label;
     updateTimeline();
@@ -527,14 +528,15 @@ if (typeof document !== 'undefined') (function () {
     current.playback.url = url; current.playback.best = best;
   }
   function openQuality() {
-    if (!current || preparing) return;
+    if (!current || preparing || playback.network) return;
+    var owner = current;
     var list = el('quality-options'); while (list.firstChild) list.removeChild(list.firstChild);
     qualityButtons = [];
     function add(label, variant) {
       var button = document.createElement('button'); button.type = 'button'; button.textContent = label;
       button.disabled = !!variant && !variant.manual;
       button.addEventListener('click', function () {
-        if (button.disabled) return;
+        if (button.disabled || el('quality-choice').hidden || current !== owner || playback.network) return;
         qualityPreference = variant ? String(variant.height) : 'auto';
         try { localStorage.setItem('kick-quality-preference', qualityPreference); } catch (e) { /* Session preference remains usable. */ }
         applyQuality(true, variant); closeQuality(); showControls(); el('quality-button').focus();
@@ -737,7 +739,7 @@ if (typeof document !== 'undefined') (function () {
   }
   function toggle() {
     if (!current || preparing) return;
-    if (playback.phase === 'idle') player.load(current.playback || current); else if (playback.network && playback.phase !== 'reconnecting') player.reconnect(true); else player.toggle();
+    if (playback.phase === 'idle') player.load(current.playback || current); else if (playback.phase === 'error') player.play(); else player.toggle();
     showControls();
   }
   function seek(seconds) {
