@@ -197,8 +197,8 @@ qualityResponse();ready();assert.equal(elements['video-host'].children.length,1)
 const count=bridges.length;key(13);key(13);node().handlers.playing();assert.equal(bridges.length,count);
 // Both synchronous play failures and stalled streams recover without throwing or looping.
 node().play=()=>{throw Error('native failure');};click('toggle');click('toggle');advance(600);
-assert.equal(videoSource(),live.url);ready();advance(20000);assert.equal(videoSource(),undefined);advance(600);
-assert.equal(videoSource(),live.url);click('back');advance(30000);assert.equal(videoSource(),undefined);
+assert.equal(videoSource(),live.url);ready();advance(20000);assert.equal(videoSource(),undefined);advance(1800);
+finishReconnect(live);assert.equal(videoSource(),live.url);click('back');advance(30000);assert.equal(videoSource(),undefined);
 boot();
 for(let i=0;i<8;i++){submit('channel-'+i);respond();click('back');}
 assert.deepEqual(names(),['channel-7','channel-6','channel-5','channel-4','channel-3','channel-2']);
@@ -216,7 +216,7 @@ click('back');
 // Offline errors stop immediately; retry is an explicit user action.
 boot();submit('example');respond();navigator.onLine=false;node().handlers.error();advance(60000);
 assert.equal(videoSource(),undefined);assert.match(elements['playback-status'].textContent,/internetu/);
-navigator.onLine=true;click('toggle');ready();assert.equal(videoSource(),live.url);
+navigator.onLine=true;click('reconnect');advance(600);finishReconnect(live);assert.equal(videoSource(),live.url);
 startVOD();node().handlers.ended();advance(60000);assert.equal(elements.toggle.textContent,'Pokračovat');
 assert.match(elements['playback-status'].textContent,/skončil/);click('back');click('catalog-back');
 // Grid pagination bounds image/DOM load and supports vertical remote navigation.
@@ -347,6 +347,58 @@ click('quality-button');document.hidden=true;document.handlers.visibilitychange(
 qualityStore.data['kick-quality-preference']='1440';boot(qualityStore,'ok','en-US');submit('example');respond({live:null,videos:[vod]});
 elements.videos.firstChild.handlers.click();preparedVariants();assert.equal(videoSource(),vod.url);assert.match(elements['quality-selection'].textContent,/unavailable.*Auto/i);
 console.log('Quality choices: passed (validated variants, paused position, Auto fallback, persistence and lifecycle).');
+
+// Network recovery refreshes identity metadata instead of reusing an expired signed source.
+const freshReplay={...vod,id:'network-replay',url:'https://stream.kick.com/fresh/master.m3u8?new=1'};
+function finishReconnect(video=freshReplay){
+ const bridge=bridges.at(-1);assert.ok(/\/(?:replay|channel)$/.test(bridge.uri));
+ bridge.onservicecallback(JSON.stringify(bridge.uri.endsWith('/replay')?{returnValue:true,video}:{returnValue:true,channel:'example',videos:[],live:video}));
+ qualityResponse();ready();
+}
+boot(qualityStore,'ok','en-US');submit('example');respond({live:null,videos:[{...vod,id:'network-replay'}]});openReplay();
+node()._time=144;node().handlers.timeupdate();const offlineVideo=node();navigator.onLine=false;window.handlers.offline();
+assert.equal(videoSource(),undefined);disposed(offlineVideo);assert.match(elements['playback-status'].textContent,/internet/i);
+navigator.onLine=true;window.handlers.online();window.handlers.online();advance(600);
+assert.equal(bridges.at(-1).uri.endsWith('/replay'),true);assert.equal(bridges.at(-1).payload.id,'network-replay');
+const resolving=bridges.at(-1), resolvingCount=bridges.length;window.handlers.online();assert.equal(bridges.length,resolvingCount);
+finishReconnect();assert.equal(videoSource(),freshReplay.url);assert.equal(options().option.transmission.playTime.start,144000);
+node().error={code:2};node().handlers.error();advance(1800);const cancelledReconnect=bridges.at(-1);click('toggle');
+assert.equal(cancelledReconnect.cancelled,true);cancelledReconnect.onservicecallback(JSON.stringify({returnValue:true,video:freshReplay}));assert.equal(videoSource(),undefined);
+window.handlers.online();advance(6000);assert.equal(videoSource(),undefined,'Pause forbids automatic recovery');
+click('reconnect');advance(600);finishReconnect();assert.equal(node().paused,true,'Explicit reconnect preserves a paused viewer');
+click('toggle');node().handlers.playing();node().error={code:2};node().handlers.error();advance(1800);
+const leavingReconnect=bridges.at(-1);key(461);assert.equal(leavingReconnect.cancelled,true);
+leavingReconnect.onservicecallback(JSON.stringify({returnValue:true,video:freshReplay}));advance(60000);assert.equal(videoSource(),undefined);
+boot(qualityStore,'ok','en-US');submit('example');respond();node().error={code:2};node().handlers.error();advance(600);
+bridges.at(-1).onservicecallback(JSON.stringify({returnValue:false}));advance(1800);
+bridges.at(-1).onservicecallback(JSON.stringify({returnValue:false}));const exhausted=bridges.length;advance(60000);window.handlers.online();assert.equal(bridges.length,exhausted,'Exhaustion requires explicit retry');
+assert.match(elements['playback-status'].textContent,/Reconnect/i);click('reconnect');advance(600);finishReconnect({...live,url:'https://stream.kick.com/new-live/master.m3u8'});
+assert.equal(videoSource(),'https://stream.kick.com/new-live/master.m3u8');
+
+// Paused/ended/hidden sessions never restart on online; flapping retains its budget.
+click('toggle');navigator.onLine=false;window.handlers.offline();navigator.onLine=true;window.handlers.online();
+const pausedBridges=bridges.length;advance(60000);assert.equal(bridges.length,pausedBridges);assert.equal(videoSource(),undefined);
+click('reconnect');advance(600);bridges.at(-1).onservicecallback(JSON.stringify({returnValue:false}));
+assert.equal(elements['playback-status'].textContent,'Connection could not be restored. Select Reconnect to try again.','A failed paused reconnect must not leave a spinner');
+boot(qualityStore,'ok','en-US');submit('example');respond();
+for(let i=0;i<3;i++){navigator.onLine=false;window.handlers.offline();navigator.onLine=true;window.handlers.online();advance(1800);}
+const flapBridges=bridges.length;advance(60000);window.handlers.online();assert.equal(bridges.length,flapBridges);
+click('reconnect');advance(600);const hiddenRecovery=bridges.at(-1);document.hidden=true;document.handlers.visibilitychange();
+assert.equal(hiddenRecovery.cancelled,true);hiddenRecovery.onservicecallback(JSON.stringify({returnValue:true,channel:'example',live,videos:[]}));
+document.hidden=false;document.handlers.visibilitychange();window.handlers.online();advance(60000);assert.equal(videoSource(),undefined);
+
+boot(qualityStore,'ok','en-US');submit('example');respond();navigator.onLine=false;window.handlers.offline();
+assert.equal(elements.toggle.textContent,'Pause');click('toggle');assert.equal(elements.toggle.textContent,'Resume');
+navigator.onLine=true;window.handlers.online();const offlinePauseRequests=bridges.length;advance(60000);assert.equal(bridges.length,offlinePauseRequests,'Offline Pause forbids automatic recovery');
+click('reconnect');advance(600);const pausedLookup=bridges.at(-1);click('toggle');assert.equal(bridges.at(-1),pausedLookup,'Play during a pending reconnect reuses the lookup');
+finishReconnect(live);assert.equal(node().paused,false,'Explicit Play updates intent while reconnect is pending');
+
+boot(qualityStore,'ok','en-US');submit('example');respond({},false);preparedVariants();click('quality-button');
+const obsoleteQuality=elements['quality-options'].firstChild;node().error={code:2};node().handlers.error();
+assert.equal(elements['quality-choice'].hidden,true,'Network entry closes old rendition choices');
+obsoleteQuality.handlers.click();assert.equal(videoSource(),undefined,'A stale quality choice cannot bypass source refresh');
+advance(600);finishReconnect({...live,url:'https://stream.kick.com/refreshed/master.m3u8'});assert.equal(elements['quality-button'].disabled,false);
+console.log('Network reconnect: passed (fresh sources, position, intent, single lookup, cancellation and bounded retries).');
 
 // A new replay selection offers saved progress; dismissing it never mounts media.
 const resumeData=new Map([['kick-watched-videos',JSON.stringify([{key:'returner:resume-a',position:123,duration:600,finished:false}])]]);

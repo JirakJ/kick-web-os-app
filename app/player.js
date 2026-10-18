@@ -4,6 +4,7 @@ function KickPlayer(host, events) {
   var media = null, listeners = [], item = null, epoch = 0, ready = false;
   var wantPlay = false, phase = 'idle', position = 0, duration = 0;
   var queuedSeek = null, activeSeek = null, seekTimer, deadline, deadlineAt = 0, retryTimer;
+  var network = false, refreshing = false;
   var retries = 0, healthySince = 0, playPending = false, playAttempt = 0;
 
   function validURL(url) {
@@ -14,7 +15,7 @@ function KickPlayer(host, events) {
   function target() { return queuedSeek !== null ? queuedSeek : activeSeek !== null ? activeSeek : position; }
   function state() {
     return { phase: phase, paused: !wantPlay, ready: ready, position: target(), duration: duration,
-      isLive: !!(item && item.isLive), seeking: queuedSeek !== null || activeSeek !== null };
+      network: network, isLive: !!(item && item.isLive), seeking: queuedSeek !== null || activeSeek !== null };
   }
   function changed() { events.change(state()); }
   function status(key, params) { events.status(key, params); }
@@ -32,6 +33,7 @@ function KickPlayer(host, events) {
   }
   function dispose() {
     epoch++;
+    refreshing = false; if (events.cancelRefresh) events.cancelRefresh();
     playAttempt++;
     clearDeadline(); clearTimeout(seekTimer); clearTimeout(retryTimer);
     seekTimer = retryTimer = null;
@@ -54,8 +56,41 @@ function KickPlayer(host, events) {
       if (cleared) try { previous.load(); } catch (e) { /* The failed decoder is already detached. */ }
     }
   }
+  function networkRetry(manual, resume) {
+    if (!item || document.hidden) return;
+    if (manual && resume) wantPlay = true;
+    if (retryTimer || refreshing) { changed(); return; }
+    if (manual) retries = 0;
+    position = target(); dispose(); healthySince = 0; network = true;
+    if (navigator.onLine === false) { phase = 'offline'; status('p_offline'); changed(); return; }
+    if (!manual && !wantPlay) { phase = 'paused'; changed(); return; }
+    if (retries >= 2) { phase = 'error'; status('p_network_final'); changed(); return; }
+    retries++; phase = 'reconnecting'; status('p_reconnecting', { attempt: retries }); changed();
+    var token = epoch;
+    retryTimer = setTimeout(function () {
+      retryTimer = null;
+      if (token !== epoch || !item || document.hidden || !events.refresh) return;
+      refreshing = true;
+      events.refresh(function (value, unavailable) {
+        if (token !== epoch || !item || document.hidden || !refreshing) return;
+        refreshing = false;
+        if (value && validURL(value.url)) { item.url = value.url; item.best = value.best; network = false; mount(); }
+        else if (unavailable) { phase = 'error'; status('p_content_unavailable'); changed(); }
+        else if (!wantPlay) { phase = 'error'; status('p_network_final'); changed(); }
+        else networkRetry(false, false);
+      });
+    }, retries === 1 ? 600 : 1800);
+  }
+  function offline() {
+    if (!item || phase === 'ended' || document.hidden) return;
+    if (events.refresh) {
+      position = target(); dispose(); network = true; phase = 'offline'; status('p_offline'); changed();
+    }
+  }
+  function online() { if (network && phase === 'offline' && wantPlay) networkRetry(false, false); }
   function recover(reason, params) {
-    if (!item || retryTimer || phase === 'error' || document.hidden) return;
+    if (!item || retryTimer || refreshing || phase === 'error' || phase === 'ended' || document.hidden) return;
+    if (events.refresh && (navigator.onLine === false || reason === 'p_stalled' || reason === 'p_live_interrupted' || reason === 'p_media_error' && params && params.code === 2)) { networkRetry(false, false); return; }
     position = target();
     dispose(); healthySince = 0;
     if (navigator.onLine === false) {
@@ -200,7 +235,7 @@ function KickPlayer(host, events) {
     } catch (e) { recover('p_mount_failed'); }
   }
   function stop() {
-    item = null; wantPlay = false; dispose();
+    item = null; wantPlay = false; network = false; dispose();
     position = duration = retries = healthySince = 0; phase = 'idle';
     status(''); changed();
   }
@@ -212,11 +247,12 @@ function KickPlayer(host, events) {
     wantPlay = true; mount(); return true;
   }
   function changeSource(url, best) {
-    if (!item || !validURL(url) || document.hidden) return false;
+    if (!item || network || !validURL(url) || document.hidden) return false;
     position = target(); item.url = url; item.best = best; mount(); return true;
   }
   function play() {
     if (!item || document.hidden) return;
+    if (network && events.refresh) { networkRetry(true, true); return; }
     wantPlay = true;
     if (phase === 'ended') position = 0;
     if (phase === 'error') retries = 0;
@@ -224,6 +260,7 @@ function KickPlayer(host, events) {
   }
   function pause() {
     wantPlay = false;
+    if (network) { position = target(); dispose(); phase = 'paused'; status('p_suspended'); changed(); return; }
     playAttempt++; playPending = false;
     if (media) { try { media.pause(); } catch (e) { recover('p_pause_failed'); } }
     if (activeSeek === null && ready) { clearDeadline(); phase = 'paused'; }
@@ -239,7 +276,7 @@ function KickPlayer(host, events) {
     if (item) status('p_suspended');
     changed();
   }
-  return { load: load, changeSource: changeSource, stop: stop, play: play, pause: pause, suspend: suspend, state: state,
+  return { load: load, offline: offline, online: online, reconnect: function (resume) { if (events.refresh) networkRetry(true, !!resume); }, changeSource: changeSource, stop: stop, play: play, pause: pause, suspend: suspend, state: state,
     toggle: function () { if (wantPlay) pause(); else play(); },
     seekTo: seekTo, seekBy: function (seconds) { if (finite(seconds)) seekTo(target() + seconds); } };
 }

@@ -50,12 +50,14 @@ if (typeof document !== 'undefined') (function () {
   var player = KickPlayer(el('video-host'), { status: mediaStatus, change: function (next) {
     var transition = playback.phase !== next.phase || playback.paused !== next.paused;
     playback = next;
+    el('quality-button').disabled = preparing || !!next.network;
+    if (next.network) closeQuality();
     var label = next.phase === 'error' ? t('retry') : next.paused ? t('resume') : t('pause');
     if (el('toggle').textContent !== label) el('toggle').textContent = label;
     updateTimeline();
     if (next.paused) saveWatched();
     if (transition && screen === 'watch' && next.phase !== 'idle') showControls();
-  }, progress: rememberVideo, interact: function () { showControls(); el('toggle').focus(); } });
+  }, progress: rememberVideo, refresh: refreshSource, cancelRefresh: cancelRequest, interact: function () { showControls(); el('toggle').focus(); } });
 
   function videoKey(item) {
     return item && !item.isLive && typeof item.id === 'string' && /^[a-z0-9-]{1,64}$/.test(item.id) ?
@@ -526,14 +528,15 @@ if (typeof document !== 'undefined') (function () {
     current.playback.url = url; current.playback.best = best;
   }
   function openQuality() {
-    if (!current || preparing) return;
+    if (!current || preparing || playback.network) return;
+    var owner = current;
     var list = el('quality-options'); while (list.firstChild) list.removeChild(list.firstChild);
     qualityButtons = [];
     function add(label, variant) {
       var button = document.createElement('button'); button.type = 'button'; button.textContent = label;
       button.disabled = !!variant && !variant.manual;
       button.addEventListener('click', function () {
-        if (button.disabled) return;
+        if (button.disabled || el('quality-choice').hidden || current !== owner || playback.network) return;
         qualityPreference = variant ? String(variant.height) : 'auto';
         try { localStorage.setItem('kick-quality-preference', qualityPreference); } catch (e) { /* Session preference remains usable. */ }
         applyQuality(true, variant); closeQuality(); showControls(); el('quality-button').focus();
@@ -543,6 +546,30 @@ if (typeof document !== 'undefined') (function () {
     add(t('quality_auto'), null);
     current.variants.forEach(function (v) { add(v.height + 'p' + (v.fps ? ' · ' + v.fps + ' fps' : '') + (v.manual ? '' : ' · ' + t('quality_audio_unsupported')), v); });
     qualityButtons.push(el('quality-cancel')); el('quality-choice').hidden = false; showControls(); qualityButtons[0].focus();
+  }
+  function refreshSource(done) {
+    var item = current, name = kickChannel(input.value);
+    if (!item || screen !== 'watch' || document.hidden) { done(null); return; }
+    var payload = { channel: name };
+    if (!item.isLive) {
+      if (!/^[a-z0-9-]{1,64}$/.test(item.id || '')) { done(null, true); return; }
+      payload.id = item.id;
+    }
+    callService(item.isLive ? 'channel' : 'replay', payload, function (data) {
+      if (current !== item || document.hidden || screen !== 'watch') return;
+      var fresh = data.returnValue && (item.isLive ? data.channel === name && data.live : data.video && data.video.id === item.id && data.video);
+      if (!fresh) { done(null, !!data.returnValue); return; }
+      if (!validVariant({ url: fresh.url, height: 1, width: 1, bitrate: 1, fps: 0 })) { done(null); return; }
+      callService('prepare', { url: fresh.url }, function (prepared) {
+        if (current !== item || document.hidden || screen !== 'watch') return;
+        if (!prepared.returnValue) { done(null); return; }
+        item.url = fresh.url;
+        item.variants = Array.isArray(prepared.variants) ? prepared.variants.slice(0, 64).filter(validVariant) : [];
+        item.best = prepared.best && typeof prepared.best.bitrate === 'number' && prepared.best.bitrate > 0 && prepared.best.bitrate <= 200000000 ? prepared.best : null;
+        if (item.best) el('quality').textContent = t('best_quality', { quality: item.best.height === 2160 ? '4K' : item.best.height + 'p' }) + (item.best.fps ? t('fps_suffix', { fps: item.best.fps }) : '');
+        applyQuality(false); done(item.playback);
+      });
+    });
   }
   function startVideo(item, startAt) {
     if (!item || typeof item.url !== 'string' ||
@@ -712,7 +739,7 @@ if (typeof document !== 'undefined') (function () {
   }
   function toggle() {
     if (!current || preparing) return;
-    if (playback.phase === 'idle') player.load(current.playback || current); else player.toggle();
+    if (playback.phase === 'idle') player.load(current.playback || current); else if (playback.phase === 'error') player.play(); else player.toggle();
     showControls();
   }
   function seek(seconds) {
@@ -785,6 +812,7 @@ if (typeof document !== 'undefined') (function () {
   el('live').addEventListener('click', function () { if (catalog) startVideo(catalog.live); });
   el('watch-recordings').addEventListener('click', showCatalog);
   el('toggle').addEventListener('click', toggle);
+  el('reconnect').addEventListener('click', function () { if (!preparing && current) player.reconnect(false); showControls(); });
   el('seek').addEventListener('input', function () { scrubbing = true; updateTimeline(); showControls(); });
   el('seek').addEventListener('change', function () {
     player.seekTo(Number(el('seek').value));
@@ -812,7 +840,8 @@ if (typeof document !== 'undefined') (function () {
     else if (screen === 'catalog') (videoButtons[0] || el('catalog-back')).focus();
   });
   window.addEventListener('pagehide', function () { cancelContinue(); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
-  window.addEventListener('online', function () { if (screen === 'home' && !document.hidden) { renderContinue(); refreshRecentStatus(); } });
+  window.addEventListener('offline', function () { if (screen === 'watch') player.offline(); });
+  window.addEventListener('online', function () { if (screen === 'watch' && !document.hidden) player.online(); if (screen === 'home' && !document.hidden) { renderContinue(); refreshRecentStatus(); } });
   document.addEventListener('keydown', function (event) {
     var key = event.keyCode;
     if (!el('quality-choice').hidden) {
@@ -880,7 +909,7 @@ if (typeof document !== 'undefined') (function () {
       screen === 'catalog' ? (el('live').hidden ? [] : [el('live')]).concat(videoButtons,
         el('catalog-retry').hidden ? [] : [el('catalog-retry')],
         el('pages').hidden ? [] : [el('previous-page'), el('next-page')].filter(function (b) { return !b.disabled; }), [el('catalog-back'), el('catalog-favorite')]) :
-      (current && current.isLive ? [] : [el('seek')]).concat([el('toggle'), el('quality-button'), el('watch-recordings'), el('back')]);
+      (current && current.isLive ? [] : [el('seek')]).concat([el('toggle'), el('reconnect'), el('quality-button'), el('watch-recordings'), el('back')]);
     controls = controls.filter(function (control) { return !control.disabled; });
     var index = controls.indexOf(event.target);
     var recentIndex = recentControls.indexOf(event.target);
