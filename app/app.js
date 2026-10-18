@@ -32,6 +32,7 @@ if (typeof document !== 'undefined') (function () {
   var page = 0;
   var recents = [];
   var recentPage = 0, recentStatus = Object.create(null), recentRequest = null, recentTimer, recentGeneration = 0;
+  var favorites = [], favoritePage = 0, favoriteButtons = [], favoriteControls = [], favoriteMove = null;
   var continuePage = 0, continueControls = [], continueRequests = [], continueGeneration = 0;
   var resumeItem = null, resumeFocus = null;
   var watched = [], historyDirty = false, historyWrittenAt = 0;
@@ -63,6 +64,90 @@ if (typeof document !== 'undefined') (function () {
   function watchedVideo(item) {
     var key = videoKey(item);
     for (var i = 0; i < watched.length; i++) if (watched[i].key === key) return watched[i];
+  }
+  function saveFavorites() {
+    try { localStorage.setItem('kick-favorites', JSON.stringify(favorites)); } catch (e) { /* Retain session favorites. */ }
+  }
+  function favoriteLabels() {
+    var name = kickChannel(input.value), key = favorites.indexOf(name) < 0 ? 'favorite_add' : 'favorite_remove';
+    ['favorite-channel', 'catalog-favorite'].forEach(function (id) {
+      el(id).textContent = t(key); el(id).disabled = !name;
+      el(id).setAttribute('aria-label', t(key) + (name ? ': ' + name : ''));
+    });
+  }
+  function closeFavoriteMove(save) {
+    el('favorite-move').hidden = true;
+    if (!favoriteMove) return;
+    var name = favoriteMove.name;
+    if (save) saveFavorites(); else favorites = favoriteMove.before;
+    favoriteMove = null;
+    favoritePage = Math.floor(Math.max(0, favorites.indexOf(name)) / 6);
+    renderFavorites(); refreshRecentStatus();
+    var index = favorites.indexOf(name) - favoritePage * 6;
+    (favoriteControls[index * 3 + 1] || input).focus();
+  }
+  function moveFavorite(delta) {
+    if (!favoriteMove) return;
+    var index = favorites.indexOf(favoriteMove.name), target = index + delta;
+    if (target >= 0 && target < favorites.length) {
+      favorites.splice(index, 1); favorites.splice(target, 0, favoriteMove.name);
+      favoritePage = Math.floor(target / 6);
+      renderFavorites(); refreshRecentStatus();
+    }
+    index = favorites.indexOf(favoriteMove.name);
+    el('favorite-move-info').textContent = t('favorite_position', { name: favoriteMove.name, position: index + 1, total: favorites.length });
+    el('favorite-move-up').disabled = index === 0;
+    el('favorite-move-down').disabled = index === favorites.length - 1;
+  }
+  function renderFavorites() {
+    Object.keys(recentStatus).forEach(function (name) {
+      if (favorites.indexOf(name) < 0 && recents.indexOf(name) < 0) delete recentStatus[name];
+    });
+    var list = el('favorite-list');
+    while (list.firstChild) list.removeChild(list.firstChild);
+    favoriteButtons = []; favoriteControls = [];
+    var pages = Math.max(1, Math.ceil(favorites.length / 6));
+    favoritePage = Math.max(0, Math.min(favoritePage, pages - 1));
+    el('favorites-section').hidden = !favorites.length;
+    el('favorite-pages').hidden = pages <= 1;
+    el('favorite-previous').disabled = favoritePage === 0;
+    el('favorite-next').disabled = favoritePage === pages - 1;
+    el('favorite-number').textContent = (favoritePage + 1) + ' / ' + pages;
+    favorites.slice(favoritePage * 6, favoritePage * 6 + 6).forEach(function (name) {
+      var row = document.createElement('div'), play = document.createElement('button'), move = document.createElement('button'), remove = document.createElement('button');
+      var label = document.createElement('span'), state = document.createElement('span');
+      row.className = 'favorite-row'; play.type = move.type = remove.type = 'button';
+      label.textContent = name; state.className = 'favorite-state'; play.appendChild(label); play.appendChild(state);
+      play.addEventListener('click', function () { startChannel(name, true); });
+      move.textContent = '↕'; move.setAttribute('aria-label', t('move_favorite') + ': ' + name);
+      move.addEventListener('click', function () {
+        favoriteMove = { name: name, before: favorites.slice() };
+        el('favorite-move').hidden = false; moveFavorite(0);
+        (!el('favorite-move-up').disabled ? el('favorite-move-up') : !el('favorite-move-down').disabled ? el('favorite-move-down') : el('favorite-move-save')).focus();
+      });
+      remove.textContent = '×'; remove.setAttribute('aria-label', t('favorite_remove') + ': ' + name);
+      remove.addEventListener('click', function () {
+        cancelRecentStatus(); favorites = favorites.filter(function (value) { return value !== name; });
+        saveFavorites(); renderFavorites(); refreshRecentStatus(); (favoriteControls[0] || input).focus();
+      });
+      row.appendChild(play); row.appendChild(move); row.appendChild(remove); list.appendChild(row);
+      favoriteButtons.push(play); favoriteControls.push(play, move, remove);
+    });
+    favoriteLabels(); showRecentStatus();
+  }
+  function toggleFavorite() {
+    closeFavoriteMove(false);
+    var name = kickChannel(input.value), index = favorites.indexOf(name);
+    if (!name) return;
+    if (index < 0 && favorites.length >= 50) { el(screen === 'catalog' ? 'catalog-favorite-feedback' : 'favorite-feedback').textContent = t('favorites_limit'); return; }
+    el(screen === 'catalog' ? 'catalog-favorite-feedback' : 'favorite-feedback').textContent = '';
+    cancelRecentStatus();
+    if (index < 0) favorites.push(name); else favorites.splice(index, 1);
+    favoritePage = Math.floor(Math.max(0, favorites.indexOf(name)) / 6);
+    saveFavorites(); renderFavorites(); refreshRecentStatus();
+  }
+  function visibleStatusNames() {
+    return favorites.slice(favoritePage * 6, favoritePage * 6 + 6).concat(recents.slice(recentPage * 6, recentPage * 6 + 6)).filter(function (name, index, all) { return all.indexOf(name) === index; });
   }
   function resumePosition(item) {
     var entry = watchedVideo(item), length = Number(item.duration) || entry && entry.duration || 0;
@@ -171,7 +256,7 @@ if (typeof document !== 'undefined') (function () {
   }
 
   function setScreen(name) {
-    closeResume(false); cancelContinue();
+    closeFavoriteMove(false); closeResume(false); cancelContinue();
     screen = name;
     ['home', 'catalog', 'watch'].forEach(function (id) { el(id).hidden = id !== name; });
     window.scrollTo(0, 0);
@@ -231,6 +316,7 @@ if (typeof document !== 'undefined') (function () {
         recents = recents.filter(function (item) { return item !== name; });
         delete recentStatus[name]; saveRecents(); renderRecents();
         if (input.value === name) input.value = recents[0] || '';
+        favoriteLabels();
         (recentButtons[Math.min(index, recentButtons.length - 1)] || input).focus();
         refreshRecentStatus();
       });
@@ -241,9 +327,15 @@ if (typeof document !== 'undefined') (function () {
     el('recent-previous').disabled = recentPage === 0;
     el('recent-next').disabled = recentPage === pages - 1;
     el('recent-page-number').textContent = (recentPage + 1) + ' / ' + pages;
-    showRecentStatus();
+    favoriteLabels(); showRecentStatus();
   }
   function showRecentStatus() {
+    favoriteButtons.forEach(function (button, index) {
+      var name = favorites[favoritePage * 6 + index], value = recentStatus[name];
+      var live = value && Date.now() - value.at < 60000 ? value.live : null;
+      var status = t(live === true ? 'live_badge' : live === false ? 'offline_status' : 'unknown_status');
+      button.children[1].textContent = status; button.setAttribute('aria-label', name + ', ' + status);
+    });
     recentButtons.forEach(function (button, index) {
       var name = recents[recentPage * 6 + index], status = recentStatus[name];
       var live = !!(status && status.live === true && Date.now() - status.at < 60000);
@@ -258,14 +350,15 @@ if (typeof document !== 'undefined') (function () {
   }
   function refreshRecentStatus() {
     cancelRecentStatus();
-    if (screen !== 'home' || document.hidden || !recents.length) return;
+    var visible = visibleStatusNames();
+    if (screen !== 'home' || document.hidden || !visible.length) return;
     showRecentStatus();
-    var names = recents.slice(recentPage * 6, recentPage * 6 + 6).filter(function (name) {
+    var names = visible.filter(function (name) {
       return !recentStatus[name] || Date.now() - recentStatus[name].at >= 60000;
-    });
+    }).slice(0, 6);
     if (!names.length || navigator.onLine === false || typeof PalmServiceBridge === 'undefined') {
       var delay = 60000;
-      if (!names.length) recents.slice(recentPage * 6, recentPage * 6 + 6).forEach(function (name) {
+      if (!names.length) visible.forEach(function (name) {
         delay = Math.min(delay, Math.max(1, 60000 - (Date.now() - recentStatus[name].at)));
       });
       recentTimer = setTimeout(refreshRecentStatus, delay); return;
@@ -301,7 +394,7 @@ if (typeof document !== 'undefined') (function () {
   function remember(name) {
     recents = [name].concat(recents.filter(function (item) { return item !== name; })).slice(0, 50);
     recentPage = 0;
-    Object.keys(recentStatus).forEach(function (key) { if (recents.indexOf(key) === -1) delete recentStatus[key]; });
+    Object.keys(recentStatus).forEach(function (key) { if (recents.indexOf(key) === -1 && favorites.indexOf(key) === -1) delete recentStatus[key]; });
     saveRecents();
     renderRecents();
   }
@@ -531,7 +624,7 @@ if (typeof document !== 'undefined') (function () {
       el(screen === 'catalog' ? 'channel-status' : 'error').textContent = t('offline');
       return;
     }
-    input.value = name;
+    input.value = name; favoriteLabels();
     input.removeAttribute('aria-invalid');
     el('error').textContent = '';
     cancelRequest();
@@ -608,6 +701,19 @@ if (typeof document !== 'undefined') (function () {
     el('seek').setAttribute('aria-valuetext', t('time_of', { elapsed: elapsed, total: total }));
   }
   el('resume-choice').hidden = true;
+  el('favorite-move').hidden = true;
+  input.addEventListener('input', favoriteLabels);
+  el('favorite-channel').addEventListener('click', toggleFavorite);
+  el('catalog-favorite').addEventListener('click', toggleFavorite);
+  [-1, 1].forEach(function (delta) {
+    el(delta < 0 ? 'favorite-previous' : 'favorite-next').addEventListener('click', function () { cancelRecentStatus(); favoritePage += delta; renderFavorites(); refreshRecentStatus(); (favoriteControls[0] || input).focus(); });
+    el(delta < 0 ? 'favorite-move-up' : 'favorite-move-down').addEventListener('click', function () {
+      moveFavorite(delta);
+      (el(delta < 0 ? 'favorite-move-up' : 'favorite-move-down').disabled ? el('favorite-move-save') : el(delta < 0 ? 'favorite-move-up' : 'favorite-move-down')).focus();
+    });
+  });
+  el('favorite-move-save').addEventListener('click', function () { closeFavoriteMove(true); });
+  el('favorite-move-cancel').addEventListener('click', function () { closeFavoriteMove(false); });
   el('resume-cancel').addEventListener('click', function () { closeResume(true); });
   el('resume-start').addEventListener('click', function () { var item = resumeItem; closeResume(false); if (item) startVideo(item, 0); });
   el('resume-continue').addEventListener('click', function () { var item = resumeItem, at = item && resumePosition(item); closeResume(false); if (item) startVideo(item, at); });
@@ -643,7 +749,7 @@ if (typeof document !== 'undefined') (function () {
   el('watch').addEventListener('mousemove', showControls);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
-      cancelRecentStatus(); cancelContinue(); closeResume(false);
+      cancelRecentStatus(); cancelContinue(); closeFavoriteMove(false); closeResume(false);
       var interrupted = !!request;
       cancelRequest();
       preparing = false;
@@ -658,10 +764,19 @@ if (typeof document !== 'undefined') (function () {
     else if (screen === 'home') { renderContinue(); refreshRecentStatus(); }
     else if (screen === 'catalog') (videoButtons[0] || el('catalog-back')).focus();
   });
-  window.addEventListener('pagehide', function () { cancelContinue(); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
+  window.addEventListener('pagehide', function () { cancelContinue(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
   window.addEventListener('online', function () { if (screen === 'home' && !document.hidden) { renderContinue(); refreshRecentStatus(); } });
   document.addEventListener('keydown', function (event) {
     var key = event.keyCode;
+    if (favoriteMove) {
+      var moveControls = [el('favorite-move-up'), el('favorite-move-down'), el('favorite-move-save'), el('favorite-move-cancel')].filter(function (control) { return !control.disabled; });
+      if (key === 461 || key === 27) { event.preventDefault(); closeFavoriteMove(false); }
+      else if (key === 9 || key >= 37 && key <= 40) {
+        event.preventDefault(); var at = moveControls.indexOf(event.target), step = key === 9 ? event.shiftKey ? -1 : 1 : key === 37 || key === 38 ? -1 : 1;
+        moveControls[(Math.max(0, at) + step + moveControls.length) % moveControls.length].focus();
+      }
+      return;
+    }
     if (resumeItem) {
       var choices = [el('resume-continue'), el('resume-start'), el('resume-cancel')];
       if (key === 9) {
@@ -703,12 +818,12 @@ if (typeof document !== 'undefined') (function () {
       if (key === 412 || key === 417) { event.preventDefault(); seek(key === 412 ? -10 : 10); return; }
       if (key >= 37 && key <= 40) showControls();
     }
-    var controls = screen === 'home' ? [input, el('play'), el('recordings')].concat(recentControls,
-      el('recent-pages').hidden ? [] : [el('recent-previous'), el('recent-next')], continueControls,
+    var controls = screen === 'home' ? [input, el('play'), el('recordings'), el('favorite-channel')].concat(recentControls,
+      el('recent-pages').hidden ? [] : [el('recent-previous'), el('recent-next')], favoriteControls, el('favorite-pages').hidden ? [] : [el('favorite-previous'), el('favorite-next')], continueControls,
       el('continue-pages').hidden ? [] : [el('continue-previous'), el('continue-next')]) :
       screen === 'catalog' ? (el('live').hidden ? [] : [el('live')]).concat(videoButtons,
         el('catalog-retry').hidden ? [] : [el('catalog-retry')],
-        el('pages').hidden ? [] : [el('previous-page'), el('next-page')].filter(function (b) { return !b.disabled; }), [el('catalog-back')]) :
+        el('pages').hidden ? [] : [el('previous-page'), el('next-page')].filter(function (b) { return !b.disabled; }), [el('catalog-back'), el('catalog-favorite')]) :
       (current && current.isLive ? [] : [el('seek')]).concat([el('toggle'), el('watch-recordings'), el('back')]);
     controls = controls.filter(function (control) { return !control.disabled; });
     var index = controls.indexOf(event.target);
@@ -717,14 +832,21 @@ if (typeof document !== 'undefined') (function () {
       event.preventDefault();
       var rowTarget = recentIndex + (key === 38 ? -2 : 2);
       (rowTarget < 0 ? el('recordings') : recentControls[rowTarget] ||
-        (!el('recent-next').disabled ? el('recent-next') : continueControls[0] || recentControls[recentIndex])).focus();
+        (!el('recent-next').disabled ? el('recent-next') : favoriteControls[0] || continueControls[0] || recentControls[recentIndex])).focus();
       return;
+    }
+    var favoriteIndex = favoriteControls.indexOf(event.target);
+    if (screen === 'home' && favoriteIndex >= 0 && (key === 38 || key === 40)) {
+      event.preventDefault(); var favoriteTarget = favoriteIndex + (key === 38 ? -1 : 1) * (window.innerWidth <= 800 ? 3 : 6);
+      var favoriteControl = favoriteTarget < 0 ? recentControls[Math.max(0, recentControls.length - 2)] || (el('favorite-channel').disabled ? el('recordings') : el('favorite-channel')) :
+        favoriteControls[favoriteTarget] || (!el('favorite-next').disabled ? el('favorite-next') : continueControls[0] || favoriteControls[favoriteIndex]);
+      favoriteControl.focus(); favoriteControl.scrollIntoView({ block: 'nearest' }); return;
     }
     var continueIndex = continueControls.indexOf(event.target);
     if (screen === 'home' && continueIndex >= 0 && (key === 38 || key === 40)) {
       event.preventDefault();
       var shelfTarget = continueIndex + (key === 38 ? -1 : 1) * (window.innerWidth <= 800 ? 2 : 4);
-      var shelfControl = shelfTarget < 0 ? recentControls[Math.max(0, recentControls.length - 2 + continueIndex % 2)] || el('recordings') :
+      var shelfControl = shelfTarget < 0 ? favoriteControls[Math.max(0, favoriteControls.length - 3 + (continueIndex % 2 ? 2 : 0))] || recentControls[Math.max(0, recentControls.length - 2 + continueIndex % 2)] || el('recordings') :
         continueControls[shelfTarget] || (!el('continue-next').disabled ? el('continue-next') : continueControls[continueIndex]);
       shelfControl.focus(); shelfControl.scrollIntoView({ block: 'nearest' }); return;
     }
@@ -769,8 +891,16 @@ if (typeof document !== 'undefined') (function () {
     try { var last = kickChannel(localStorage.getItem('kick-channel')); if (last) recents.push(last); }
     catch (e) { /* Optional migration. */ }
   }
+  try {
+    var rawFavorites = localStorage.getItem('kick-favorites') || '[]';
+    var savedFavorites = rawFavorites.length <= 4096 ? JSON.parse(rawFavorites) : [];
+    if (Array.isArray(savedFavorites)) savedFavorites.slice(0, 100).forEach(function (value) {
+      var name = kickChannel(value);
+      if (name && favorites.indexOf(name) === -1 && favorites.length < 50) favorites.push(name);
+    });
+  } catch (e) { /* Ignore corrupt or unavailable favorite storage. */ }
   input.value = recents[0] || '';
-  renderRecents();
+  renderRecents(); renderFavorites();
   setScreen('home');
   (recentButtons[0] || input).focus();
 }());
