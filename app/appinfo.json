@@ -1,6 +1,6 @@
 {
   "id": "com.jakubjirak",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "vendor": "Jiri Jirak",
   "type": "web",
   "main": "index.html",
@@ -10,5 +10,5 @@
   "iconColor": "#0b0e0f",
   "resolution": "1920x1080",
   "disableBackHistoryAPI": true,
-  "appDescription": "Unofficial Kick player · No chat"
+  "appDescription": "Unofficial Kick player \u00b7 No chat"
 }

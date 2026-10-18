@@ -17,15 +17,15 @@ const output='artifacts/browser';fs.mkdirSync(output,{recursive:true});for(const
     localStorage.setItem('kick-accessibility',JSON.stringify({size:large?'large':'normal',contrast:high}));
     localStorage.setItem('kick-recent-channels',JSON.stringify(['example','channel_two','channel_three','channel_four','channel_five','channel_six']));
     localStorage.setItem('kick-favorites',JSON.stringify(['example','channel_two','channel_three','channel_four','channel_five','channel_six','channel_seven']));
-    localStorage.setItem('kick-watched-videos',JSON.stringify(Array.from({length:6},(_,i)=>({key:'example:replay-'+i,position:100,duration:600,finished:i%2!==0}))));
-    const videos=Array.from({length:14},(_,i)=>({id:'replay-'+i,title:'🔴 👩🏽‍💻 Čaj — '+('Long replay title '.repeat(8))+i,url:'https://stream.kick.com/a/master.m3u8',date:'2026-10-18',duration:600,thumbnail:'https://files.kick.com/test.jpg'}));
+    localStorage.setItem('kick-watched-videos',JSON.stringify(Array.from({length:6},(_,i)=>({key:'example:replay-'+i,position:100+i,duration:600,finished:i%2!==0}))));
+    const videos=Array.from({length:14},(_,i)=>({id:'replay-'+i,title:'Replay '+i+' 🔴 👩🏽‍💻 Čaj — '+('Long replay title '.repeat(8))+i,url:'https://stream.kick.com/a/master.m3u8',date:'2026-10-18',duration:600,thumbnail:'https://files.kick.com/test.jpg'}));
     const live={...videos[0],isLive:true};
     const variants=[{url:'https://stream.kick.com/a/1080.m3u8',width:1920,height:1080,bitrate:7000000,fps:60,manual:true},{url:'https://stream.kick.com/a/720.m3u8',width:1280,height:720,bitrate:3000000,fps:30,manual:true}];
     window.PalmServiceBridge=function(){this.cancel=()=>{this.cancelled=true;};this.call=(uri,json)=>{
      const data=JSON.parse(json);let reply;
      if(uri.endsWith('/channel'))reply={returnValue:true,channel:data.channel,live,videos};
-     else if(uri.endsWith('/statuses'))reply={returnValue:true,statuses:data.channels.map(channel=>({channel,live:true}))};
-     else if(uri.endsWith('/replay'))reply={returnValue:true,video:videos.find(v=>v.id===data.id)||null};
+     else if(uri.endsWith('/statuses'))reply=window.fixtureStatusesUnavailable?{returnValue:false}:{returnValue:true,statuses:data.channels.map(channel=>({channel,live:true}))};
+     else if(uri.endsWith('/replay'))reply=window.fixtureReplayUnavailable?{returnValue:false}:{returnValue:true,video:videos.find(v=>v.id===data.id)||null};
      else if(uri.endsWith('/prepare'))reply={returnValue:true,best:variants[0],variants};
      else reply={returnValue:false};
      setTimeout(()=>{if(!this.cancelled)this.onservicecallback(JSON.stringify(reply));},5);
@@ -61,8 +61,11 @@ const output='artifacts/browser';fs.mkdirSync(output,{recursive:true});for(const
     },{high});
     assert.deepEqual(controls,[],`${locale}/${stage} controls`);checks++;
    }
-   await page.waitForFunction(()=>document.querySelectorAll('#favorite-list button').length===18);
+   await page.waitForFunction(()=>document.querySelectorAll('#favorite-list button').length>0);
+   await page.waitForTimeout(40);
    await audit('home');
+   const homeFit=await page.evaluate(()=>{const region=document.getElementById('home-content'),errors=[];if(region.scrollHeight>region.clientHeight+1)errors.push('Home needs vertical scrolling');if(document.documentElement.scrollHeight>innerHeight+1)errors.push('Page needs vertical scrolling');for(const e of document.querySelectorAll('#home button,#home input')){if(!e.getClientRects().length)continue;const r=e.getBoundingClientRect();if(r.top<0||r.bottom>innerHeight||r.left<0||r.right>innerWidth)errors.push((e.id||e.className)+': control outside screen');}return errors;});
+   assert.deepEqual(homeFit,[],`${viewport.width}/${locale}/${large?'large':'normal'}/home fits without scrolling`);
    const footerBoxes=await page.evaluate(()=>{const bounds=id=>{const r=document.getElementById(id).getBoundingClientRect();return{top:r.top,bottom:r.bottom,left:r.left,right:r.right};};return{footer:document.querySelector('footer').getBoundingClientRect().toJSON(),version:bounds('app-version'),about:bounds('about-button'),accessibility:bounds('accessibility-button'),height:innerHeight};});
    assert(footerBoxes.version.top>=0&&footerBoxes.version.bottom<=footerBoxes.height,'Home version stays visible above the screen edge with populated shelves');
    for(const id of ['about','accessibility'])assert(footerBoxes[id].top>=footerBoxes.footer.top&&footerBoxes[id].bottom<=footerBoxes.footer.bottom,'Secondary actions stay within the visible footer');
@@ -73,12 +76,44 @@ const output='artifacts/browser';fs.mkdirSync(output,{recursive:true});for(const
     assert(focusBox.top>=focusBox.containerTop+10&&focusBox.bottom<=focusBox.containerBottom-10,'Scrolling home controls retain the complete focus outline above the footer: '+selector+' '+JSON.stringify(focusBox));
    }
 
+   if(locale==='en'){
+    for(const [list,row,prefix,count] of [['recent-channels','.recent-name','recent',6],['favorite-list','.favorite-row button:first-child > span:first-child','favorite',7],['continue-list','.continue-row button:first-child','continue',3]]){
+     const names=[];do{names.push(...await page.locator('#'+list+' '+row).allTextContents());if(await page.locator('#'+prefix+'-next').isDisabled())break;await page.click('#'+prefix+'-next');}while(names.length<=count);
+     assert.equal(names.length,count,'Paging reaches every saved item without scrolling');assert.equal(new Set(names).size,count,'Paging neither repeats nor loses items');
+     while(!await page.locator('#'+prefix+'-previous').isDisabled())await page.click('#'+prefix+'-previous');
+    }
+    await page.screenshot({path:`${output}/home-${viewport.width}-${large?'large':'normal'}-${high?'high':'normal'}.png`});
+    await page.locator('.recent-row:first-child .recent-remove').focus();await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement===document.querySelector('.favorite-row button')),true,'Right crosses to the same row in the adjacent panel');
+    await page.locator('.favorite-row button').first().focus();await page.keyboard.press('ArrowDown');if(await page.locator('.favorite-row').count()>1)assert.equal(await page.evaluate(()=>document.activeElement===document.querySelectorAll('.favorite-row')[1].firstChild),true,'Down follows the painted single-column rows');
+    if(viewport.width===1280&&!large){await page.locator('#recent-next').focus();}
+    await page.setViewportSize(viewport.width===1280?{width:1920,height:1080}:{width:1280,height:720});await page.waitForTimeout(40);if(viewport.width===1280&&!large)assert.equal(await page.evaluate(()=>document.activeElement===document.querySelector('.recent-row button')),true,'A paginator hidden by growing capacity restores focus within its panel');await page.setViewportSize(viewport);await page.waitForTimeout(40);
+    const resized=await page.evaluate(()=>{const e=document.getElementById('home-content');return{scroll:e.scrollHeight,height:e.clientHeight,focused:document.activeElement!==document.body&&document.activeElement.getClientRects().length>0};});assert(resized.scroll<=resized.height+1&&resized.focused,'Resize preserves visible focus and a fitted home');
+   }
+   if(large&&(locale==='en'||locale==='de')){
+    await page.addInitScript(()=>{window.fixtureStatusesUnavailable=true;});await page.reload();await page.waitForTimeout(60);
+    const readable=await page.evaluate(()=>Array.from(document.querySelectorAll('.favorite-row button:first-child')).every(e=>e.firstChild.getBoundingClientRect().width>=e.clientWidth*.4));
+    assert(readable,'Unavailable status preserves meaningful width for favorite channel names');
+   }
    await page.click('#accessibility-button');await audit('settings');await page.click('#accessibility-close');
    await page.click('#find-saved');await page.fill('#saved-query','channel');await audit('saved-search');await page.click('#saved-cancel');
-   await page.click('#recordings');await page.waitForFunction(()=>document.querySelectorAll('#videos>button').length===6);await audit('catalog');
+   await page.click('#recordings');await page.waitForFunction(()=>document.querySelectorAll('#videos>button').length>0);await page.waitForTimeout(40);await audit('catalog');
+   if(locale==='de'&&large){
+    await page.click('#catalog-back');await page.fill('#channel','abcdefghijklmnopqrstuvwxy');await page.click('#recordings');await page.waitForTimeout(60);
+    const completeLong=await page.evaluate(()=>Array.from(document.querySelectorAll('#videos>button')).every(card=>{const b=card.getBoundingClientRect();return Array.from(card.querySelectorAll('.video-preview,.video-title,small')).every(e=>{const r=e.getBoundingClientRect();return r.top>=b.top&&r.bottom<=b.bottom&&(e.className!=='video-preview'||r.width>=b.width-8);});}));assert(completeLong,'A valid maximum-length channel keeps complete replay cards visible');
+    await page.click('#catalog-back');await page.evaluate(()=>{window.fixtureReplayUnavailable=true;});await page.locator('.continue-row button').first().click();await page.waitForTimeout(100);
+    const completeUnavailable=await page.evaluate(()=>Array.from(document.querySelectorAll('#videos>button')).every(card=>{const b=card.getBoundingClientRect();return Array.from(card.querySelectorAll('.video-preview,.video-title,small')).every(e=>{const r=e.getBoundingClientRect();return r.top>=b.top&&r.bottom<=b.bottom&&(e.className!=='video-preview'||r.width>=b.width-8);});}));assert(completeUnavailable,'An unavailable Continue item keeps the remaining replay cards complete');assert(await page.locator('#videos-status').textContent());
+    await page.evaluate(()=>{window.fixtureReplayUnavailable=false;});await page.click('#catalog-back');await page.fill('#channel','example');await page.click('#recordings');await page.waitForTimeout(60);
+   }
+   // Legacy TV buttons align flex children at the start; previews must keep their width.
+   await page.evaluate(()=>document.querySelectorAll('.video-preview').forEach(e=>{e.style.alignSelf='flex-start';}));
+   const catalogFit=await page.evaluate(()=>Array.from(document.querySelectorAll('#catalog button')).filter(e=>e.getClientRects().length).every(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}));assert(catalogFit,'Catalog cards and paging fit the screen without scrolling');
+   const completeCards=await page.evaluate(()=>Array.from(document.querySelectorAll('#videos>button')).every(card=>{const b=card.getBoundingClientRect();return Array.from(card.querySelectorAll('.video-preview,.video-title,small')).every(e=>{const r=e.getBoundingClientRect();return r.top>=b.top&&r.bottom<=b.bottom&&(e.className!=='video-preview'||r.width>=b.width-8);});}));assert(completeCards,'Thumbnails, titles and dates fit fully inside each replay card');
    const columns=await page.evaluate(()=>{const cards=Array.from(document.querySelectorAll('#videos>button'));const y=cards[0].getBoundingClientRect().top;return cards.filter(c=>Math.abs(c.getBoundingClientRect().top-y)<1).length;});
    assert.equal(columns,large?2:3,'Remote grid columns match painted columns');
    if(locale==='en'&&large&&high)await page.screenshot({path:`${output}/catalog-${viewport.width}.png`,fullPage:true});
+   if(locale==='en'&&!large&&viewport.width===1280){
+    await page.click('#next-page');const savedTitle=await page.locator('#videos .video-title').first().textContent();await page.click('#catalog-search');await page.setViewportSize({width:1920,height:1080});await page.waitForTimeout(40);await page.click('#replay-cancel');assert((await page.locator('#videos .video-title').allTextContents()).includes(savedTitle),'Cancel after resizing search retains the original replay in view');await page.setViewportSize(viewport);await page.waitForTimeout(40);while(!await page.locator('#previous-page').isDisabled())await page.click('#previous-page');
+   }
    await page.click('#catalog-search');await page.fill('#replay-query','Čaj');await audit('replay-search');await page.click('#replay-cancel');
    await page.click('#videos>button');await page.waitForFunction(()=>!document.getElementById('resume-choice').hidden);await audit('resume');await page.click('#resume-start');
    await page.waitForFunction(()=>document.querySelector('#video-host video'));await audit('watch');

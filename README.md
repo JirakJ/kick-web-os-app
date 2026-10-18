@@ -1,28 +1,28 @@
-# Kick for LG webOS
+# Kick TV app for LG webOS
 
 [![CI](https://github.com/JirakJ/kick-web-os-app/actions/workflows/ci.yml/badge.svg)](https://github.com/JirakJ/kick-web-os-app/actions/workflows/ci.yml)
 
-An unofficial, chat-free Kick player for LG webOS TVs. Choose a channel and watch live streams or public replays through the TV's native video player. The app and its small JavaScript service run on the TV; no computer or external proxy needs to stay on.
+An unofficial, chat-free Kick TV app for LG webOS smart TVs. Choose a channel and watch live streams or public video-on-demand (VOD) replays through the TV's native video player. The app and its small JavaScript service run on the TV; no computer or external proxy needs to stay on.
 
 The interface follows the TV's system language (Czech, Slovak, English, German, Polish, Spanish, Portuguese, French, Italian, Hungarian, Ukrainian, Russian and Turkish; other languages fall back to English) and uses Kick-inspired black and green styling.
 
 [Download the latest installable IPK](https://github.com/JirakJ/kick-web-os-app/releases/latest).
 
-**0.8.1 keeps the version and settings visible in the home footer and adds channel-row hearts.** The UI passed native TV acceptance, following the eight features accepted in 0.8.0. The release workflow publishes the IPK and checksums only after every main-branch CI job succeeds. See the [device audit](docs/production-audit.md) for measurements and remaining hardware coverage limits.
+**0.8.2 fits home and replay browsing to the TV screen.** Three saved-channel panels and the replay grid adapt their page size to the available height, including larger text. The release workflow publishes the IPK, current TV screenshots and checksums only after every main-branch CI job succeeds. See the [device audit](docs/production-audit.md) for measured scope and remaining coverage limits.
 
 ## Features
 
 - Live streams and public replays, including a replay picker when a channel is offline.
-- Up to 50 independently ordered favorite channels, six per page, with row hearts, remote-only move/save/cancel controls and visible LIVE/offline/unknown status.
-- Up to 50 recent channels stored locally, six per page, with a **LIVE** badge for live channels and an individual remove button.
+- Up to 50 independently ordered favorite channels, up to six per page depending on screen height and text size, with row hearts, remote-only move/save/cancel controls and visible LIVE/offline/unknown status.
+- Up to 50 recent channels stored locally, up to six per page depending on available space, with a **LIVE** badge for live channels and an individual remove button.
 - Interface language taken from the TV's locale, including the launcher title, with English as the fallback.
-- Replay thumbnails, titles, dates and durations, with six recordings per page.
+- Replay thumbnails, titles, dates and durations, with up to six recordings per page; the grid adapts to the available screen height.
 - Last-watched and previously watched replay badges, with the last played position stored locally.
 - A seek bar without a focus rectangle, pause/resume and remote controls; playback controls hide after six seconds of inactivity.
 - Accessibility settings persist app-only text size and high contrast, with remote controls and reset. Large text uses a two-column replay grid; focus and statuses have visible text/semantics. Voice Guide is off on the tested TV; spoken output remains unverified.
 - About and updates shows installed/latest stable versions and short plain-text release notes. Checks are viewer initiated against the fixed official GitHub repository, cached for six hours with persisted failure/rate-limit deadlines that survive idle service exit. It provides Dev Manager/existing Homebrew installation and rollback guidance; no in-app installer. Offline saved results are labelled as potentially outdated.
 - Go to time accepts hours/minutes/seconds, previews a duration-clamped target and offers Confirm/Cancel. Fast-forward/rewind opens a ±10-minute preview; short timeline arrows remain ±10 seconds.
-- Find saved channels locally; search replay titles, filter by viewing history and sort newest/oldest within the loaded catalog of up to 30 public replays. Six visible results per page; Back cancels changes and restores focus.
+- Find saved channels locally; search replay titles, filter by viewing history and sort newest/oldest within the loaded catalog of up to 30 public replays. Up to six visible results per page; Back cancels changes and restores focus.
 - Network reconnect refreshes validated live/replay sources with two bounded attempts; offline flapping retains the budget. Pause, hide and Back cancel pending recovery. Manual Reconnect preserves pause intent. A 55-second TV-only internet outage, paused reconnect and cancellation passed on webOS 5; physical Wi-Fi/router restart remains unverified.
 - Auto quality up to 4K: 2160p → 1440p → 1080p → lower resolutions. Native adaptation remains enabled for slower connections. The quality menu also offers validated self-contained HLS renditions; fixed quality preserves position/pause, while playlists with separate audio require Auto. Preferences are local; missing renditions fall back explicitly to Auto. Actual decoder resolution/FPS is unavailable through the supported app API.
 - Serialized seeking, bounded recovery after media errors, request timeouts and cleanup when leaving the player.
@@ -31,11 +31,13 @@ No chat, account login, private videos or analytics.
 
 ## Screenshots
 
-Captured from version **0.6.0** (Czech interface) running on an LG 55NANO863NA at 1920 × 1080 on 12 September 2026.
+Captured from version **0.8.2** (English interface) on an LG 55NANO863NA / webOS 5.6.2 at native 1920 × 1080 on 18 October 2026. Saved lists use demonstration channel choices; catalog and playback show an actual public replay. After CI succeeds, the release workflow attaches these same PNGs and includes them in SHA256SUMS.
 
-![Channel selection and recent channels](docs/screenshots/home.png)
+![Kick TV home with recent channels, favorites and Continue watching](docs/screenshots/home.png)
 
-![Replay catalog with viewing history and correctly rendered symbols](docs/screenshots/replays.png)
+![Home with larger text](docs/screenshots/home-large.png)
+
+![Replay catalog with thumbnails and titles](docs/screenshots/replays.png)
 
 ![Native replay video with playback controls](docs/screenshots/player.png)
 
@@ -52,7 +54,7 @@ npm test
 npm run package
 ```
 
-The output is `dist/com.jakubjirak_0.8.1_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
+The output is `dist/com.jakubjirak_0.8.2_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
 
 Build dependencies pin security updates and two documented [local backports](vendor/security/README.md) for fixes that have no official release yet. `npm test` also checks the installed CLI dependencies against hostile brace patterns, proxy trust inputs and numeric precision values. These development dependencies are not shipped to the TV.
 

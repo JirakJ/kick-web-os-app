@@ -288,6 +288,7 @@ assert.equal(elements['recent-channels'].children[1].children[1].attrs['aria-pre
 elements['recent-channels'].children[0].children[1].focus();key(40);assert.equal(document.activeElement,elements['recent-channels'].children[1].children[1],'Down preserves the heart column');
 elements['recent-channels'].children[0].children[1].handlers.click();assert.deepEqual(JSON.parse(heartData.get('kick-favorites')),['beta']);assert.deepEqual(names(),['alpha','beta']);
 assert.equal(elements['favorite-channel'].attrs['aria-pressed'],'false');
+elements['recent-channels'].children[1].children[1].focus();key(40);assert.equal(document.activeElement,elements['about-button'],'Down at the bottom of a home column reaches the footer rather than another column');
 boot(favoriteStorage);
 // Reordering previews in memory; Back cancels and Save persists.
 elements['favorite-list'].children[1].children[1].handlers.click();assert.equal(elements['favorite-move'].hidden,false);
@@ -577,7 +578,8 @@ assert.equal(videoSource(),undefined);oldShelf(JSON.stringify({returnValue:true,
 // The shelf is reachable vertically and refreshes after offline startup.
 const withRecents={getItem:k=>k==='kick-recent-channels'?'["returner"]':resumeStorage.getItem(k),setItem:resumeStorage.setItem};
 boot(withRecents);elements['recent-channels'].firstChild.firstChild.focus();key(40);
-assert.equal(document.activeElement,elements['continue-list'].firstChild.firstChild,'Down leaves the last recent row for the shelf');
+assert.equal(document.activeElement,elements['about-button'],'Down leaves the last recent row for the fixed footer');
+elements['recent-channels'].firstChild.children[2].focus();key(39);assert.equal(document.activeElement,elements['continue-list'].firstChild.firstChild,'Right crosses to the adjacent populated column');
 boot(resumeStorage,'ok','cs-CZ',false);assert.equal(bridges.filter(b=>b.uri.endsWith('/replay')).length,0);
 navigator.onLine=true;window.handlers.online();assert.equal(bridges.filter(b=>b.uri.endsWith('/replay')).length,1,'Online refreshes visible shelf metadata');
 // Opening history resolves the selected public identity beyond the visible catalogue.

@@ -55,7 +55,18 @@ jobs:
           app_id=$(node -p 'require("./app/appinfo.json").id')
           ipk="${app_id}_${version}_all.ipk"
           test -s "dist/$ipk"
-          (cd dist && sha256sum "$ipk" > SHA256SUMS)
-          gh release create "$tag" "dist/$ipk" dist/SHA256SUMS \
+          # Versioned TV captures are opt-in assets from this exact source commit.
+          shopt -s nullglob
+          names=("$ipk")
+          for shot in "docs/screenshots/v$version/"*.png; do
+            test -s "$shot"
+            name="${shot##*/}"
+            cp "$shot" "dist/$name"
+            names+=("$name")
+          done
+          (cd dist && sha256sum "${names[@]}" > SHA256SUMS)
+          assets=(dist/SHA256SUMS)
+          for name in "${names[@]}"; do assets+=("dist/$name"); done
+          gh release create "$tag" "${assets[@]}" \
             --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SHA" \
             --title "$tag — Stream for Kick" --notes-file "$notes" --latest

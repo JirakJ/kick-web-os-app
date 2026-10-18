@@ -16,10 +16,10 @@
     <div id="home-content">
     <div class="content">
     <section class="selection" aria-labelledby="heading">
-      <p id="home-eyebrow" class="eyebrow" data-i18n="home_eyebrow">Your channels. Your screen.</p>
+      <div class="selection-copy"><p id="home-eyebrow" class="eyebrow" data-i18n="home_eyebrow">Your channels. Your screen.</p>
       <h1 id="heading" data-i18n="home_heading">What will you watch?</h1>
       <p id="home-intro" data-i18n="home_intro">Enter a channel or return to one of your recent ones.</p>
-      <form id="channel-form" novalidate>
+      </div><form id="channel-form" novalidate>
         <label id="channel-label" for="channel" data-i18n="channel_label">Kick channel</label>
         <div class="channel-row"><input id="channel" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Channel name or kick.com/… link" data-i18n-attr="placeholder:channel_placeholder" aria-describedby="error"><button id="favorite-channel" class="favorite-heart" type="button"></button></div>
         <p id="error" role="alert"></p>
@@ -31,6 +31,8 @@
         </div>
       </form>
     </section>
+    </div>
+    <div class="home-shelves">
     <section id="recent" aria-labelledby="recent-heading" hidden>
       <h2 id="recent-heading" data-i18n="recent_heading">Recently opened</h2>
       <div id="recent-channels"></div>
@@ -40,18 +42,18 @@
         <button id="recent-next" type="button" aria-label="More channels" data-i18n-attr="aria-label:recent_next">→</button>
       </nav>
     </section>
-    </div>
     <section id="favorites-section" aria-labelledby="favorites-heading" hidden>
       <h2 id="favorites-heading" data-i18n="favorites_heading">Favorite channels</h2><div id="favorite-list"></div>
-      <nav id="favorite-pages" aria-label="Favorite channel pages" data-i18n-attr="aria-label:favorite_pages_label" hidden><button id="favorite-previous" type="button" data-i18n="page_previous">← Previous</button><span id="favorite-number"></span><button id="favorite-next" type="button" data-i18n="page_next">Next →</button></nav>
+      <nav id="favorite-pages" aria-label="Favorite channel pages" data-i18n-attr="aria-label:favorite_pages_label" hidden><button id="favorite-previous" type="button" aria-label="← Previous" title="← Previous" data-i18n-attr="aria-label:page_previous;title:page_previous">←</button><span id="favorite-number"></span><button id="favorite-next" type="button" aria-label="Next →" title="Next →" data-i18n-attr="aria-label:page_next;title:page_next">→</button></nav>
     </section>
     <section id="continue-section" aria-labelledby="continue-heading" hidden>
       <h2 id="continue-heading" data-i18n="continue_heading">Continue watching</h2>
       <div id="continue-list"></div>
-      <nav id="continue-pages" hidden><button id="continue-previous" type="button" data-i18n="page_previous">← Previous</button><span id="continue-number"></span><button id="continue-next" type="button" data-i18n="page_next">Next →</button></nav>
+      <nav id="continue-pages" hidden><button id="continue-previous" type="button" aria-label="← Previous" title="← Previous" data-i18n-attr="aria-label:page_previous;title:page_previous">←</button><span id="continue-number"></span><button id="continue-next" type="button" aria-label="Next →" title="Next →" data-i18n-attr="aria-label:page_next;title:page_next">→</button></nav>
     </section>
     </div>
-    <footer><span id="footer-hints" data-i18n="footer_hints">↑ ↓ Select &nbsp; OK Confirm &nbsp; Back Return</span><div id="footer-actions"><button id="about-button" type="button" data-i18n="about_title">About and updates</button><button id="accessibility-button" type="button" data-i18n="accessibility_title">Accessibility</button></div><small><span id="footer-note" data-i18n="footer_note">Unofficial Kick player · No chat</span> · <span id="app-version">v0.8.1</span></small></footer>
+    </div>
+    <footer><span id="footer-hints" data-i18n="footer_hints">↑ ↓ Select &nbsp; OK Confirm &nbsp; Back Return</span><div id="footer-actions"><button id="about-button" type="button" data-i18n="about_title">About and updates</button><button id="accessibility-button" type="button" data-i18n="accessibility_title">Accessibility</button></div><small><span id="footer-note" data-i18n="footer_note">Unofficial Kick player · No chat</span> · <span id="app-version">v0.8.2</span></small></footer>
   </main>
   <section id="about" aria-labelledby="about-heading" hidden><h1 id="about-heading" data-i18n="about_title">About and updates</h1>
     <p id="installed-version"></p><p id="latest-version"></p><p id="update-status" role="status"></p><p id="update-cache-note"></p><pre id="release-notes"></pre><p id="release-url"></p>

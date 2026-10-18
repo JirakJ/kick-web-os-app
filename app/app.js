@@ -48,23 +48,73 @@ if (typeof document !== 'undefined') (function () {
   var request = null;
   var requestTimer;
   var controlsTimer;
-  var homeFocusTimer;
   var generation = 0;
   var scrubbing = false, jumpOpen = false;
   var timelineState = '';
-  function cancelHomeFocus() { clearTimeout(homeFocusTimer); homeFocusTimer = null; }
-  function revealHomeFocus() {
-    cancelHomeFocus();
-    if (screen !== 'home' || document.hidden) return;
-    // Run after the browser and directional handler finish their nearest scrolling.
-    // Old TV engines do not support CSS scroll-padding for the focus outline.
-    homeFocusTimer = setTimeout(function () {
-      homeFocusTimer = null;
-      var region = el('home-content'), active = document.activeElement;
-      if (screen !== 'home' || document.hidden || !active || !region.contains(active)) return;
-      var box = active.getBoundingClientRect(), bounds = region.getBoundingClientRect();
-      if (box.top < bounds.top + 12) region.scrollTop += box.top - bounds.top - 12;
-      else if (box.bottom > bounds.bottom - 12) region.scrollTop += box.bottom - bounds.bottom + 12;
+  var homePageSize = 6, homeLayoutTimer;
+  function cancelHomeLayout() { clearTimeout(homeLayoutTimer); homeLayoutTimer = null; }
+  function fitHome() {
+    cancelHomeLayout();
+    if (screen !== 'home' || document.hidden || typeof window.getComputedStyle !== 'function') return;
+    homeLayoutTimer = setTimeout(function () {
+      homeLayoutTimer = null;
+      if (screen !== 'home' || document.hidden) return;
+      var size = 6;
+      [['recent', 'recent-channels'], ['favorites-section', 'favorite-list'], ['continue-section', 'continue-list']].forEach(function (ids) {
+        var panel = el(ids[0]), list = el(ids[1]), row = list.firstChild;
+        if (panel.hidden || !row) return;
+        var box = list.getBoundingClientRect(), style = window.getComputedStyle(row);
+        var rowHeight = row.getBoundingClientRect().height + parseFloat(style.marginBottom || 0);
+        // Reserve paging even on the first page, where it may still be hidden.
+        var available = panel.getBoundingClientRect().bottom - box.top - 72;
+        if (rowHeight > 0) size = Math.min(size, Math.max(1, Math.floor((available + parseFloat(style.marginBottom || 0)) / rowHeight)));
+      });
+      if (size === homePageSize) return;
+      var active = document.activeElement, groups = [recentControls, favoriteControls, continueControls], pages = [recentPage, favoritePage, continuePage];
+      var strides = [3, 3, 2], focused = -1, column = 0, rowIndex = 0;
+      var pagerIds = [['recent-previous', 'recent-next'], ['favorite-previous', 'favorite-next'], ['continue-previous', 'continue-next']], pager = -1;
+      pagerIds.forEach(function (ids, i) { if (ids.indexOf(active.id) >= 0) pager = i; });
+      groups.forEach(function (group, i) {
+        var index = group.indexOf(active);
+        if (index >= 0) { focused = i; column = index % strides[i]; rowIndex = pages[i] * homePageSize + Math.floor(index / strides[i]); }
+        pages[i] = Math.floor(pages[i] * homePageSize / size);
+      });
+      if (focused >= 0) pages[focused] = Math.floor(rowIndex / size);
+      recentPage = pages[0]; favoritePage = pages[1]; continuePage = pages[2]; homePageSize = size;
+      cancelRecentStatus(); renderRecents(); renderFavorites(); renderContinue(); refreshRecentStatus();
+      if (focused >= 0) {
+        var control = [recentControls, favoriteControls, continueControls][focused][(rowIndex % size) * strides[focused] + column];
+        (control || input).focus();
+      } else if (pager >= 0 && (active.disabled || !active.getClientRects().length)) {
+        ([recentControls, favoriteControls, continueControls][pager][0] || input).focus();
+      }
+    }, 0);
+  }
+  var catalogPageSize = 6, catalogLayoutTimer;
+  function cancelCatalogLayout() { clearTimeout(catalogLayoutTimer); catalogLayoutTimer = null; }
+  function fitCatalog() {
+    cancelCatalogLayout();
+    if (screen !== 'catalog' || document.hidden || typeof window.getComputedStyle !== 'function') return;
+    catalogLayoutTimer = setTimeout(function () {
+      catalogLayoutTimer = null;
+      if (screen !== 'catalog' || document.hidden || !videoButtons.length) return;
+      var list = el('videos'), card = videoButtons[0], preview = card.querySelector('.video-preview');
+      var columns = window.innerWidth <= 560 ? 1 : accessibility.size === 'large' || window.innerWidth <= 800 ? 2 : 3;
+      var previewMinimum = parseFloat(window.getComputedStyle(preview).minHeight);
+      var cardStyle = window.getComputedStyle(card), textHeight = parseFloat(cardStyle.borderTopWidth) + parseFloat(cardStyle.borderBottomWidth);
+      for (var c = 0; c < card.children.length; c++) if (card.children[c] !== preview) {
+        var child = card.children[c], childStyle = window.getComputedStyle(child);
+        textHeight += child.getBoundingClientRect().height + parseFloat(childStyle.marginTop || 0) + parseFloat(childStyle.marginBottom || 0);
+      }
+      var rows = Math.max(1, Math.min(2, Math.floor((list.clientHeight + 22) / (textHeight + previewMinimum + 22))));
+      list.style.gridTemplateRows = 'repeat(' + rows + ', minmax(0, 1fr))'; list.setAttribute('data-rows', String(rows));
+      var size = Math.min(6, rows * columns);
+      if (size === catalogPageSize) return;
+      var active = document.activeElement, index = videoButtons.indexOf(active), absolute = page * catalogPageSize + Math.max(0, index);
+      page = Math.floor(absolute / size); catalogPageSize = size; renderVideos();
+      if (index >= 0) (videoButtons[absolute % size] || videoButtons[0] || el('catalog-back')).focus();
+      else if ((active === el('previous-page') || active === el('next-page')) && (active.disabled || !active.getClientRects().length))
+        (videoButtons[0] || el('catalog-back')).focus();
     }, 0);
   }
   var player = KickPlayer(el('video-host'), { status: mediaStatus, change: function (next) {
@@ -90,7 +140,7 @@ if (typeof document !== 'undefined') (function () {
     el('saved-search').hidden = el('replay-tools').hidden = true; savedSearchButtons = [];
     if (toolsSnapshot) {
       if (!save && toolsSnapshot.catalog === catalog) {
-        catalogQuery = toolsSnapshot.query; catalogFilter = toolsSnapshot.filter; catalogOrder = toolsSnapshot.order; page = toolsSnapshot.page;
+        catalogQuery = toolsSnapshot.query; catalogFilter = toolsSnapshot.filter; catalogOrder = toolsSnapshot.order; page = Math.floor(toolsSnapshot.offset / catalogPageSize);
         renderVideos();
       }
       toolsSnapshot = null;
@@ -212,6 +262,7 @@ if (typeof document !== 'undefined') (function () {
     el('high-contrast').textContent = t(accessibility.contrast ? 'contrast_on' : 'contrast_off');
     el('high-contrast').setAttribute('aria-pressed', accessibility.contrast ? 'true' : 'false');
     if (save) try { localStorage.setItem('kick-accessibility', JSON.stringify(accessibility)); } catch (e) { /* Session preferences still work. */ }
+    fitHome(); fitCatalog();
   }
   function closeAccessibility(focus) {
     var wasOpen = accessibilityOpen; accessibilityOpen = false; el('accessibility-dialog').hidden = true;
@@ -234,7 +285,7 @@ if (typeof document !== 'undefined') (function () {
       favoriteIcon(el(id), name); el(id).disabled = !name;
     });
     recentButtons.forEach(function (button, index) {
-      favoriteIcon(recentControls[index * 3 + 1], recents[recentPage * 6 + index]);
+      favoriteIcon(recentControls[index * 3 + 1], recents[recentPage * homePageSize + index]);
     });
   }
   function favoriteIcon(button, name) {
@@ -250,9 +301,9 @@ if (typeof document !== 'undefined') (function () {
     var name = favoriteMove.name;
     if (save) saveFavorites(); else favorites = favoriteMove.before;
     favoriteMove = null;
-    favoritePage = Math.floor(Math.max(0, favorites.indexOf(name)) / 6);
+    favoritePage = Math.floor(Math.max(0, favorites.indexOf(name)) / homePageSize);
     renderFavorites(); refreshRecentStatus();
-    var index = favorites.indexOf(name) - favoritePage * 6;
+    var index = favorites.indexOf(name) - favoritePage * homePageSize;
     (favoriteControls[index * 3 + 1] || input).focus();
   }
   function moveFavorite(delta) {
@@ -260,7 +311,7 @@ if (typeof document !== 'undefined') (function () {
     var index = favorites.indexOf(favoriteMove.name), target = index + delta;
     if (target >= 0 && target < favorites.length) {
       favorites.splice(index, 1); favorites.splice(target, 0, favoriteMove.name);
-      favoritePage = Math.floor(target / 6);
+      favoritePage = Math.floor(target / homePageSize);
       renderFavorites(); refreshRecentStatus();
     }
     index = favorites.indexOf(favoriteMove.name);
@@ -275,14 +326,14 @@ if (typeof document !== 'undefined') (function () {
     var list = el('favorite-list');
     while (list.firstChild) list.removeChild(list.firstChild);
     favoriteButtons = []; favoriteControls = [];
-    var pages = Math.max(1, Math.ceil(favorites.length / 6));
+    var pages = Math.max(1, Math.ceil(favorites.length / homePageSize));
     favoritePage = Math.max(0, Math.min(favoritePage, pages - 1));
     el('favorites-section').hidden = !favorites.length;
     el('favorite-pages').hidden = pages <= 1;
     el('favorite-previous').disabled = favoritePage === 0;
     el('favorite-next').disabled = favoritePage === pages - 1;
     el('favorite-number').textContent = (favoritePage + 1) + ' / ' + pages;
-    favorites.slice(favoritePage * 6, favoritePage * 6 + 6).forEach(function (name) {
+    favorites.slice(favoritePage * homePageSize, favoritePage * homePageSize + homePageSize).forEach(function (name) {
       var row = document.createElement('div'), play = document.createElement('button'), move = document.createElement('button'), remove = document.createElement('button');
       var label = document.createElement('span'), state = document.createElement('span');
       row.className = 'favorite-row'; play.type = move.type = remove.type = 'button';
@@ -302,7 +353,7 @@ if (typeof document !== 'undefined') (function () {
       row.appendChild(play); row.appendChild(move); row.appendChild(remove); list.appendChild(row);
       favoriteButtons.push(play); favoriteControls.push(play, move, remove);
     });
-    favoriteLabels(); showRecentStatus();
+    favoriteLabels(); showRecentStatus(); fitHome();
   }
   function toggleFavorite() {
     toggleNamedFavorite(kickChannel(input.value));
@@ -311,15 +362,15 @@ if (typeof document !== 'undefined') (function () {
     closeFavoriteMove(false);
     var index = favorites.indexOf(name);
     if (!name) return;
-    if (index < 0 && favorites.length >= 50) { el(screen === 'catalog' ? 'catalog-favorite-feedback' : 'favorite-feedback').textContent = t('favorites_limit'); return; }
-    el(screen === 'catalog' ? 'catalog-favorite-feedback' : 'favorite-feedback').textContent = '';
+    if (index < 0 && favorites.length >= 50) { el(screen === 'catalog' ? 'catalog-favorite-feedback' : 'favorite-feedback').textContent = t('favorites_limit'); fitHome(); fitCatalog(); return; }
+    el(screen === 'catalog' ? 'catalog-favorite-feedback' : 'favorite-feedback').textContent = ''; fitHome(); fitCatalog();
     cancelRecentStatus();
     if (index < 0) favorites.push(name); else favorites.splice(index, 1);
-    favoritePage = Math.floor(Math.max(0, favorites.indexOf(name)) / 6);
+    favoritePage = Math.floor(Math.max(0, favorites.indexOf(name)) / homePageSize);
     saveFavorites(); renderFavorites(); refreshRecentStatus();
   }
   function visibleStatusNames() {
-    return favorites.slice(favoritePage * 6, favoritePage * 6 + 6).concat(recents.slice(recentPage * 6, recentPage * 6 + 6)).filter(function (name, index, all) { return all.indexOf(name) === index; });
+    return favorites.slice(favoritePage * homePageSize, favoritePage * homePageSize + homePageSize).concat(recents.slice(recentPage * homePageSize, recentPage * homePageSize + homePageSize)).filter(function (name, index, all) { return all.indexOf(name) === index; });
   }
   function resumePosition(item) {
     var entry = watchedVideo(item), length = Number(item.duration) || entry && entry.duration || 0;
@@ -357,14 +408,14 @@ if (typeof document !== 'undefined') (function () {
     var entries = watched.filter(function (entry) {
       return !entry.finished && (!entry.duration || entry.position < entry.duration - 30);
     });
-    var pages = Math.max(1, Math.ceil(entries.length / 6));
+    var pages = Math.max(1, Math.ceil(entries.length / homePageSize));
     continuePage = Math.max(0, Math.min(continuePage, pages - 1));
     el('continue-section').hidden = !entries.length;
     el('continue-pages').hidden = pages <= 1;
     el('continue-previous').disabled = continuePage === 0;
     el('continue-next').disabled = continuePage === pages - 1;
     el('continue-number').textContent = (continuePage + 1) + ' / ' + pages;
-    var rows = entries.slice(continuePage * 6, continuePage * 6 + 6).map(function (entry) {
+    var rows = entries.slice(continuePage * homePageSize, continuePage * homePageSize + homePageSize).map(function (entry) {
       var parts = entry.key.split(':'), row = document.createElement('div'), button = document.createElement('button'), remove = document.createElement('button');
       row.className = 'continue-row'; button.type = remove.type = 'button';
       button.textContent = t('continue_named', { channel: parts[0], title: t('replay'), time: formatTime(entry.position) });
@@ -377,6 +428,7 @@ if (typeof document !== 'undefined') (function () {
       row.appendChild(button); row.appendChild(remove); list.appendChild(row); continueControls.push(button, remove);
       return { entry: entry, button: button, parts: parts };
     });
+    fitHome();
     if (document.hidden || navigator.onLine === false || typeof PalmServiceBridge === 'undefined') return;
     var token = continueGeneration, next = 0;
     function worker() {
@@ -430,10 +482,10 @@ if (typeof document !== 'undefined') (function () {
   function setScreen(name) {
     closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelContinue();
     screen = name;
-    cancelHomeFocus();
+    cancelHomeLayout(); cancelCatalogLayout();
     ['home', 'catalog', 'watch', 'about'].forEach(function (id) { el(id).hidden = id !== name; });
     window.scrollTo(0, 0);
-    if (name === 'home') { el('home-content').scrollTop = 0; renderContinue(); refreshRecentStatus(); } else cancelRecentStatus();
+    if (name === 'home') { renderContinue(); refreshRecentStatus(); fitHome(); } else cancelRecentStatus();
   }
   function cancelRequest() {
     generation++;
@@ -468,9 +520,9 @@ if (typeof document !== 'undefined') (function () {
     while (list.firstChild) list.removeChild(list.firstChild);
     recentButtons = []; recentControls = [];
     el('recent').hidden = !recents.length;
-    var pages = Math.max(1, Math.ceil(recents.length / 6));
+    var pages = Math.max(1, Math.ceil(recents.length / homePageSize));
     recentPage = Math.max(0, Math.min(recentPage, pages - 1));
-    recents.slice(recentPage * 6, recentPage * 6 + 6).forEach(function (name) {
+    recents.slice(recentPage * homePageSize, recentPage * homePageSize + homePageSize).forEach(function (name) {
       var row = document.createElement('div'); row.className = 'recent-row';
       var button = document.createElement('button');
       button.type = 'button'; button.className = 'recent-play';
@@ -503,17 +555,17 @@ if (typeof document !== 'undefined') (function () {
     el('recent-previous').disabled = recentPage === 0;
     el('recent-next').disabled = recentPage === pages - 1;
     el('recent-page-number').textContent = (recentPage + 1) + ' / ' + pages;
-    favoriteLabels(); showRecentStatus();
+    favoriteLabels(); showRecentStatus(); fitHome();
   }
   function showRecentStatus() {
     favoriteButtons.forEach(function (button, index) {
-      var name = favorites[favoritePage * 6 + index], value = recentStatus[name];
+      var name = favorites[favoritePage * homePageSize + index], value = recentStatus[name];
       var live = value && Date.now() - value.at < 60000 ? value.live : null;
       var status = t(live === true ? 'live_badge' : live === false ? 'offline_status' : 'unknown_status');
       button.children[1].textContent = status; button.setAttribute('aria-label', name + ', ' + status);
     });
     recentButtons.forEach(function (button, index) {
-      var name = recents[recentPage * 6 + index], status = recentStatus[name];
+      var name = recents[recentPage * homePageSize + index], status = recentStatus[name];
       var live = !!(status && status.live === true && Date.now() - status.at < 60000);
       button.children[1].hidden = !live;
       button.setAttribute('aria-label', name + (live ? ', ' + t('live_now') : ''));
@@ -748,7 +800,7 @@ if (typeof document !== 'undefined') (function () {
   function startVideo(item, startAt) {
     if (!item || typeof item.url !== 'string' ||
       !/^https:\/\/(?:stream\.kick\.com|(?:[a-z0-9-]+\.)+live-video\.net)\/[^\s?#]+\.m3u8(?:\?[^\s#]*)?$/.test(item.url)) {
-      el('videos-status').textContent = t('invalid_video_url');
+      el('videos-status').textContent = t('invalid_video_url'); fitCatalog();
       return;
     }
     item.startAt = startAt || 0;
@@ -796,9 +848,9 @@ if (typeof document !== 'undefined') (function () {
     videoButtons = [];
     var all = filteredVideos();
     el('search-summary').textContent = el('replay-result-count').textContent = t('results_count', { count: all.length });
-    var count = Math.max(1, Math.ceil(all.length / 6));
+    var count = Math.max(1, Math.ceil(all.length / catalogPageSize));
     page = Math.max(0, Math.min(page, count - 1));
-    all.slice(page * 6, page * 6 + 6).forEach(function (item) {
+    all.slice(page * catalogPageSize, page * catalogPageSize + catalogPageSize).forEach(function (item) {
       var button = document.createElement('button');
       button.type = 'button';
       var preview = document.createElement('span');
@@ -848,6 +900,7 @@ if (typeof document !== 'undefined') (function () {
     el('previous-page').disabled = page === 0;
     el('next-page').disabled = page === count - 1;
     el('page-number').textContent = (page + 1) + ' / ' + count;
+    fitCatalog();
   }
   function renderCatalog(data) {
     catalog = data; page = 0; catalogQuery = ''; catalogFilter = 'all'; catalogOrder = 'newest';
@@ -862,18 +915,18 @@ if (typeof document !== 'undefined') (function () {
   function startChannel(value, autoplay, replayId) {
     var name = kickChannel(value);
     if (!name) {
-      el('error').textContent = t('invalid_channel_input');
+      el('error').textContent = t('invalid_channel_input'); fitHome();
       input.setAttribute('aria-invalid', 'true');
       input.focus();
       return;
     }
     if (navigator.onLine === false) {
-      el(screen === 'catalog' ? 'channel-status' : 'error').textContent = t('offline');
+      el(screen === 'catalog' ? 'channel-status' : 'error').textContent = t('offline'); fitHome();
       return;
     }
     input.value = name; favoriteLabels();
     input.removeAttribute('aria-invalid');
-    el('error').textContent = '';
+    el('error').textContent = ''; fitHome();
     cancelRequest();
     current = null;
     unload();
@@ -903,10 +956,10 @@ if (typeof document !== 'undefined') (function () {
       else {
         showCatalog();
         if (replayId) {
-          el('videos-status').textContent = t('continue_loading');
+          el('videos-status').textContent = t('continue_loading'); fitCatalog();
           callService('replay', { channel: name, id: replayId }, function (reply) {
             var selected = reply.returnValue && reply.video && reply.video.id === replayId ? reply.video : null;
-            el('videos-status').textContent = selected ? '' : t('continue_unavailable');
+            el('videos-status').textContent = selected ? '' : t('continue_unavailable'); fitCatalog();
             if (selected && !document.hidden) chooseVideo(selected);
           });
         }
@@ -971,7 +1024,7 @@ if (typeof document !== 'undefined') (function () {
   el('saved-cancel').addEventListener('click', function () { closeSearch(false, true); });
   [-1, 1].forEach(function (delta) { el(delta < 0 ? 'saved-previous' : 'saved-next').addEventListener('click', function () { savedPage += delta; renderSavedSearch(); (savedSearchButtons[0] || el('saved-query')).focus(); }); });
   el('catalog-search').addEventListener('click', function () {
-    toolsSnapshot = { catalog: catalog, query: catalogQuery, filter: catalogFilter, order: catalogOrder, page: page };
+    toolsSnapshot = { catalog: catalog, query: catalogQuery, filter: catalogFilter, order: catalogOrder, page: page, offset: page * catalogPageSize };
     el('replay-query').value = catalogQuery; updateSearch(); el('replay-tools').hidden = false; el('replay-query').focus();
   });
   el('replay-query').addEventListener('input', updateSearch);
@@ -1032,7 +1085,7 @@ if (typeof document !== 'undefined') (function () {
   el('watch').addEventListener('mousemove', showControls);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
-      cancelHomeFocus();
+      cancelHomeLayout(); cancelCatalogLayout();
       cancelRecentStatus(); cancelContinue(); closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false);
       var interrupted = !!request;
       cancelRequest();
@@ -1047,10 +1100,10 @@ if (typeof document !== 'undefined') (function () {
       }
     } else if (current) { showControls(); el('toggle').focus(); }
     else if (screen === 'home') { renderContinue(); refreshRecentStatus(); }
-    else if (screen === 'catalog') (videoButtons[0] || el('catalog-back')).focus();
+    else if (screen === 'catalog') { fitCatalog(); (videoButtons[0] || el('catalog-back')).focus(); }
   });
-  window.addEventListener('pagehide', function () { cancelContinue(); closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); cancelHomeFocus(); });
-  document.addEventListener('focusin', revealHomeFocus);
+  window.addEventListener('pagehide', function () { cancelContinue(); closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); cancelHomeLayout(); cancelCatalogLayout(); });
+  window.addEventListener('resize', function () { fitHome(); fitCatalog(); });
   window.addEventListener('offline', function () { if (screen === 'watch') player.offline(); });
   window.addEventListener('online', function () { if (screen === 'watch' && !document.hidden) player.online(); if (screen === 'home' && !document.hidden) { renderContinue(); refreshRecentStatus(); } });
   document.addEventListener('keydown', function (event) {
@@ -1166,29 +1219,55 @@ if (typeof document !== 'undefined') (function () {
       screen === 'about' ? [el('check-updates'), el('about-back')] : (current && current.isLive ? [] : [el('seek'), el('jump-time')]).concat([el('toggle'), el('reconnect'), el('quality-button'), el('watch-recordings'), el('back')]);
     controls = controls.filter(function (control) { return !control.disabled; });
     var index = controls.indexOf(event.target);
+    if (screen === 'home' && (key === 37 || key === 39)) {
+      var groups = [recentControls, favoriteControls, continueControls], strides = [3, 3, 2];
+      for (var g = 0; g < groups.length; g++) {
+        var cell = groups[g].indexOf(event.target), step = key === 37 ? -1 : 1;
+        if (cell < 0 || cell % strides[g] !== (step < 0 ? 0 : strides[g] - 1)) continue;
+        event.preventDefault();
+        var neighbor = g + step;
+        while (neighbor >= 0 && neighbor < groups.length && !groups[neighbor].length) neighbor += step;
+        if (neighbor >= 0 && neighbor < groups.length) {
+          var row = Math.min(Math.floor(cell / strides[g]), groups[neighbor].length / strides[neighbor] - 1);
+          groups[neighbor][row * strides[neighbor] + (step < 0 ? strides[neighbor] - 1 : 0)].focus();
+        }
+        return;
+      }
+    }
+    if (screen === 'home' && (key === 38 || key === 40)) {
+      var paging = [['recent-previous', 'recent-next'], ['favorite-previous', 'favorite-next'], ['continue-previous', 'continue-next']];
+      for (var p = 0; p < paging.length; p++) if (paging[p].indexOf(event.target.id) >= 0) {
+        event.preventDefault(); var group = [recentControls, favoriteControls, continueControls][p], stride = p === 2 ? 2 : 3;
+        (key === 38 ? group[Math.max(0, group.length - stride)] || el('recordings') : el('about-button')).focus(); return;
+      }
+      if (key === 38 && (event.target === el('about-button') || event.target === el('accessibility-button'))) {
+        event.preventDefault();
+        var bottom = favoriteControls.length ? favoriteControls[favoriteControls.length - 3] : recentControls.length ? recentControls[recentControls.length - 3] : continueControls[continueControls.length - 2];
+        (bottom || el('recordings')).focus(); return;
+      }
+    }
     var recentIndex = recentControls.indexOf(event.target);
     if (screen === 'home' && recentIndex >= 0 && (key === 38 || key === 40)) {
       event.preventDefault();
       var rowTarget = recentIndex + (key === 38 ? -3 : 3);
       var recentControl = rowTarget < 0 ? el('recordings') : recentControls[rowTarget] ||
-        (!el('recent-next').disabled ? el('recent-next') : favoriteControls[0] || continueControls[0] || el('about-button'));
+        (!el('recent-next').disabled ? el('recent-next') : !el('recent-previous').disabled ? el('recent-previous') : el('about-button'));
       recentControl.focus(); recentControl.scrollIntoView({ block: 'nearest' });
       return;
     }
     var favoriteIndex = favoriteControls.indexOf(event.target);
     if (screen === 'home' && favoriteIndex >= 0 && (key === 38 || key === 40)) {
-      event.preventDefault(); var favoriteTarget = favoriteIndex + (key === 38 ? -1 : 1) * (window.innerWidth <= 800 ? 3 : 6);
-      var favoriteControl = favoriteTarget < 0 ? recentControls[Math.max(0, recentControls.length - 3)] || (el('favorite-channel').disabled ? el('recordings') : el('favorite-channel')) :
-        favoriteControls[favoriteTarget] || (!el('favorite-next').disabled ? el('favorite-next') : continueControls[0] || el('about-button'));
+      event.preventDefault(); var favoriteTarget = favoriteIndex + (key === 38 ? -1 : 1) * 3;
+      var favoriteControl = favoriteTarget < 0 ? el('recordings') :
+        favoriteControls[favoriteTarget] || (!el('favorite-next').disabled ? el('favorite-next') : !el('favorite-previous').disabled ? el('favorite-previous') : el('about-button'));
       favoriteControl.focus(); favoriteControl.scrollIntoView({ block: 'nearest' }); return;
     }
     var continueIndex = continueControls.indexOf(event.target);
     if (screen === 'home' && continueIndex >= 0 && (key === 38 || key === 40)) {
       event.preventDefault();
-      var shelfTarget = continueIndex + (key === 38 ? -1 : 1) * (window.innerWidth <= 800 ? 2 : 4);
-      var recentOffset = continueIndex % 2 ? 2 : 0;
-      var shelfControl = shelfTarget < 0 ? favoriteControls[Math.max(0, favoriteControls.length - 3 + recentOffset)] || recentControls[Math.max(0, recentControls.length - 3 + recentOffset)] || el('recordings') :
-        continueControls[shelfTarget] || (!el('continue-next').disabled ? el('continue-next') : el('about-button'));
+      var shelfTarget = continueIndex + (key === 38 ? -1 : 1) * 2;
+      var shelfControl = shelfTarget < 0 ? el('recordings') :
+        continueControls[shelfTarget] || (!el('continue-next').disabled ? el('continue-next') : !el('continue-previous').disabled ? el('continue-previous') : el('about-button'));
       shelfControl.focus(); shelfControl.scrollIntoView({ block: 'nearest' }); return;
     }
     var cardIndex = videoButtons.indexOf(event.target);

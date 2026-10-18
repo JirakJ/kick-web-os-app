@@ -1,3 +1,49 @@
+# Screen-fit acceptance for 0.8.2
+
+Checked on 18 October 2026 on LG 55NANO863NA / webOS 5.6.2 / Chromium 68.
+The native-tested candidate archive SHA256 is `45bdd3f41cd685e596ce1489aeeddf3eed6f46f2003548c3a59d168d73a73d02`;
+all 27 installed app/service files matched. Release CI rebuilds this source and
+publishes only after every main CI job succeeds. Its archive has a separate checksum.
+
+Home now uses compact channel entry above three independently paged lists.
+Page capacity follows the painted panel/row height rather than shrinking text or
+hiding a scrollbar. The replay grid similarly fits complete cards, including
+titles, dates, paging and watched labels. Directional navigation matches painted
+rows/columns. Resizing preserves the selected item or restores focus when a pager
+is hidden; cancelling a search retains the original replay range after resizing.
+Long channel/status text and asynchronous unavailable-replay feedback retain
+space. Explicit preview width handles the TV's flex-start button default.
+
+Twenty-five native checkpoints covered home and catalog at 720p/1080p in all
+four text/contrast combinations, paging, complete card contents and preview width.
+The 720p cases are viewport overrides; physical output stayed 1920×1080.
+All 1,144 browser screens passed across 13 locales, with additional long-name,
+unknown-status, unavailable-content, resize/focus and legacy-alignment cases.
+Independent code review, local tests and the packaged-JavaScript suite passed.
+
+Real replay decoding reached 1920×1080/60 with one sampled pipeline and active
+unmuted audio; audible output was not checked. After 20 alternating viewport
+changes, settled DOM/listener counts stayed 690/102.
+Heap samples were 2,245,372 and 2,245,700 bytes after forced GC.
+Returning home left no native app media pipeline. This bounded check does not
+establish multi-hour leak freedom.
+
+The four current documentation/release PNGs were captured on the TV using its
+real app, service, public replay and metadata. English was selected for this
+capture session through Web Inspector using the shipped English dictionary;
+TV-wide locale/settings were unchanged. Saved lists are demonstration choices.
+Original storage was restored exactly, including six recents and twelve history
+entries; restarting restored the original Czech interface. The TV returned to
+ordinary Live TV after testing.
+
+[Measurements, source/payload binding and PNG hashes](validation/tv-0.8.2.json)
+retain this evidence. Screenshots, raw logs and private storage backups remain
+under `artifacts/tv-0.8.2-20261018/`; backups are not published. Physical handset,
+Voice Guide, audible output, multi-hour soak, actual pre-Grid and actual 4K/1440p
+coverage remain limited as described below. v0.8.1 is retained for rollback.
+
+---
+
 # Home UI acceptance for 0.8.1
 
 Checked on 18 October 2026 on the same LG 55NANO863NA / webOS 5.6.2 /
