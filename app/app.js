@@ -39,6 +39,7 @@ if (typeof document !== 'undefined') (function () {
   var watched = [], historyDirty = false, historyWrittenAt = 0;
   var recentButtons = [], recentControls = [];
   var videoButtons = [];
+  var updateRetryAt = 0;
   var releaseCache = null, installedVersion = el('app-version').textContent.replace(/^v/, '');
   var current = null;
   var catalog = null;
@@ -169,12 +170,18 @@ if (typeof document !== 'undefined') (function () {
   function closeAbout() { goHome(); el('about-button').focus(); }
   function checkUpdates() {
     if (screen !== 'about' || document.hidden) return;
-    if (navigator.onLine === false) { el('update-status').textContent = t('update_unavailable'); return; }
+    if (releaseCache && Date.now() >= releaseCache.checkedAt && Date.now() - releaseCache.checkedAt < 21600000) { showRelease(true); return; }
+    if (navigator.onLine === false || Date.now() < updateRetryAt) { el('update-status').textContent = t('update_unavailable'); return; }
     el('check-updates').disabled = true; el('update-status').textContent = t('update_checking');
     callService('updates', {}, function (data) {
       el('check-updates').disabled = false;
       if (screen !== 'about' || document.hidden) return;
-      if (!data.returnValue || !validRelease(data.release)) { el('update-status').textContent = t('update_unavailable'); return; }
+      if (!data.returnValue || !validRelease(data.release)) {
+        updateRetryAt = Math.max(Date.now() + 60000, typeof data.retryAt === 'number' && isFinite(data.retryAt) && data.retryAt <= 4102444800000 ? data.retryAt : 0);
+        try { localStorage.setItem('kick-update-retry-at', String(updateRetryAt)); } catch (e) { /* Keep session backoff. */ }
+        el('update-status').textContent = t('update_unavailable'); return;
+      }
+      updateRetryAt = 0; try { localStorage.setItem('kick-update-retry-at', '0'); } catch (e) { /* Optional cache. */ }
       releaseCache = { version: data.release.version, url: data.release.url, notes: titleSlice(data.release.notes), checkedAt: data.release.checkedAt };
       try { localStorage.setItem('kick-release-cache', JSON.stringify(releaseCache)); } catch (e) { /* Optional offline cache. */ }
       showRelease(!!data.cached);
@@ -1161,6 +1168,7 @@ if (typeof document !== 'undefined') (function () {
   } catch (e) { /* Ignore corrupt or unavailable favorite storage. */ }
   try { var savedQuality = localStorage.getItem('kick-quality-preference'); if (/^(?:auto|[1-9][0-9]{0,3})$/.test(savedQuality) && (savedQuality === 'auto' || +savedQuality <= 2160)) qualityPreference = savedQuality; } catch (e) { /* Auto default. */ }
   try { var rawRelease = localStorage.getItem('kick-release-cache') || ''; if (rawRelease.length <= 8192) { var savedRelease = JSON.parse(rawRelease); if (validRelease(savedRelease)) releaseCache = savedRelease; } } catch (e) { /* Ignore invalid update cache. */ }
+  try { var savedRetry = localStorage.getItem('kick-update-retry-at'); if (/^[0-9]{1,13}$/.test(savedRetry) && +savedRetry > Date.now() && +savedRetry <= 4102444800000) updateRetryAt = +savedRetry; } catch (e) { /* Session-only backoff. */ }
   input.value = recents[0] || '';
   renderRecents(); renderFavorites();
   setScreen('home');

@@ -19,7 +19,7 @@ The interface follows the TV's system language (Czech, Slovak, English, German, 
 - Replay thumbnails, titles, dates and durations, with six recordings per page.
 - Last-watched and previously watched replay badges, with the last played position stored locally.
 - A seek bar without a focus rectangle, pause/resume and remote controls; playback controls hide after six seconds of inactivity.
-- About and updates shows installed/latest stable versions and short plain-text release notes. Checks are viewer initiated against the fixed official GitHub repository, cached for six hours with failure/rate-limit backoff. It provides Dev Manager/existing Homebrew installation and rollback guidance; no in-app installer. Offline saved results are labelled as potentially outdated.
+- About and updates shows installed/latest stable versions and short plain-text release notes. Checks are viewer initiated against the fixed official GitHub repository, cached for six hours with persisted failure/rate-limit deadlines that survive idle service exit. It provides Dev Manager/existing Homebrew installation and rollback guidance; no in-app installer. Offline saved results are labelled as potentially outdated.
 - Go to time accepts hours/minutes/seconds, previews a duration-clamped target and offers Confirm/Cancel. Fast-forward/rewind opens a ±10-minute preview; short timeline arrows remain ±10 seconds.
 - Find saved channels locally; search replay titles, filter by viewing history and sort newest/oldest within the loaded catalog of up to 30 public replays. Six visible results per page; Back cancels changes and restores focus.
 - Network reconnect refreshes validated live/replay sources with two bounded attempts; offline flapping retains the budget. Pause, hide and Back cancel pending recovery. Manual Reconnect preserves pause intent. Real outage acceptance remains pending.
@@ -153,4 +153,4 @@ The bundled [Noto Emoji font](app/fonts/README.md) is Copyright 2013 Google LLC 
 
 References: [LG JavaScript services](https://webostv.developer.lge.com/develop/guides/js-service-usage), [HLS support](https://webostv.developer.lge.com/faq/streaming-http-live-streaming-hls-troubleshooting), [media options](https://webostv.developer.lge.com/develop/guides/mediaoption-parameter), [resuming media](https://webostv.developer.lge.com/develop/guides/resuming-media-with-mediaoption).
 
-Update metadata uses the [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#list-releases). SHA256SUMS checks integrity, not publisher signatures. Same-ID installation preserves app storage; actual upgrade/rollback acceptance remains a TV check.
+Update metadata uses the [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release). SHA256SUMS checks integrity, not publisher signatures. Same-ID installation preserves app storage; actual upgrade/rollback acceptance remains a TV check.
