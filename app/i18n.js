@@ -3,6 +3,10 @@ var KickI18n = (function () {
   'use strict';
   var strings = {
     en: {
+      reconnect: "Reconnect",
+      p_reconnecting: "Reconnecting with a fresh source ({attempt}/2)…",
+      p_network_final: "Connection could not be restored. Select Reconnect to try again.",
+      p_content_unavailable: "This live session or public replay is no longer available.",
       quality_title: "Playback quality",
       quality_auto: "Auto (adaptive)",
       quality_fixed: "Selected: {quality} · {fps} fps (fixed rendition)",
@@ -73,6 +77,10 @@ var KickI18n = (function () {
       svc_internal: 'The data from Kick could not be processed.'
     },
     cs: {
+      reconnect: "Znovu připojit",
+      p_reconnecting: "Připojuji se s novým zdrojem ({attempt}/2)…",
+      p_network_final: "Připojení se nepodařilo obnovit. Zvolte Znovu připojit.",
+      p_content_unavailable: "Tento živý přenos nebo veřejný záznam už není dostupný.",
       quality_title: "Kvalita přehrávání",
       quality_auto: "Auto (adaptivní)",
       quality_fixed: "Vybráno: {quality} · {fps} fps (pevná varianta)",
@@ -143,6 +151,10 @@ var KickI18n = (function () {
       svc_internal: 'Data z Kicku se nepodařilo zpracovat.'
     },
     sk: {
+      reconnect: "Znovu pripojiť",
+      p_reconnecting: "Pripájam sa s novým zdrojom ({attempt}/2)…",
+      p_network_final: "Pripojenie sa nepodarilo obnoviť. Zvoľte Znovu pripojiť.",
+      p_content_unavailable: "Tento živý prenos alebo verejný záznam už nie je dostupný.",
       quality_title: "Kvalita prehrávania",
       quality_auto: "Auto (adaptívna)",
       quality_fixed: "Vybrané: {quality} · {fps} fps (pevný variant)",
@@ -213,6 +225,10 @@ var KickI18n = (function () {
       svc_internal: 'Dáta z Kicku sa nepodarilo spracovať.'
     },
     de: {
+      reconnect: "Neu verbinden",
+      p_reconnecting: "Verbindung mit neuer Quelle ({attempt}/2)…",
+      p_network_final: "Verbindung konnte nicht wiederhergestellt werden. Neu verbinden wählen.",
+      p_content_unavailable: "Dieser Livestream oder öffentliche Mitschnitt ist nicht mehr verfügbar.",
       quality_title: "Wiedergabequalität",
       quality_auto: "Auto (adaptiv)",
       quality_fixed: "Gewählt: {quality} · {fps} fps (feste Variante)",
@@ -283,6 +299,10 @@ var KickI18n = (function () {
       svc_internal: 'Die Daten von Kick konnten nicht verarbeitet werden.'
     },
     pl: {
+      reconnect: "Połącz ponownie",
+      p_reconnecting: "Łączenie z nowym źródłem ({attempt}/2)…",
+      p_network_final: "Nie udało się przywrócić połączenia. Wybierz Połącz ponownie.",
+      p_content_unavailable: "Ta transmisja lub publiczne nagranie nie jest już dostępne.",
       quality_title: "Jakość odtwarzania",
       quality_auto: "Auto (adaptacyjna)",
       quality_fixed: "Wybrano: {quality} · {fps} fps (stały wariant)",
@@ -353,6 +373,10 @@ var KickI18n = (function () {
       svc_internal: 'Nie udało się przetworzyć danych z Kick.'
     },
     es: {
+      reconnect: "Reconectar",
+      p_reconnecting: "Reconectando con una fuente nueva ({attempt}/2)…",
+      p_network_final: "No se pudo restablecer la conexión. Selecciona Reconectar.",
+      p_content_unavailable: "Este directo o repetición pública ya no está disponible.",
       quality_title: "Calidad de reproducción",
       quality_auto: "Auto (adaptativa)",
       quality_fixed: "Seleccionada: {quality} · {fps} fps (variante fija)",
@@ -423,6 +447,10 @@ var KickI18n = (function () {
       svc_internal: 'No se pudieron procesar los datos de Kick.'
     },
     pt: {
+      reconnect: "Reconectar",
+      p_reconnecting: "Reconectando com uma fonte nova ({attempt}/2)…",
+      p_network_final: "Não foi possível restaurar a conexão. Selecione Reconectar.",
+      p_content_unavailable: "Esta transmissão ou gravação pública não está mais disponível.",
       quality_title: "Qualidade de reprodução",
       quality_auto: "Auto (adaptativa)",
       quality_fixed: "Selecionada: {quality} · {fps} fps (variante fixa)",
@@ -493,6 +521,10 @@ var KickI18n = (function () {
       svc_internal: 'Não foi possível processar os dados do Kick.'
     },
     fr: {
+      reconnect: "Reconnecter",
+      p_reconnecting: "Reconnexion avec une nouvelle source ({attempt}/2)…",
+      p_network_final: "Connexion impossible. Sélectionnez Reconnecter.",
+      p_content_unavailable: "Ce direct ou replay public n’est plus disponible.",
       quality_title: "Qualité de lecture",
       quality_auto: "Auto (adaptative)",
       quality_fixed: "Sélection : {quality} · {fps} fps (variante fixe)",
@@ -563,6 +595,10 @@ var KickI18n = (function () {
       svc_internal: 'Les données de Kick n’ont pas pu être traitées.'
     },
     it: {
+      reconnect: "Riconnetti",
+      p_reconnecting: "Riconnessione con una nuova sorgente ({attempt}/2)…",
+      p_network_final: "Connessione non ripristinata. Seleziona Riconnetti.",
+      p_content_unavailable: "Questa diretta o registrazione pubblica non è più disponibile.",
       quality_title: "Qualità di riproduzione",
       quality_auto: "Auto (adattiva)",
       quality_fixed: "Selezionata: {quality} · {fps} fps (variante fissa)",
@@ -633,6 +669,10 @@ var KickI18n = (function () {
       svc_internal: 'Impossibile elaborare i dati di Kick.'
     },
     hu: {
+      reconnect: "Újracsatlakozás",
+      p_reconnecting: "Újracsatlakozás friss forrással ({attempt}/2)…",
+      p_network_final: "A kapcsolat nem állt helyre. Válassza az Újracsatlakozás gombot.",
+      p_content_unavailable: "Ez az élő adás vagy nyilvános felvétel már nem érhető el.",
       quality_title: "Lejátszási minőség",
       quality_auto: "Auto (adaptív)",
       quality_fixed: "Kiválasztva: {quality} · {fps} fps (rögzített változat)",
@@ -703,6 +743,10 @@ var KickI18n = (function () {
       svc_internal: 'A Kick adatait nem sikerült feldolgozni.'
     },
     uk: {
+      reconnect: "Підключити знову",
+      p_reconnecting: "Підключення зі свіжим джерелом ({attempt}/2)…",
+      p_network_final: "Не вдалося відновити з’єднання. Виберіть Підключити знову.",
+      p_content_unavailable: "Цей ефір або публічний запис більше недоступний.",
       quality_title: "Якість відтворення",
       quality_auto: "Авто (адаптивна)",
       quality_fixed: "Вибрано: {quality} · {fps} fps (фіксований варіант)",
@@ -773,6 +817,10 @@ var KickI18n = (function () {
       svc_internal: 'Не вдалося обробити дані з Kick.'
     },
     ru: {
+      reconnect: "Подключить снова",
+      p_reconnecting: "Подключение со свежим источником ({attempt}/2)…",
+      p_network_final: "Не удалось восстановить соединение. Выберите Подключить снова.",
+      p_content_unavailable: "Этот эфир или публичная запись больше недоступны.",
       quality_title: "Качество воспроизведения",
       quality_auto: "Авто (адаптивное)",
       quality_fixed: "Выбрано: {quality} · {fps} fps (фиксированный вариант)",
@@ -843,6 +891,10 @@ var KickI18n = (function () {
       svc_internal: 'Не удалось обработать данные с Kick.'
     },
     tr: {
+      reconnect: "Yeniden bağlan",
+      p_reconnecting: "Yeni kaynakla bağlanılıyor ({attempt}/2)…",
+      p_network_final: "Bağlantı geri yüklenemedi. Yeniden bağlan'ı seçin.",
+      p_content_unavailable: "Bu canlı yayın veya herkese açık kayıt artık yok.",
       quality_title: "Oynatma kalitesi",
       quality_auto: "Otomatik (uyarlanabilir)",
       quality_fixed: "Seçilen: {quality} · {fps} fps (sabit varyant)",
