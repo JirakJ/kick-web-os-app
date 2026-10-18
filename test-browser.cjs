@@ -72,8 +72,12 @@ const output='artifacts/browser';fs.mkdirSync(output,{recursive:true});for(const
    await page.click('#catalog-search');await page.fill('#replay-query','Čaj');await audit('replay-search');await page.click('#replay-cancel');
    await page.click('#videos>button');await page.waitForFunction(()=>!document.getElementById('resume-choice').hidden);await audit('resume');await page.click('#resume-start');
    await page.waitForFunction(()=>document.querySelector('#video-host video'));await audit('watch');
-   await page.click('#quality-button');await audit('quality');await page.click('#quality-cancel');
-   await page.click('#jump-time');await audit('jump');await page.click('#jump-cancel');
+   await page.click('#quality-button');await audit('quality');
+   const qualityFocus=await page.evaluate(()=>document.activeElement.id);await page.keyboard.press('Pause');assert.equal(await page.locator('video').evaluate(e=>e.paused),true,'Pause works with quality open');assert.equal(await page.evaluate(()=>document.activeElement.id),qualityFocus);
+   await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:415,bubbles:true})));assert.equal(await page.locator('video').evaluate(e=>e.paused),false);await page.click('#quality-cancel');
+   await page.click('#jump-time');await audit('jump');
+   const jumpFocus=await page.evaluate(()=>document.activeElement.id);await page.keyboard.press('Pause');assert.equal(await page.locator('video').evaluate(e=>e.paused),true,'Pause works with Jump open');assert.equal(await page.evaluate(()=>document.activeElement.id),jumpFocus);
+   await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{keyCode:415,bubbles:true})));assert.equal(await page.locator('video').evaluate(e=>e.paused),false);await page.click('#jump-cancel');
    await page.evaluate(()=>window.dispatchEvent(new Event('offline')));await audit('offline-watch');
    if(locale==='en'&&large&&high)await page.screenshot({path:`${output}/watch-${viewport.width}.png`});
    await page.click('#back');await page.click('#about-button');await audit('about');

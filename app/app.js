@@ -55,7 +55,7 @@ if (typeof document !== 'undefined') (function () {
     var transition = playback.phase !== next.phase || playback.paused !== next.paused, durationChanged = playback.duration !== next.duration;
     playback = next;
     if (jumpOpen && durationChanged) jumpPreview();
-    el('quality-button').disabled = preparing || !!next.network;
+    el('quality-button').disabled = preparing || !!next.network || !current || !current.prepared;
     if (next.network) closeQuality();
     var label = next.phase === 'error' ? t('retry') : next.paused ? t('resume') : t('pause');
     if (el('toggle').textContent !== label) el('toggle').textContent = label;
@@ -670,7 +670,7 @@ if (typeof document !== 'undefined') (function () {
     current.playback.url = url; current.playback.best = best;
   }
   function openQuality() {
-    if (!current || preparing || playback.network) return;
+    if (!current || !current.prepared || preparing || playback.network) return;
     var owner = current;
     var list = el('quality-options'); while (list.firstChild) list.removeChild(list.firstChild);
     qualityButtons = [];
@@ -720,6 +720,7 @@ if (typeof document !== 'undefined') (function () {
       return;
     }
     item.startAt = startAt || 0;
+    item.prepared = false; item.playback = null; item.variants = []; item.best = null;
     current = item;
     scrubbing = false;
     setScreen('watch');
@@ -743,7 +744,7 @@ if (typeof document !== 'undefined') (function () {
       if (item.best) el('quality').textContent = t('best_quality', { quality: item.best.height === 2160 ? '4K' : item.best.height + 'p' }) +
         (item.best.fps ? t('fps_suffix', { fps: item.best.fps }) : '');
       item.variants = data.returnValue && Array.isArray(data.variants) ? data.variants.slice(0, 64).filter(validVariant) : [];
-      item.playback = null; applyQuality(false); el('quality-button').disabled = false;
+      item.prepared = true; item.playback = null; applyQuality(false); el('quality-button').disabled = false;
       if (!document.hidden) player.load(item.playback);
       else mediaStatus('playback_stopped');
     });
@@ -882,7 +883,7 @@ if (typeof document !== 'undefined') (function () {
   }
   function toggle() {
     if (!current || preparing) return;
-    if (playback.phase === 'idle') player.load(current.playback || current); else if (playback.phase === 'error') player.play(); else player.toggle();
+    if (playback.phase === 'idle') { if (current.prepared) player.load(current.playback || current); else startVideo(current, current.startAt); } else if (playback.phase === 'error') player.play(); else player.toggle();
     showControls();
   }
   function seek(seconds) {
@@ -1020,6 +1021,15 @@ if (typeof document !== 'undefined') (function () {
   window.addEventListener('online', function () { if (screen === 'watch' && !document.hidden) player.online(); if (screen === 'home' && !document.hidden) { renderContinue(); refreshRecentStatus(); } });
   document.addEventListener('keydown', function (event) {
     var key = event.keyCode;
+    // Transport commands remain active while a playback dialog owns navigation focus.
+    if (screen === 'watch' && (key === 19 || key === 415 || key === 179)) {
+      event.preventDefault();
+      if (preparing) return;
+      if (key === 19) player.pause();
+      else if (key === 415) { if (playback.phase === 'idle' && current) toggle(); else player.play(); }
+      else toggle();
+      showControls(); return;
+    }
     if (accessibilityOpen) {
       var settings = ['text-size', 'high-contrast', 'accessibility-reset', 'accessibility-close'].map(el);
       if (key === 461 || key === 27) { event.preventDefault(); closeAccessibility(true); }
@@ -1103,11 +1113,10 @@ if (typeof document !== 'undefined') (function () {
         el('seek').focus();
         return;
       }
-      if (key === 415 || key === 19 || key === 179 || (key === 13 && (event.target === el('watch') || event.target === el('seek')))) {
+      if (key === 13 && (event.target === el('watch') || event.target === el('seek'))) {
         event.preventDefault();
         if (preparing) return;
-        if (key === 415) { if (playback.phase === 'idle' && current) player.load(current.playback || current); else player.play(); }
-        else if (key === 19) player.pause(); else toggle();
+        toggle();
         showControls();
         return;
       }

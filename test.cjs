@@ -347,6 +347,31 @@ click('quality-button');key(461);assert.equal(elements['quality-choice'].hidden,
 click('quality-button');document.hidden=true;document.handlers.visibilitychange();assert.equal(elements['quality-choice'].hidden,true);
 qualityStore.data['kick-quality-preference']='1440';boot(qualityStore,'ok','en-US');submit('example');respond({live:null,videos:[vod]});
 elements.videos.firstChild.handlers.click();preparedVariants();assert.equal(videoSource(),vod.url);assert.match(elements['quality-selection'].textContent,/unavailable.*Auto/i);
+
+// An interrupted second preparation must not reuse the previous resume target.
+const interruptedReplay={...vod,id:'resume-interrupted'};
+const interruptedStore={getItem(k){return k==='kick-watched-videos'?JSON.stringify([{key:'example:resume-interrupted',position:123,duration:600,finished:false}]):null;},setItem(){}};
+boot(interruptedStore,'ok','en-US');submit('example');respond({live:null,videos:[interruptedReplay]});elements.videos.firstChild.handlers.click();click('resume-continue');qualityResponse();ready();assert.equal(options().option.transmission.playTime.start,123000);
+click('watch-recordings');elements.videos.firstChild.handlers.click();click('resume-start');const interruptedPrepare=bridges.at(-1);
+document.hidden=true;document.handlers.visibilitychange();document.hidden=false;document.handlers.visibilitychange();click('toggle');
+assert.equal(videoSource(),undefined,'An interrupted Start over must prepare again before mounting');assert.equal(interruptedPrepare.cancelled,true);assert.notEqual(bridges.at(-1),interruptedPrepare);
+qualityResponse();ready();assert.equal(options().option.transmission,undefined,'Start over cannot inherit the previous saved position');
+boot({getItem(){return null;},setItem(){}},'ok','en-US');submit('example');respond({live:null,videos:[interruptedReplay]});elements.videos.firstChild.handlers.click();
+document.hidden=true;document.handlers.visibilitychange();document.hidden=false;document.handlers.visibilitychange();
+assert.equal(elements['quality-button'].disabled,true,'Initial cancelled preparation cannot expose incomplete quality metadata');
+click('quality-button');assert.equal(elements['quality-choice'].hidden,true);
+elements.watch.focus();key(415);assert.equal(videoSource(),undefined);qualityResponse();ready();assert.equal(videoSource(),interruptedReplay.url);
+
+// Dedicated transport keys retain pause/play intent inside playback dialogs.
+boot({getItem(){return null;},setItem(){}},'ok','en-US');submit('example');respond({live:null,videos:[{...vod,id:'transport-replay'}]});openReplay();
+click('quality-button');const transportFocus=document.activeElement;key(19);assert.equal(node().paused,true,'Pause works inside quality dialog');
+assert.equal(elements['quality-choice'].hidden,false);assert.equal(document.activeElement,transportFocus);key(415);assert.equal(node().paused,false);key(179);assert.equal(node().paused,true);click('quality-cancel');
+click('jump-time');const jumpTransportFocus=document.activeElement;key(415);assert.equal(node().paused,false);navigator.onLine=false;window.handlers.offline();key(19);
+navigator.onLine=true;window.handlers.online();const dialogPauseCalls=bridges.length;advance(60000);assert.equal(bridges.length,dialogPauseCalls,'Pause inside Jump forbids online recovery');
+assert.equal(videoSource(),undefined);assert.equal(document.activeElement,jumpTransportFocus);assert.equal(elements['jump-dialog'].hidden,false);
+key(415);advance(600);finishReconnect({...vod,id:'transport-replay',url:'https://stream.kick.com/transport/master.m3u8'});assert.equal(node().paused,false);assert.equal(elements['jump-dialog'].hidden,false);
+node().error={code:2};node().handlers.error();advance(1800);const pendingDialogRecovery=bridges.at(-1);key(19);assert.equal(pendingDialogRecovery.cancelled,true);
+pendingDialogRecovery.onservicecallback(JSON.stringify({returnValue:true,video:{...vod,id:'transport-replay'}}));advance(30000);assert.equal(videoSource(),undefined);key(461);click('watch-recordings');
 console.log('Quality choices: passed (validated variants, paused position, Auto fallback, persistence and lifecycle).');
 
 // Network recovery refreshes identity metadata instead of reusing an expired signed source.
