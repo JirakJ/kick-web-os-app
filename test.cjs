@@ -400,6 +400,27 @@ obsoleteQuality.handlers.click();assert.equal(videoSource(),undefined,'A stale q
 advance(600);finishReconnect({...live,url:'https://stream.kick.com/refreshed/master.m3u8'});assert.equal(elements['quality-button'].disabled,false);
 console.log('Network reconnect: passed (fresh sources, position, intent, single lookup, cancellation and bounded retries).');
 
+// Search only loaded local data; cancel restores the catalog and focus.
+const searchStore={getItem(k){return k==='kick-recent-channels'?JSON.stringify(['alpha','beta','alpha_2']):k==='kick-watched-videos'?JSON.stringify([
+ {key:'example:search-a',position:30,duration:600,finished:false},{key:'example:search-c',position:600,duration:600,finished:true}]):null;},setItem(){}};
+boot(searchStore,'ok','en-US');click('find-saved');const searchCalls=bridges.length;
+elements['saved-query'].value='ALP';elements['saved-query'].handlers.input();assert.equal(elements['saved-results'].children.length,2);
+assert.equal(bridges.length,searchCalls);key(461);assert.equal(elements['saved-search'].hidden,true);assert.equal(document.activeElement,elements['find-saved']);
+submit('example');respond({live:null,videos:[{...vod,id:'search-a',title:'Čaj 🐸',date:'2026-10-01'},
+ {...vod,id:'search-b',title:'Alfa',date:'2026-09-01'},{...vod,id:'search-c',title:'Žába',date:'2026-08-01'}]});
+const searchTitles=()=>elements.videos.children.map(v=>v.children[1].textContent);const catalogCalls=bridges.length;
+click('catalog-search');click('replay-filter');assert.deepEqual(searchTitles(),['Čaj 🐸']);click('replay-filter');assert.deepEqual(searchTitles(),['Alfa']);
+click('replay-filter');assert.deepEqual(searchTitles(),['Žába']);click('replay-filter');click('replay-sort');assert.deepEqual(searchTitles(),['Žába','Alfa','Čaj 🐸']);
+elements['replay-query'].value='🐸';elements['replay-query'].handlers.input();assert.deepEqual(searchTitles(),['Čaj 🐸']);
+assert.equal(bridges.length,catalogCalls);assert.match(elements['search-scope'].textContent,/loaded.*30/i);key(461);
+assert.deepEqual(searchTitles(),['Čaj 🐸','Alfa','Žába']);assert.equal(document.activeElement,elements['catalog-search']);
+click('catalog-search');elements['replay-query'].value='missing';elements['replay-query'].handlers.input();assert.equal(elements.videos.children.length,0);assert.equal(elements['replay-result-count'].textContent,'Results: 0','Empty results must be visible inside the dialog');
+click('replay-reset');click('replay-apply');assert.equal(elements['replay-tools'].hidden,true);assert.equal(elements.videos.children.length,3);
+assert.equal(document.activeElement,elements.videos.firstChild);key(461);submit('second');respond({live:null,videos:[{...vod,id:'new',title:'New'}]});assert.deepEqual(searchTitles(),['New']);
+boot(searchStore,'ok','en-US');submit('example');respond({live:null,videos:[{...vod,id:'unicode-search',title:'🐸'.repeat(100)+' target'}]});
+click('catalog-search');elements['replay-query'].value='target';elements['replay-query'].handlers.input();assert.equal(elements.videos.children.length,1,'Search includes the full 200-code-point title');key(461);
+console.log('Local search: passed (saved channels, Unicode titles, viewing filters, deterministic sort, cancel/focus and no per-key requests).');
+
 // A new replay selection offers saved progress; dismissing it never mounts media.
 const resumeData=new Map([['kick-watched-videos',JSON.stringify([{key:'returner:resume-a',position:123,duration:600,finished:false}])]]);
 const resumeStorage={getItem:k=>resumeData.get(k)||null,setItem:(k,v)=>resumeData.set(k,v)};

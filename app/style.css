@@ -197,3 +197,6 @@ footer > * { min-width: 0; max-width: 100%; }
 #quality-selection, #quality-actual { color: #c5cbd3; font-size: 18px; margin: 6px 0; }
 #quality-options button { display: block; width: 100%; margin: 8px 0; }
 .modal-card { max-height: 88vh; overflow-y: auto; }
+
+#saved-results button { display: block; width: 100%; margin: 10px 0; }
+#search-summary { color: #a9afb7; font-size: 22px; }

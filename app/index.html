@@ -25,6 +25,7 @@
         <div class="home-actions">
           <button id="play" type="submit" class="primary"><span id="play-label" data-i18n="play_live">Play live</span> <span aria-hidden="true">▶</span></button>
           <button id="recordings" type="button" data-i18n="recordings">Replays</button>
+          <button id="find-saved" type="button" data-i18n="find_saved">Find saved channels</button>
           <button id="favorite-channel" type="button"></button>
           <p id="favorite-feedback" role="status" class="favorite-feedback"></p>
         </div>
@@ -59,12 +60,14 @@
         <p id="channel-status" role="status"></p>
       </div>
       <div class="catalog-actions">
+        <button id="catalog-search" type="button" data-i18n="search_replays">Search and filter replays</button>
         <button id="catalog-favorite" type="button"></button><p id="catalog-favorite-feedback" role="status" class="favorite-feedback"></p>
         <button id="catalog-back" type="button" data-i18n="change_channel">Change channel</button>
         <button id="live" type="button" class="primary" hidden><span class="live-dot" aria-hidden="true"></span><span id="live-label" data-i18n="play_live">Play live</span></button>
       </div>
     </div>
     <h2 id="videos-heading" data-i18n="videos_heading">Stream replays</h2>
+    <p id="search-summary" role="status"></p>
     <p id="videos-status" role="status"></p>
     <button id="catalog-retry" type="button" data-i18n="retry" hidden>Try again</button>
     <div id="videos"></div>
@@ -99,6 +102,14 @@
     </div>
     <button id="back" type="button" data-i18n="change_channel">Change channel</button>
   </section>
+  <section id="saved-search" class="modal" role="dialog" aria-modal="true" aria-labelledby="saved-heading" hidden><div class="modal-card">
+    <h2 id="saved-heading" data-i18n="find_saved">Find saved channels</h2><label id="saved-label" for="saved-query" data-i18n="search_query">Search text</label><input id="saved-query" type="text" maxlength="200" autocomplete="off"><button id="saved-clear" type="button" data-i18n="clear">Clear</button>
+    <p id="saved-count" role="status"></p><div id="saved-results"></div><button id="saved-previous" type="button" data-i18n="page_previous">← Previous</button><span id="saved-number"></span><button id="saved-next" type="button" data-i18n="page_next">Next →</button><button id="saved-cancel" type="button" data-i18n="cancel">Cancel</button>
+  </div></section>
+  <section id="replay-tools" class="modal" role="dialog" aria-modal="true" aria-labelledby="replay-tools-heading" hidden><div class="modal-card">
+    <h2 id="replay-tools-heading" data-i18n="search_replays">Search and filter replays</h2><p id="search-scope" data-i18n="search_scope">Search covers only the loaded catalog (up to 30 public replays).</p><label id="replay-query-label" for="replay-query" data-i18n="search_query">Search text</label><input id="replay-query" type="text" maxlength="200" autocomplete="off">
+    <p id="replay-result-count" role="status"></p><button id="replay-filter" type="button"></button><button id="replay-sort" type="button"></button><button id="replay-reset" type="button" data-i18n="reset">Reset</button><button id="replay-apply" type="button" data-i18n="apply">Apply</button><button id="replay-cancel" type="button" data-i18n="cancel">Cancel</button>
+  </div></section>
   <section id="quality-choice" class="modal" role="dialog" aria-modal="true" aria-labelledby="quality-heading" hidden><div class="modal-card"><h2 id="quality-heading" data-i18n="quality_title">Playback quality</h2><div id="quality-options"></div><button id="quality-cancel" type="button" data-i18n="cancel">Cancel</button></div></section>
   <section id="favorite-move" class="modal" role="dialog" aria-modal="true" aria-labelledby="favorite-move-heading" hidden><div class="modal-card">
     <h2 id="favorite-move-heading" data-i18n="favorite_move_title">Reorder favorite channels</h2><p id="favorite-move-info"></p>

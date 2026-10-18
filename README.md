@@ -19,6 +19,7 @@ The interface follows the TV's system language (Czech, Slovak, English, German, 
 - Replay thumbnails, titles, dates and durations, with six recordings per page.
 - Last-watched and previously watched replay badges, with the last played position stored locally.
 - A seek bar without a focus rectangle, pause/resume and remote controls; playback controls hide after six seconds of inactivity.
+- Find saved channels locally; search replay titles, filter by viewing history and sort newest/oldest within the loaded catalog of up to 30 public replays. Six visible results per page; Back cancels changes and restores focus.
 - Network reconnect refreshes validated live/replay sources with two bounded attempts; offline flapping retains the budget. Pause, hide and Back cancel pending recovery. Manual Reconnect preserves pause intent. Real outage acceptance remains pending.
 - Auto quality up to 4K: 2160p → 1440p → 1080p → lower resolutions. Native adaptation remains enabled for slower connections. The quality menu also offers validated self-contained HLS renditions; fixed quality preserves position/pause, while playlists with separate audio require Auto. Preferences are local; missing renditions fall back explicitly to Auto. Actual decoder resolution/FPS is unavailable through the supported app API.
 - Serialized seeking, bounded recovery after media errors, request timeouts and cleanup when leaving the player.
