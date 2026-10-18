@@ -417,6 +417,8 @@ assert.deepEqual(searchTitles(),['Čaj 🐸','Alfa','Žába']);assert.equal(docu
 click('catalog-search');elements['replay-query'].value='missing';elements['replay-query'].handlers.input();assert.equal(elements.videos.children.length,0);assert.equal(elements['replay-result-count'].textContent,'Results: 0','Empty results must be visible inside the dialog');
 click('replay-reset');click('replay-apply');assert.equal(elements['replay-tools'].hidden,true);assert.equal(elements.videos.children.length,3);
 assert.equal(document.activeElement,elements.videos.firstChild);key(461);submit('second');respond({live:null,videos:[{...vod,id:'new',title:'New'}]});assert.deepEqual(searchTitles(),['New']);
+boot(searchStore,'ok','en-US');submit('example');respond({live:null,videos:[{...vod,id:'unicode-search',title:'🐸'.repeat(100)+' target'}]});
+click('catalog-search');elements['replay-query'].value='target';elements['replay-query'].handlers.input();assert.equal(elements.videos.children.length,1,'Search includes the full 200-code-point title');key(461);
 console.log('Local search: passed (saved channels, Unicode titles, viewing filters, deterministic sort, cancel/focus and no per-key requests).');
 
 // A new replay selection offers saved progress; dismissing it never mounts media.

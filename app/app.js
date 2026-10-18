@@ -61,7 +61,7 @@ if (typeof document !== 'undefined') (function () {
   }, progress: rememberVideo, refresh: refreshSource, cancelRefresh: cancelRequest, interact: function () { showControls(); el('toggle').focus(); } });
 
   function searchText(value) {
-    var text = String(value || '').slice(0, 200);
+    var text = titleSlice(String(value || ''));
     if (typeof text.normalize === 'function') text = text.normalize('NFKC');
     return text.toLowerCase().trim();
   }
