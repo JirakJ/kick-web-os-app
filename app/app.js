@@ -105,8 +105,15 @@ if (typeof document !== 'undefined') (function () {
     cancelRequest();
     current = null;
     unload();
+    catalog = null;
+    clearVideos();
     setScreen('home');
     input.focus();
+  }
+  function clearVideos() {
+    videoButtons = [];
+    var list = el('videos');
+    while (list.firstChild) list.removeChild(list.firstChild);
   }
   function renderRecents() {
     var list = el('recent-channels');
@@ -440,8 +447,7 @@ if (typeof document !== 'undefined') (function () {
     current = null;
     unload();
     catalog = null;
-    videoButtons = [];
-    while (el('videos').firstChild) el('videos').removeChild(el('videos').firstChild);
+    clearVideos();
     el('pages').hidden = true;
     el('catalog-retry').hidden = true;
     el('live').hidden = true;

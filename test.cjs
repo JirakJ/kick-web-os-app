@@ -30,7 +30,7 @@ assert.equal(serviceManifest.id,serviceId);
 assert.deepEqual(serviceManifest.services.map(s=>s.name),[serviceId]);
 assert.equal(JSON.parse(fs.readFileSync('service/package.json','utf8')).name,serviceId);
 assert.equal(fs.readFileSync('app/index.html','utf8').match(/id="app-version">v([^<]+)</)[1],appVersion,'Footer must match the packaged app version');
-let elements, document, window, navigator, bridges, timers, clock, created, textWrites;
+let elements, document, window, navigator, bridges, timers, clock, created, textWrites, timerAllocations, wallClockOffset;
 function element(id = '') {
   return {
     id, hidden: false, disabled: false, value: '', _text: '', children: [], attrs: {}, handlers: {},
@@ -60,7 +60,7 @@ function element(id = '') {
 const stored = new Map();
 const storage = {getItem(key){return stored.get(key)||null;},setItem(key,value){stored.set(key,value);}};
 function boot(localStorage = storage, bridgeMode = 'ok', locale = 'cs-CZ') {
-  elements = {}; bridges = []; timers = new Map(); clock = 1000; created = {}; textWrites = {};
+  elements = {}; bridges = []; timers = new Map(); clock = 1000; created = {}; textWrites = {}; timerAllocations = 0; wallClockOffset = 0;
   const labelled=[];
   document = {hidden:false,activeElement:null,handlers:{},
     getElementById(id){return elements[id];},createElement(tag){created[tag]=(created[tag]||0)+1;return element();},
@@ -75,8 +75,8 @@ function boot(localStorage = storage, bridgeMode = 'ok', locale = 'cs-CZ') {
   }
   window={innerWidth:1920,handlers:{},addEventListener(name,fn){this.handlers[name]=fn;},scrollTo(){}};
   navigator={onLine:true,language:locale};
-  const context={document,window,navigator,localStorage,Date:{now:()=>clock},webOSSystem:{locale,platformBack(){}},
-    setTimeout(fn,ms){const id={};timers.set(id,{fn,ms,at:clock+ms});return id;},clearTimeout(id){timers.delete(id);}};
+  const context={document,window,navigator,localStorage,Date:{now:()=>clock+wallClockOffset},performance:{now:()=>clock},webOSSystem:{locale,platformBack(){}},
+    setTimeout(fn,ms){timerAllocations++;const id={};timers.set(id,{fn,ms,at:clock+ms});return id;},clearTimeout(id){timers.delete(id);}};
   if(bridgeMode!=='missing')context.PalmServiceBridge=function(){
     if(bridgeMode==='throw')throw Error('bridge unavailable');
     bridges.push(this);
@@ -220,6 +220,23 @@ assert.equal(elements.videos.children.length,6);assert.equal(elements['page-numb
 elements.videos.children[0].focus();key(40);assert.equal(document.activeElement,elements.videos.children[3]);
 click('next-page');assert.equal(elements['page-number'].textContent,'2 / 3');
 click('next-page');assert.equal(elements.videos.children.length,2);assert.equal(elements['next-page'].disabled,true);
+// A seek entered while no decoder exists survives the next mount.
+for(const interrupted of ['recovering','suspended']){
+ boot();submit('example');respond();startVOD();
+ node()._time=50;node().handlers.timeupdate();
+ if(interrupted==='recovering'){node().error={code:3};node().handlers.error();}
+ else{document.hidden=true;document.handlers.visibilitychange();document.hidden=false;document.handlers.visibilitychange();}
+ elements.watch.focus();key(39);
+ if(interrupted==='recovering')advance(600);else key(13);
+ assert.equal(options().option.transmission.playTime.start,60000,'Keep a new seek target through '+interrupted+' mount');
+ click('back');
+}
+// Completing an active seek consumes the pending debounce, rather than orphaning it.
+boot();submit('example');respond();startVOD();elements.watch.focus();key(39);advance(300);
+advance(50);key(39);advance(50);seeked();advance(50);seeked();advance(50);key(39);
+advance(299);assert.deepEqual(node().seeks,[10,20],'An old debounce cannot start the next seek early');
+advance(1);assert.deepEqual(node().seeks,[10,20,30]);seeked();
+click('watch-recordings');assert.equal(timers.size,0,'Leaving playback cancels every media timer');
 console.log('Player and TV UI: passed (serialized seeking, bounded recovery, stale events, stalled/failed media, lifecycle, API failures, history, grid navigation).');
 
 // Replay history follows actual media progress, survives restarts, and never stores signed URLs.
@@ -327,6 +344,10 @@ const performanceReplays=Array.from({length:30},(_,i)=>({...vod,id:'perf-'+i,thu
 boot();submit('example');respond({live:null,videos:performanceReplays});
 assert.equal(created.img,6,'Render only the six visible thumbnails, once per catalog load');
 const perfImages=created.img;
+click('catalog-back');
+assert.equal(elements.videos.children.length,0,'Returning home releases hidden replay cards and their thumbnail references');
+submit('example');respond({live:null,videos:performanceReplays});
+assert.equal(elements.videos.children.length,6,'Opening the channel again renders a fresh catalog');
 boot();submit('example');respond({videos:performanceReplays});
 assert.equal(created.img||0,0,'Autoplay must not construct a hidden catalog');
 click('watch-recordings');assert.equal(created.img,6);
@@ -347,7 +368,19 @@ boot({getItem(key){return key==='kick-recent-channels'?'["'+'x'.repeat(4096)+'"]
 assert.deepEqual(names(),[],'Oversized recent history is ignored');
 submit('example');bridges.at(-1).onservicecallback(' '.repeat(1048577));
 assert.match(elements['channel-status'].textContent,/neplatnou/,'Oversized bridge payload fails visibly');
-console.log('Performance budgets: '+JSON.stringify({catalogThumbnails:perfImages,timelineTextWritesPerMinute:timelineWrites,pauseLabelWritesDuringPlayback:toggleWrites}));
+boot();submit('example');respond();
+const timerBaseline=timerAllocations;
+for(let i=1;i<=240;i++){advance(250);node()._time=i/4;node().handlers.timeupdate();}
+const playbackTimers=timerAllocations-timerBaseline;
+assert.ok(playbackTimers<=5,'Steady playback schedules at most five timers per minute, not one per media event: '+playbackTimers);
+advance(19999);assert.ok(node(),'The watchdog waits twenty seconds after the last progress update');
+advance(1);assert.equal(node(),undefined,'The coalesced watchdog still detects a twenty-second stall');
+click('back');
+boot();submit('example');respond();advance(10000);wallClockOffset=-3600000;
+advance(9999);assert.ok(node());advance(1);
+assert.equal(node(),undefined,'A TV wall-clock correction cannot postpone the stall watchdog');
+click('back');
+console.log('Performance budgets: '+JSON.stringify({catalogThumbnails:perfImages,timelineTextWritesPerMinute:timelineWrites,pauseLabelWritesDuringPlayback:toggleWrites,playbackTimersPerMinute:playbackTimers}));
 
 // Recent channels: page-local status requests, removal, persistence and stale callbacks.
 const recentStore=new Map([['kick-recent-channels',JSON.stringify(Array.from({length:50},(_,i)=>'saved-'+i))],['kick-channel','legacy']]);
@@ -503,7 +536,7 @@ async function testService() {
     return req;
   }};
   function Service(name){assert.equal(name,'com.jakubjirak.service');this.register=(name,fn)=>{handlers[name]=fn;};}
-  https.Agent=function(options){agents.push(options);};
+  https.Agent=class extends require('node:https').Agent{constructor(options){super(options);agents.push(options);}};
   const serviceContext=vm.createContext({require(name){if(name==='https')return https;if(name==='zlib')return require('node:zlib');if(name==='webos-service')return Service;throw Error('Unexpected dependency: '+name);},Promise,Buffer,
     setTimeout(fn,ms){assert.equal(ms,12000);const id={};serviceTimers.set(id,fn);return id;},clearTimeout(id){serviceTimers.delete(id);}});
   vm.runInContext('Array.from = undefined;',serviceContext);

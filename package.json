@@ -1,6 +1,6 @@
 {
   "name": "kick-web-os-app",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "private": true,
   "packageManager": "npm@12.0.2",
   "engines": {
@@ -8,7 +8,7 @@
     "npm": ">=12.0.0"
   },
   "scripts": {
-    "test": "node test.cjs && node test-service-legacy.js && node test-build-deps.cjs",
+    "test": "node test.cjs && node test-service-legacy.js && node test-service-resources.js && node test-build-deps.cjs",
     "start": "python3 -m http.server 8080 --bind 127.0.0.1 --directory app",
     "package": "ares-package app service --outdir dist"
   },

@@ -3,7 +3,7 @@ function KickPlayer(host, events) {
   'use strict';
   var media = null, item = null, epoch = 0, ready = false;
   var wantPlay = false, phase = 'idle', position = 0, duration = 0;
-  var queuedSeek = null, activeSeek = null, seekTimer, deadline, retryTimer;
+  var queuedSeek = null, activeSeek = null, seekTimer, deadline, deadlineAt = 0, retryTimer;
   var retries = 0, healthySince = 0, playPending = false, playAttempt = 0;
 
   function validURL(url) {
@@ -18,10 +18,17 @@ function KickPlayer(host, events) {
   }
   function changed() { events.change(state()); }
   function status(key, params) { events.status(key, params); }
-  function clearDeadline() { clearTimeout(deadline); deadline = null; }
+  function now() { return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now(); }
+  function clearDeadline() { clearTimeout(deadline); deadline = null; deadlineAt = 0; }
+  function checkDeadline() {
+    deadline = null;
+    var remaining = deadlineAt - now();
+    if (remaining > 0) deadline = setTimeout(checkDeadline, remaining);
+    else recover('p_stalled');
+  }
   function armDeadline() {
-    clearDeadline();
-    deadline = setTimeout(function () { recover('p_stalled'); }, 20000);
+    deadlineAt = now() + 20000;
+    if (!deadline) deadline = setTimeout(checkDeadline, 20000);
   }
   function dispose() {
     epoch++;
@@ -81,6 +88,7 @@ function KickPlayer(host, events) {
     } catch (e) { playPending = false; recover('p_play_failed'); }
   }
   function commitSeek() {
+    clearTimeout(seekTimer);
     seekTimer = null;
     if (!media || !ready || activeSeek !== null || queuedSeek === null || media.seeking) return;
     activeSeek = queuedSeek; queuedSeek = null; phase = 'seeking';
@@ -90,6 +98,7 @@ function KickPlayer(host, events) {
   }
   function mount() {
     if (!item || document.hidden) return;
+    position = target();
     dispose();
     phase = 'loading'; status('p_loading');
     var node = document.createElement('video');
@@ -116,7 +125,7 @@ function KickPlayer(host, events) {
       if (!wantPlay) { node.pause(); phase = 'paused'; clearDeadline(); changed(); return; }
       phase = activeSeek === null ? 'playing' : 'seeking';
       if (activeSeek === null) status('');
-      if (!healthySince) healthySince = Date.now();
+      if (!healthySince) healthySince = now();
       armDeadline(); changed();
     });
     on('timeupdate', function () {
@@ -126,7 +135,7 @@ function KickPlayer(host, events) {
         position = Math.max(0, node.currentTime);
         if (advanced && wantPlay && !node.paused) {
           phase = 'playing'; status(''); armDeadline();
-          if (healthySince && Date.now() - healthySince >= 30000) retries = 0;
+          if (healthySince && now() - healthySince >= 30000) retries = 0;
           if (!item.isLive && delta > 0 && !node.seeking && queuedSeek === null && events.progress) {
             events.progress(position, duration, false);
           }
