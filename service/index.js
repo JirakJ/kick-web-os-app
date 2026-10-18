@@ -7,6 +7,14 @@ var pending = Object.create(null);
 var activeRequests = 0;
 // Reuse TLS connections between channel, replay and status lookups on the same host.
 var agent = new https.Agent({ keepAlive: true, keepAliveMsecs: 15000, maxSockets: 6, maxFreeSockets: 2 });
+// maxFreeSockets is per origin. Channel-specific CDN hosts must not grow the idle pool.
+agent.on('free', function () {
+  var free = [];
+  Object.keys(agent.freeSockets).forEach(function (origin) {
+    agent.freeSockets[origin].forEach(function (socket) { if (!socket.destroyed) free.push(socket); });
+  });
+  for (var i = 0; i < free.length - 2; i++) free[i].destroy();
+});
 
 function titleText(value, fallback) {
   var text = String(value || fallback || '');

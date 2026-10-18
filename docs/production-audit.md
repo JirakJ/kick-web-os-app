@@ -1,3 +1,91 @@
+# Playback performance and memory audit for 0.7.5
+
+Checked on 18 October 2026 using the packaged app on LG 55NANO863NA,
+firmware 04.64.00 / webOS 5.6.2 (Chromium 68, service Node.js 8.12.0).
+The installed app/service matched all 27 files in the candidate IPK.
+
+Native stress exposed a teardown defect: each rapid replay start/return retained
+88 DOM nodes and 11 event listeners. Heap retaining paths placed detached videos
+under the browser's native pending activities. Removing listeners and a stale
+`play()` promise capture fixed those references but did not stop native-node
+growth. Detaching the video before the final empty-source `load()` reset stopped
+the observed growth; this order is now covered for stop, suspension and recovery.
+The precise internal LG engine flag responsible remains unconfirmed.
+
+| Check | Observed result |
+| --- | --- |
+| Fresh-process native replay stress: one warm-up plus three batches of five starts/returns | 334 DOM nodes and 43 listeners at every settled catalog sample after forced GC |
+| 50 next/previous pagination cycles | Same 334 nodes and 43 listeners |
+| Return home after stress | 270 nodes, 31 listeners, zero videos and replay thumbnails; no active media pipeline |
+| JS heap after pagination versus final playback batch | 1,983,680 to 1,996,520 bytes; warm-up allocations are excluded from this comparison |
+| Unresolved native Promise regression | A retired video can be collected while the promise and player remain alive |
+| Simulated minute with 240 progress events | Watchdog allocations reduced from 240 to 3; last-progress +20-second stall detection retained |
+| Actual socket integration across 25 CDN origins | At most two idle sockets globally; same-origin requests reuse their connection |
+| Installed minified service integration on the TV's Node.js 8.12.0 | Legacy and resource suites passed |
+
+New seek regressions preserve a target entered during recovery/suspension and
+prevent an obsolete debounce from committing later input early. The watchdog
+uses a monotonic clock where available, so wall-clock corrections do not extend
+its deadline. Returning home drops unused catalog cards and thumbnail references.
+
+The full regression suite includes failing-before/passing-after cases. CI runs
+actual Node.js 0.12.2 and 8.12.0 integration jobs, npm audit, package creation and
+a pinned, checksum-verified Gitleaks full-history scan with redacted output.
+Publication requires every main-branch CI job to succeed. OSV and Semgrep also
+passed locally. The build-dependency fixes below are included; 0.7.4 was tested
+as a local candidate but was not published.
+
+Native evidence is retained locally under
+`artifacts/performance-0.7.5-20261018/`. Heap snapshots were processed in memory;
+only sanitized retaining paths were saved. No cookies, signed media URLs or
+viewing history are published here. Bounded stress and forced-GC observations
+are not proof against every firmware or decoder leak. Audible sound, multi-hour
+playback, actual 4K decoding and webOS 3.5 hardware remain unverified.
+
+---
+
+# Build dependency and TV audit for 0.7.4
+
+Checked on 18 October 2026. The build dependency lockfile now uses
+`brace-expansion` 1.1.21 / 5.0.12, `proxy-addr` 2.0.8 and documented,
+checksum-pinned [local security backports](../vendor/security/README.md) of
+`braces` and `sprintf-js`. Both backports reproduce byte for byte from pinned
+public sources. Their original licenses remain in the archives; neither is
+represented as an official upstream release.
+
+The installed-dependency regressions reproduced the proxy trust mismatch and
+sprintf precision exception before the fixes, then passed after a clean npm 12
+installation. They exercise both minimatch generations, bounded parsing and AST
+traversal, the sprintf source and minified bundle, and asynchronous hostile
+precision inputs under Node's default exception policy. OSV scanned 229 resolved
+lockfile packages with no findings; npm audit also reported zero vulnerabilities.
+
+On LG 55NANO863NA, firmware 04.64.00 / webOS 5.6.2:
+
+- The installed 0.7.4 app and service matched all 27 payload files in the IPK.
+- The Czech UI and the home, catalog and paused-player geometry checks passed.
+- Real live and replay playback advanced without a media error. Native pipeline
+  telemetry reported 1920 x 1080 at 60 fps, one active decoder and an unmuted
+  audio track.
+- Pause held the current position; seeking to 600 seconds while paused and five
+  rapid right-arrow inputs reached 650 seconds while remaining paused.
+- Play resumed, controls hid automatically, Back returned to the catalog and
+  released the decoder. Three-column arrow navigation and replay pagination
+  passed on the TV's own browser.
+- The service integration script passed on the TV's actual Node.js 8.12.0 with
+  the installed minified app/service files. Its loopback transport checks remain
+  distinct from the successful real Kick playback checks.
+- A one-time transfer preserved the owner's existing channels and replay
+  history across the old/new application identity. This is device maintenance,
+  not an automatic app migration feature.
+
+Screenshots and detailed native observations are retained locally under
+`artifacts/tv-release-0.7.4-20261018/`. No cookies, signed media URLs or viewing
+history are included in this public audit. Audible sound, multi-hour playback,
+actual 4K decoding, network outages and webOS 3.5 hardware were not verified.
+
+---
+
 # Legacy runtime compatibility audit for 0.7.1
 
 Checked locally on 18 October 2026 (Europe/Prague). Fixes Claire's report in
