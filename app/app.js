@@ -29,7 +29,8 @@ if (typeof document !== 'undefined') (function () {
   var playback = { paused: true, phase: 'idle', position: 0, duration: 0, ready: false, seeking: false };
   var preparing = false, qualityPreference = 'auto', qualityButtons = [];
   var hidingControls = false;
-  var page = 0;
+  var page = 0, catalogQuery = '', catalogFilter = 'all', catalogOrder = 'newest', toolsSnapshot = null;
+  var savedPage = 0, savedSearchButtons = [];
   var recents = [];
   var recentPage = 0, recentStatus = Object.create(null), recentRequest = null, recentTimer, recentGeneration = 0;
   var favorites = [], favoritePage = 0, favoriteButtons = [], favoriteControls = [], favoriteMove = null;
@@ -59,6 +60,56 @@ if (typeof document !== 'undefined') (function () {
     if (transition && screen === 'watch' && next.phase !== 'idle') showControls();
   }, progress: rememberVideo, refresh: refreshSource, cancelRefresh: cancelRequest, interact: function () { showControls(); el('toggle').focus(); } });
 
+  function searchText(value) {
+    var text = String(value || '').slice(0, 200);
+    if (typeof text.normalize === 'function') text = text.normalize('NFKC');
+    return text.toLowerCase().trim();
+  }
+  function closeSearch(save, focus) {
+    var wasSaved = !el('saved-search').hidden, wasTools = !!toolsSnapshot;
+    el('saved-search').hidden = el('replay-tools').hidden = true; savedSearchButtons = [];
+    if (toolsSnapshot) {
+      if (!save && toolsSnapshot.catalog === catalog) {
+        catalogQuery = toolsSnapshot.query; catalogFilter = toolsSnapshot.filter; catalogOrder = toolsSnapshot.order; page = toolsSnapshot.page;
+        renderVideos();
+      }
+      toolsSnapshot = null;
+    }
+    if (focus && wasSaved) el('find-saved').focus();
+    else if (focus && wasTools) (save && videoButtons[0] || el('catalog-search')).focus();
+  }
+  function renderSavedSearch() {
+    var query = searchText(el('saved-query').value), names = favorites.concat(recents).filter(function (name, index, all) {
+      return all.indexOf(name) === index && (!query || searchText(name).indexOf(query) >= 0);
+    });
+    var pages = Math.max(1, Math.ceil(names.length / 6)); savedPage = Math.max(0, Math.min(savedPage, pages - 1));
+    var list = el('saved-results'); while (list.firstChild) list.removeChild(list.firstChild); savedSearchButtons = [];
+    names.slice(savedPage * 6, savedPage * 6 + 6).forEach(function (name) {
+      var button = document.createElement('button'); button.type = 'button'; button.textContent = name;
+      button.addEventListener('click', function () { closeSearch(true, false); startChannel(name, true); });
+      list.appendChild(button); savedSearchButtons.push(button);
+    });
+    el('saved-count').textContent = t('results_count', { count: names.length });
+    el('saved-number').textContent = (savedPage + 1) + ' / ' + pages;
+    el('saved-previous').disabled = savedPage === 0; el('saved-next').disabled = savedPage === pages - 1;
+  }
+  function filteredVideos() {
+    var query = searchText(catalogQuery);
+    return (catalog ? catalog.videos : []).map(function (item, index) { return { item: item, index: index }; }).filter(function (row) {
+      var entry = watchedVideo(row.item), state = !entry ? 'unwatched' : entry.finished ? 'finished' : 'progress';
+      return (!query || searchText(row.item.title || t('replay')).indexOf(query) >= 0) && (catalogFilter === 'all' || catalogFilter === state);
+    }).sort(function (a, b) {
+      var ad = /^\d{4}-\d{2}-\d{2}$/.test(a.item.date || '') ? a.item.date : '', bd = /^\d{4}-\d{2}-\d{2}$/.test(b.item.date || '') ? b.item.date : '';
+      if (!ad !== !bd) return ad ? -1 : 1;
+      var dates = ad < bd ? -1 : ad > bd ? 1 : 0;
+      var ai = String(a.item.id || ''), bi = String(b.item.id || '');
+      return dates * (catalogOrder === 'oldest' ? 1 : -1) || (ai < bi ? -1 : ai > bi ? 1 : 0) || a.index - b.index;
+    }).map(function (row) { return row.item; });
+  }
+  function updateSearch() {
+    catalogQuery = String(el('replay-query').value || '').slice(0, 200); page = 0;
+    el('replay-filter').textContent = t('filter_' + catalogFilter); el('replay-sort').textContent = t('order_' + catalogOrder); renderVideos();
+  }
   function videoKey(item) {
     return item && !item.isLive && typeof item.id === 'string' && /^[a-z0-9-]{1,64}$/.test(item.id) ?
       kickChannel(input.value) + ':' + item.id : '';
@@ -258,7 +309,7 @@ if (typeof document !== 'undefined') (function () {
   }
 
   function setScreen(name) {
-    closeQuality(); closeFavoriteMove(false); closeResume(false); cancelContinue();
+    closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelContinue();
     screen = name;
     ['home', 'catalog', 'watch'].forEach(function (id) { el(id).hidden = id !== name; });
     window.scrollTo(0, 0);
@@ -619,7 +670,8 @@ if (typeof document !== 'undefined') (function () {
     var list = el('videos');
     while (list.firstChild) list.removeChild(list.firstChild);
     videoButtons = [];
-    var all = catalog ? catalog.videos : [];
+    var all = filteredVideos();
+    el('search-summary').textContent = el('replay-result-count').textContent = t('results_count', { count: all.length });
     var count = Math.max(1, Math.ceil(all.length / 6));
     page = Math.max(0, Math.min(page, count - 1));
     all.slice(page * 6, page * 6 + 6).forEach(function (item) {
@@ -674,7 +726,7 @@ if (typeof document !== 'undefined') (function () {
     el('page-number').textContent = (page + 1) + ' / ' + count;
   }
   function renderCatalog(data) {
-    catalog = data; page = 0;
+    catalog = data; page = 0; catalogQuery = ''; catalogFilter = 'all'; catalogOrder = 'newest';
     recentStatus[kickChannel(input.value)] = { live: !!data.live, at: Date.now() };
     data.videos = data.videos.filter(function (v) { return v && typeof v.url === 'string'; }).slice(0, 30);
     el('channel-status').textContent = t(data.live ? 'status_live' : 'status_offline');
@@ -772,6 +824,22 @@ if (typeof document !== 'undefined') (function () {
     el('seek').setAttribute('aria-valuetext', t('time_of', { elapsed: elapsed, total: total }));
   }
   el('resume-choice').hidden = true;
+  closeSearch(false, false);
+  el('find-saved').addEventListener('click', function () { el('saved-query').value = ''; savedPage = 0; renderSavedSearch(); el('saved-search').hidden = false; el('saved-query').focus(); });
+  el('saved-query').addEventListener('input', function () { savedPage = 0; renderSavedSearch(); });
+  el('saved-clear').addEventListener('click', function () { el('saved-query').value = ''; savedPage = 0; renderSavedSearch(); el('saved-query').focus(); });
+  el('saved-cancel').addEventListener('click', function () { closeSearch(false, true); });
+  [-1, 1].forEach(function (delta) { el(delta < 0 ? 'saved-previous' : 'saved-next').addEventListener('click', function () { savedPage += delta; renderSavedSearch(); (savedSearchButtons[0] || el('saved-query')).focus(); }); });
+  el('catalog-search').addEventListener('click', function () {
+    toolsSnapshot = { catalog: catalog, query: catalogQuery, filter: catalogFilter, order: catalogOrder, page: page };
+    el('replay-query').value = catalogQuery; updateSearch(); el('replay-tools').hidden = false; el('replay-query').focus();
+  });
+  el('replay-query').addEventListener('input', updateSearch);
+  el('replay-filter').addEventListener('click', function () { var filters = ['all', 'progress', 'unwatched', 'finished']; catalogFilter = filters[(filters.indexOf(catalogFilter) + 1) % filters.length]; updateSearch(); });
+  el('replay-sort').addEventListener('click', function () { catalogOrder = catalogOrder === 'newest' ? 'oldest' : 'newest'; updateSearch(); });
+  el('replay-reset').addEventListener('click', function () { el('replay-query').value = ''; catalogFilter = 'all'; catalogOrder = 'newest'; updateSearch(); el('replay-query').focus(); });
+  el('replay-apply').addEventListener('click', function () { closeSearch(true, true); });
+  el('replay-cancel').addEventListener('click', function () { closeSearch(false, true); });
   el('favorite-move').hidden = true;
   closeQuality();
   el('quality-button').addEventListener('click', openQuality);
@@ -824,7 +892,7 @@ if (typeof document !== 'undefined') (function () {
   el('watch').addEventListener('mousemove', showControls);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
-      cancelRecentStatus(); cancelContinue(); closeQuality(); closeFavoriteMove(false); closeResume(false);
+      cancelRecentStatus(); cancelContinue(); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false);
       var interrupted = !!request;
       cancelRequest();
       preparing = false;
@@ -839,11 +907,25 @@ if (typeof document !== 'undefined') (function () {
     else if (screen === 'home') { renderContinue(); refreshRecentStatus(); }
     else if (screen === 'catalog') (videoButtons[0] || el('catalog-back')).focus();
   });
-  window.addEventListener('pagehide', function () { cancelContinue(); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
+  window.addEventListener('pagehide', function () { cancelContinue(); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
   window.addEventListener('offline', function () { if (screen === 'watch') player.offline(); });
   window.addEventListener('online', function () { if (screen === 'watch' && !document.hidden) player.online(); if (screen === 'home' && !document.hidden) { renderContinue(); refreshRecentStatus(); } });
   document.addEventListener('keydown', function (event) {
     var key = event.keyCode;
+    if (!el('saved-search').hidden || toolsSnapshot) {
+      var savedOpen = !el('saved-search').hidden, searchInput = el(savedOpen ? 'saved-query' : 'replay-query');
+      var searchControls = savedOpen ? [searchInput, el('saved-clear')].concat(savedSearchButtons, [el('saved-previous'), el('saved-next'), el('saved-cancel')]) :
+        [searchInput, el('replay-filter'), el('replay-sort'), el('replay-reset'), el('replay-apply'), el('replay-cancel')];
+      searchControls = searchControls.filter(function (button) { return !button.disabled; });
+      if (key === 461 || key === 27) { event.preventDefault(); closeSearch(false, true); }
+      else if (key === 9 || key >= 37 && key <= 40) {
+        if (event.target === searchInput && (key === 37 || key === 39)) return;
+        event.preventDefault(); var searchIndex = searchControls.indexOf(event.target), searchDirection = key === 9 ? event.shiftKey ? -1 : 1 : key === 37 || key === 38 ? -1 : 1;
+        var searchTarget = searchControls[(Math.max(0, searchIndex) + searchDirection + searchControls.length) % searchControls.length];
+        searchTarget.focus(); searchTarget.scrollIntoView({ block: 'nearest' });
+      }
+      return;
+    }
     if (!el('quality-choice').hidden) {
       if (key === 461 || key === 27) { event.preventDefault(); closeQuality(); showControls(); el('quality-button').focus(); }
       else if (key === 9 || key >= 37 && key <= 40) {
@@ -903,10 +985,10 @@ if (typeof document !== 'undefined') (function () {
       if (key === 412 || key === 417) { event.preventDefault(); seek(key === 412 ? -10 : 10); return; }
       if (key >= 37 && key <= 40) showControls();
     }
-    var controls = screen === 'home' ? [input, el('play'), el('recordings'), el('favorite-channel')].concat(recentControls,
+    var controls = screen === 'home' ? [input, el('play'), el('recordings'), el('favorite-channel'), el('find-saved')].concat(recentControls,
       el('recent-pages').hidden ? [] : [el('recent-previous'), el('recent-next')], favoriteControls, el('favorite-pages').hidden ? [] : [el('favorite-previous'), el('favorite-next')], continueControls,
       el('continue-pages').hidden ? [] : [el('continue-previous'), el('continue-next')]) :
-      screen === 'catalog' ? (el('live').hidden ? [] : [el('live')]).concat(videoButtons,
+      screen === 'catalog' ? [el('catalog-search')].concat(el('live').hidden ? [] : [el('live')], videoButtons,
         el('catalog-retry').hidden ? [] : [el('catalog-retry')],
         el('pages').hidden ? [] : [el('previous-page'), el('next-page')].filter(function (b) { return !b.disabled; }), [el('catalog-back'), el('catalog-favorite')]) :
       (current && current.isLive ? [] : [el('seek')]).concat([el('toggle'), el('reconnect'), el('quality-button'), el('watch-recordings'), el('back')]);
