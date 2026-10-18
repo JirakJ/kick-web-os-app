@@ -38,7 +38,12 @@
       </nav>
     </section>
     </div>
-    <footer><span id="footer-hints" data-i18n="footer_hints">↑ ↓ Select &nbsp; OK Confirm &nbsp; Back Return</span><small><span id="footer-note" data-i18n="footer_note">Unofficial Kick player · No chat</span> · <span id="app-version">v0.7.5</span></small></footer>
+    <section id="continue-section" aria-labelledby="continue-heading" hidden>
+      <h2 id="continue-heading" data-i18n="continue_heading">Continue watching</h2>
+      <div id="continue-list"></div>
+      <nav id="continue-pages" hidden><button id="continue-previous" type="button" data-i18n="page_previous">← Previous</button><span id="continue-number"></span><button id="continue-next" type="button" data-i18n="page_next">Next →</button></nav>
+    </section>
+    <footer><span id="footer-hints" data-i18n="footer_hints">↑ ↓ Select &nbsp; OK Confirm &nbsp; Back Return</span><small><span id="footer-note" data-i18n="footer_note">Unofficial Kick player · No chat</span> · <span id="app-version">v0.8.0</span></small></footer>
   </main>
   <section id="catalog" aria-labelledby="catalog-heading" hidden>
     <div class="catalog-header">
@@ -83,6 +88,13 @@
       <button id="watch-recordings" type="button" data-i18n="channel_recordings">Channel replays</button>
     </div>
     <button id="back" type="button" data-i18n="change_channel">Change channel</button>
+  </section>
+  <section id="resume-choice" class="modal" role="dialog" aria-modal="true" aria-labelledby="resume-heading" hidden>
+    <div class="modal-card"><h2 id="resume-heading" data-i18n="resume_title">Continue this replay?</h2><p id="resume-info"></p>
+      <button id="resume-continue" type="button" class="primary"></button>
+      <button id="resume-start" type="button" data-i18n="start_over">Start over</button>
+      <button id="resume-cancel" type="button" data-i18n="cancel">Cancel</button>
+    </div>
   </section>
 </body>
 </html>

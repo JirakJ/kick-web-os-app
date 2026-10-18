@@ -208,6 +208,7 @@ function KickPlayer(host, events) {
     stop();
     if (!value || !validURL(value.url)) { phase = 'error'; status('p_invalid_url'); changed(); return false; }
     item = value; duration = finite(value.duration) && value.duration > 0 ? value.duration : 0;
+    position = finite(value.startAt) && value.startAt > 0 ? Math.min(value.startAt, duration ? Math.max(0, duration - 0.1) : 2592000) : 0;
     wantPlay = true; mount(); return true;
   }
   function play() {

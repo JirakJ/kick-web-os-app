@@ -60,7 +60,7 @@ function element(id = '') {
 }
 const stored = new Map();
 const storage = {getItem(key){return stored.get(key)||null;},setItem(key,value){stored.set(key,value);}};
-function boot(localStorage = storage, bridgeMode = 'ok', locale = 'cs-CZ') {
+function boot(localStorage = storage, bridgeMode = 'ok', locale = 'cs-CZ', online = true) {
   elements = {}; bridges = []; timers = new Map(); clock = 1000; created = {}; textWrites = {}; timerAllocations = 0; wallClockOffset = 0;
   const labelled=[];
   document = {hidden:false,activeElement:null,handlers:{},
@@ -75,7 +75,7 @@ function boot(localStorage = storage, bridgeMode = 'ok', locale = 'cs-CZ') {
     if(attrs['data-i18n']||attrs['data-i18n-attr'])labelled.push(node);
   }
   window={innerWidth:1920,handlers:{},addEventListener(name,fn){this.handlers[name]=fn;},scrollTo(){}};
-  navigator={onLine:true,language:locale};
+  navigator={onLine:online,language:locale};
   const context={document,window,navigator,localStorage,Date:{now:()=>clock+wallClockOffset},performance:{now:()=>clock},webOSSystem:{locale,platformBack(){}},
     setTimeout(fn,ms){timerAllocations++;const id={};timers.set(id,{fn,ms,at:clock+ms});return id;},clearTimeout(id){timers.delete(id);}};
   if(bridgeMode!=='missing')context.PalmServiceBridge=function(){
@@ -116,7 +116,7 @@ function respond(data={},prepare=true){
 }
 function submit(value){elements.channel.value=value;elements['channel-form'].handlers.submit({preventDefault(){}});}
 function click(id){elements[id].handlers.click();}
-function key(keyCode){document.handlers.keydown({keyCode,target:document.activeElement,preventDefault(){}});}
+function key(keyCode,extra={}){document.handlers.keydown({keyCode,target:document.activeElement,preventDefault(){},...extra});}
 function names(){return elements['recent-channels'].children.map(row=>row.firstChild.firstChild.textContent);}
 function startVOD(){click('watch-recordings');elements.videos.firstChild.handlers.click();qualityResponse();ready();}
 
@@ -254,11 +254,86 @@ for(const operation of ['pause','removeAttribute']){
 }
 console.log('Player and TV UI: passed (serialized seeking, bounded recovery, stale events, stalled/failed media, lifecycle, API failures, history, grid navigation).');
 
+// A new replay selection offers saved progress; dismissing it never mounts media.
+const resumeData=new Map([['kick-watched-videos',JSON.stringify([{key:'returner:resume-a',position:123,duration:600,finished:false}])]]);
+const resumeStorage={getItem:k=>resumeData.get(k)||null,setItem:(k,v)=>resumeData.set(k,v)};
+const resumeReplay={...vod,id:'resume-a'};
+boot(resumeStorage);submit('returner');respond({live:null,videos:[resumeReplay]});
+elements.videos.firstChild.handlers.click();
+assert.equal(elements['resume-choice']?.hidden,false,'Saved replay offers Continue and Start over');
+assert.equal(videoSource(),undefined,'A choice never starts a decoder implicitly');
+key(9);assert.equal(document.activeElement,elements['resume-start'],'Tab stays inside the choice');
+key(9);key(9);assert.equal(document.activeElement,elements['resume-continue']);
+key(9,{shiftKey:true});assert.equal(document.activeElement,elements['resume-cancel']);
+click('resume-continue');qualityResponse();ready();
+assert.equal(options().option.transmission.playTime.start,123000,'Resume uses native start time, not an overlapping early seek');
+click('watch-recordings');elements.videos.firstChild.handlers.click();click('resume-start');qualityResponse();ready();
+assert.equal(options().option.transmission,undefined,'Start over explicitly ignores saved progress');
+click('back');
+
+// Continue watching renders one page and owns at most two metadata requests.
+const shelfData=new Map([['kick-watched-videos',JSON.stringify(Array.from({length:15},(_,i)=>({key:'shelf:r'+i,position:100,duration:600,finished:false})))]]);
+const shelfStorage={getItem:k=>shelfData.get(k)||null,setItem:(k,v)=>shelfData.set(k,v)};
+boot(shelfStorage);assert.equal(elements['continue-list'].children.length,6);
+const shelfRequests=()=>bridges.filter(b=>b.uri.endsWith('/replay'));
+assert.equal(shelfRequests().length,2,'Only two visible-page metadata workers start');
+assert.ok(shelfRequests().every(b=>b.payload.background===true),'Only shelf lookups use background capacity');
+const firstMetadata=shelfRequests()[0].onservicecallback;
+firstMetadata(JSON.stringify({returnValue:true,video:{...vod,id:'r0',title:'Fresh replay'}}));
+assert.equal(shelfRequests().length,3);assert.match(elements['continue-list'].firstChild.firstChild.textContent,/Fresh replay/);
+firstMetadata(JSON.stringify({returnValue:true,video:{...vod,id:'r0'}}));
+assert.equal(shelfRequests().length,3,'A repeated callback cannot create a third metadata worker');
+const obsoleteMetadata=shelfRequests().at(-1).onservicecallback;
+submit('other');const afterLeaving=shelfRequests().length;obsoleteMetadata(JSON.stringify({returnValue:true,video:{...vod,id:'r2'}}));
+assert.equal(shelfRequests().length,afterLeaving,'Leaving home cancels the metadata queue');
+assert.ok(shelfRequests().every(b=>b.cancelled));
+respond({live:null});click('catalog-back');click('continue-next');assert.equal(elements['continue-number'].textContent,'2 / 3');
+elements['continue-list'].firstChild.children[1].handlers.click();
+assert.equal(JSON.parse(shelfData.get('kick-watched-videos')).length,14,'Unavailable entries can be removed without mounting a player');
+assert.ok(JSON.parse(shelfData.get('kick-watched-videos')).every(e=>Object.keys(e).sort().join(',')==='duration,finished,key,position'));
+// Completed/near-end history never offers a resume that immediately ends again.
+for(const entry of [{position:580,finished:false},{position:123,finished:true}]){
+ const d=new Map([['kick-watched-videos',JSON.stringify([{key:'returner:resume-a',duration:600,...entry}])]]);
+ boot({getItem:k=>d.get(k)||null,setItem:(k,v)=>d.set(k,v)});assert.equal(elements['continue-section'].hidden,true);
+ submit('returner');respond({live:null,videos:[resumeReplay]},false);elements.videos.firstChild.handlers.click();
+ assert.equal(elements['resume-choice'].hidden,true);qualityResponse();ready();assert.equal(options().option.transmission,undefined);
+ if(entry.finished){progressAt(2);click('toggle');assert.equal(JSON.parse(d.get('kick-watched-videos'))[0].finished,false,'Starting a finished replay makes new progress resumable');}
+ click('back');
+}
+// A dismissed choice and a stale home lookup never start playback.
+boot(resumeStorage);const oldShelf=bridges.find(b=>b.uri.endsWith('/replay')).onservicecallback;
+submit('returner');respond({live:null,videos:[resumeReplay]},false);elements.videos.firstChild.focus();elements.videos.firstChild.handlers.click();
+key(461);assert.equal(elements['resume-choice'].hidden,true);assert.equal(document.activeElement,elements.videos.firstChild);
+assert.equal(videoSource(),undefined);oldShelf(JSON.stringify({returnValue:true,video:resumeReplay}));assert.equal(videoSource(),undefined);
+// The shelf is reachable vertically and refreshes after offline startup.
+const withRecents={getItem:k=>k==='kick-recent-channels'?'["returner"]':resumeStorage.getItem(k),setItem:resumeStorage.setItem};
+boot(withRecents);elements['recent-channels'].firstChild.firstChild.focus();key(40);
+assert.equal(document.activeElement,elements['continue-list'].firstChild.firstChild,'Down leaves the last recent row for the shelf');
+boot(resumeStorage,'ok','cs-CZ',false);assert.equal(bridges.filter(b=>b.uri.endsWith('/replay')).length,0);
+navigator.onLine=true;window.handlers.online();assert.equal(bridges.filter(b=>b.uri.endsWith('/replay')).length,1,'Online refreshes visible shelf metadata');
+// Opening history resolves the selected public identity beyond the visible catalogue.
+boot(resumeStorage);elements['continue-list'].firstChild.firstChild.handlers.click();
+respond({live:null,videos:[]},false);assert.ok(bridges.at(-1).uri.endsWith('/replay'));
+bridges.at(-1).onservicecallback(JSON.stringify({returnValue:true,video:{...resumeReplay,url:vod.url+'?token=fresh'}}));
+assert.equal(elements['resume-choice'].hidden,false);click('resume-continue');qualityResponse();ready();
+assert.equal(videoSource(),vod.url+'?token=fresh');assert.equal(options().option.transmission.playTime.start,123000);
+click('back');
+// Explicit selection wins over an older in-flight history lookup.
+const raceHistory=[{key:'returner:resume-a',position:123,duration:600,finished:false},{key:'returner:saved-f',position:222,duration:600,finished:false}];
+boot({getItem:k=>k==='kick-watched-videos'?JSON.stringify(raceHistory):null,setItem(){}});
+elements['continue-list'].firstChild.firstChild.handlers.click();
+const selectedReplay={...vod,id:'saved-f',title:'Chosen F',url:'https://stream.kick.com/f/master.m3u8'};
+respond({live:null,videos:[selectedReplay]},false);const oldSelection=bridges.at(-1).onservicecallback;
+elements.videos.firstChild.handlers.click();oldSelection(JSON.stringify({returnValue:true,video:{...resumeReplay,title:'Original E'}}));
+assert.equal(elements['resume-info'].textContent,'Chosen F','An obsolete lookup cannot replace an explicit choice');
+click('resume-continue');qualityResponse();ready();assert.equal(videoSource(),selectedReplay.url);assert.equal(options().option.transmission.playTime.start,222000);click('back');
+console.log('Continue watching: passed (resume/start-over, page bounds, worker bounds, cancellation and history removal).');
+
 // Replay history follows actual media progress, survives restarts, and never stores signed URLs.
 const historyKey='kick-watched-videos', historyData=new Map();let historyWrites=0;
 const historyStorage={getItem:k=>historyData.get(k)||null,setItem(k,v){if(k===historyKey)historyWrites++;historyData.set(k,v);}};
 const replayA={...vod,id:'replay-a'}, replayB={...vod,id:'replay-b',url:'https://stream.kick.com/b/master.m3u8'};
-function openReplay(index=0){elements.videos.children[index].handlers.click();qualityResponse();ready();}
+function openReplay(index=0){elements.videos.children[index].handlers.click();if(elements['resume-choice']&&!elements['resume-choice'].hidden)click('resume-start');qualityResponse();ready();}
 function progressAt(seconds){node()._time=seconds;node().handlers.timeupdate();}
 function history(){return JSON.parse(historyData.get(historyKey)||'[]');}
 function replayBadge(index,cls){return elements.videos.children[index].firstChild.children.find(c=>c.className===cls);}
@@ -672,6 +747,13 @@ async function testService() {
   send({channel:'example'});assert.equal(calls.length-backgroundStart,6,'Foreground channel lookup retains capacity');
   transport='ok';waiting.splice(0).forEach(fn=>fn());await new Promise(r=>setImmediate(r));
   assert.equal(serviceTimers.size,0);
+  recordings=[{is_live:false,source:vod.url,session_title:'Selected',duration:600000,video:{uuid:'selected-replay',is_private:false,status:'public'}}];
+  transport='wait';replies=[];statuses(['one-a','two-b']);statuses(['three-c','four-d']);
+  const foregroundReplayStart=calls.length;
+  handlers.replay({payload:{channel:'selected',id:'selected-replay'},respond(d){replies.push(d);}});
+  assert.equal(calls.length,foregroundReplayStart+1,'Selected history replay keeps foreground capacity while four background requests finish');
+  transport='ok';waiting.splice(0).forEach(fn=>fn());await new Promise(r=>setImmediate(r));
+  assert.ok(replies.some(r=>r.video&&r.video.id==='selected-replay'));
   console.log('TV service: passed (channel validation, fixed API origin, public replays only, media URL validation, offline and HTTP errors).');
 }
 testService().catch(e=>{console.error(e);process.exitCode=1;});

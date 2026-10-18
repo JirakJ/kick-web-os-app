@@ -199,6 +199,34 @@ service.register('prepare', function (message) {
   }).catch(function (e) { respond(message, errorReply(e)); });
 });
 
+function publicVideos(recordings, identity) {
+  return Array.isArray(recordings) ? recordings.filter(function (v) {
+      return v && !v.is_live && v.video && v.video.is_private === false &&
+        !v.video.deleted_at && !v.video.is_pruned && v.video.status === 'public' && mediaURL(v.source) &&
+        (!identity || String(v.video.uuid || v.video.id || v.id || '') === identity);
+    }).slice(0, identity ? 1 : 30).map(function (v) {
+      var length = Number(v.duration);
+      var id = String(v.video.uuid || v.video.id || v.id || '');
+      // An empty title lets the app supply its localized "Replay" label.
+      return { id: /^[a-z0-9-]{1,64}$/.test(id) ? id : '', title: titleText(v.session_title, ''),
+        url: mediaURL(v.source), date: String(v.created_at || '').slice(0, 10),
+        thumbnail: imageURL(v.thumbnail),
+        duration: isFinite(length) && length > 0 ? Math.min(length / 1000, 2592000) : 0 };
+    }) : [];
+}
+
+service.register('replay', function (message) {
+  var payload = message.payload || {}, slug = payload.channel, id = payload.id;
+  if (typeof slug !== 'string' || !/^[a-z0-9_-]{1,25}$/.test(slug) || typeof id !== 'string' || !/^[a-z0-9-]{1,64}$/.test(id)) {
+    respond(message, errorReply(failure('invalid_replay', 'Invalid replay identity.'))); return;
+  }
+  getJSON(slug + '/videos', payload.background === true).then(function (recordings) {
+    if (!Array.isArray(recordings)) throw failure('videos_unavailable', 'The replay list is not available.');
+    var found = publicVideos(recordings, id)[0];
+    respond(message, { returnValue: true, video: found || null });
+  }).catch(function (error) { respond(message, errorReply(error)); });
+});
+
 service.register('channel', function (message) {
   var slug = message.payload && message.payload.channel;
   if (typeof slug !== 'string' || !/^[a-z0-9_-]{1,25}$/.test(slug)) {
@@ -215,18 +243,7 @@ service.register('channel', function (message) {
     var live = channel.livestream;
     var source = mediaURL(channel.playback_url);
     var recordings = results[1];
-    var videos = Array.isArray(recordings) ? recordings.filter(function (v) {
-      return v && !v.is_live && v.video && v.video.is_private === false &&
-        !v.video.deleted_at && !v.video.is_pruned && v.video.status === 'public' && mediaURL(v.source);
-    }).slice(0, 30).map(function (v) {
-      var length = Number(v.duration);
-      var id = String(v.video.uuid || v.video.id || v.id || '');
-      // An empty title lets the app supply its localized "Replay" label.
-      return { id: /^[a-z0-9-]{1,64}$/.test(id) ? id : '', title: titleText(v.session_title, ''),
-        url: mediaURL(v.source), date: String(v.created_at || '').slice(0, 10),
-        thumbnail: imageURL(v.thumbnail),
-        duration: isFinite(length) && length > 0 ? Math.min(length / 1000, 2592000) : 0 };
-    }) : [];
+    var videos = publicVideos(recordings);
     var videosError = Array.isArray(recordings) ? null :
       recordings && recordings.marker === failedVideos ? recordings.error : failure('videos_unavailable', 'The replay list is not available.');
     respond(message, { returnValue: true, channel: slug,

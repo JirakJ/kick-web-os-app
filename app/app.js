@@ -32,6 +32,8 @@ if (typeof document !== 'undefined') (function () {
   var page = 0;
   var recents = [];
   var recentPage = 0, recentStatus = Object.create(null), recentRequest = null, recentTimer, recentGeneration = 0;
+  var continuePage = 0, continueControls = [], continueRequests = [], continueGeneration = 0;
+  var resumeItem = null, resumeFocus = null;
   var watched = [], historyDirty = false, historyWrittenAt = 0;
   var recentButtons = [], recentControls = [];
   var videoButtons = [];
@@ -62,6 +64,93 @@ if (typeof document !== 'undefined') (function () {
     var key = videoKey(item);
     for (var i = 0; i < watched.length; i++) if (watched[i].key === key) return watched[i];
   }
+  function resumePosition(item) {
+    var entry = watchedVideo(item), length = Number(item.duration) || entry && entry.duration || 0;
+    return entry && !entry.finished && entry.position > 0 && (!length || entry.position < length - 30) ? entry.position : 0;
+  }
+  function closeResume(restore) {
+    resumeItem = null;
+    el('resume-choice').hidden = true;
+    if (restore && resumeFocus && resumeFocus.parentNode) resumeFocus.focus();
+    resumeFocus = null;
+  }
+  function chooseVideo(item) {
+    cancelRequest();
+    var at = resumePosition(item);
+    if (!at) { startVideo(item, 0); return; }
+    resumeFocus = document.activeElement; resumeItem = item;
+    el('resume-info').textContent = item.title;
+    el('resume-continue').textContent = t('resume_at', { time: formatTime(at) });
+    el('resume-choice').hidden = false;
+    el('resume-continue').focus();
+  }
+  function cancelContinue() {
+    continueGeneration++;
+    continueRequests.forEach(function (work) {
+      clearTimeout(work.timer);
+      work.bridge.onservicecallback = function () {};
+      try { work.bridge.cancel(); } catch (e) { /* Closed bridge. */ }
+    });
+    continueRequests = [];
+  }
+  function renderContinue() {
+    cancelContinue(); continueControls = [];
+    var list = el('continue-list');
+    while (list.firstChild) list.removeChild(list.firstChild);
+    var entries = watched.filter(function (entry) {
+      return !entry.finished && (!entry.duration || entry.position < entry.duration - 30);
+    });
+    var pages = Math.max(1, Math.ceil(entries.length / 6));
+    continuePage = Math.max(0, Math.min(continuePage, pages - 1));
+    el('continue-section').hidden = !entries.length;
+    el('continue-pages').hidden = pages <= 1;
+    el('continue-previous').disabled = continuePage === 0;
+    el('continue-next').disabled = continuePage === pages - 1;
+    el('continue-number').textContent = (continuePage + 1) + ' / ' + pages;
+    var rows = entries.slice(continuePage * 6, continuePage * 6 + 6).map(function (entry) {
+      var parts = entry.key.split(':'), row = document.createElement('div'), button = document.createElement('button'), remove = document.createElement('button');
+      row.className = 'continue-row'; button.type = remove.type = 'button';
+      button.textContent = t('continue_named', { channel: parts[0], title: t('replay'), time: formatTime(entry.position) });
+      button.addEventListener('click', function () { startChannel(parts[0], false, parts[1]); });
+      remove.textContent = '×'; remove.setAttribute('aria-label', t('remove_history'));
+      remove.addEventListener('click', function () {
+        watched = watched.filter(function (other) { return other.key !== entry.key; });
+        historyDirty = true; saveWatched(); renderContinue(); (continueControls[0] || input).focus();
+      });
+      row.appendChild(button); row.appendChild(remove); list.appendChild(row); continueControls.push(button, remove);
+      return { entry: entry, button: button, parts: parts };
+    });
+    if (document.hidden || navigator.onLine === false || typeof PalmServiceBridge === 'undefined') return;
+    var token = continueGeneration, next = 0;
+    function worker() {
+      if (token !== continueGeneration || screen !== 'home' || document.hidden || next >= rows.length) return;
+      var row = rows[next++], bridge, work, done = false;
+      try { bridge = new PalmServiceBridge(); } catch (e) { return; }
+      work = { bridge: bridge };
+      continueRequests.push(work);
+      function finish(data) {
+        if (done || token !== continueGeneration) return;
+        done = true;
+        clearTimeout(work.timer);
+        continueRequests = continueRequests.filter(function (other) { return other !== work; });
+        bridge.onservicecallback = function () {};
+        try { bridge.cancel(); } catch (e) { /* Closed bridge. */ }
+        var video = data && data.returnValue && data.video && data.video.id === row.parts[1] ? data.video : null;
+        if (video) setVideoTitle(row.button, t('continue_named', { channel: row.parts[0], title: typeof video.title === 'string' ? titleSlice(video.title) : t('replay'), time: formatTime(row.entry.position) }));
+        else row.button.setAttribute('aria-label', row.button.textContent + '. ' + t('continue_unavailable'));
+        worker();
+      }
+      bridge.onservicecallback = function (response) {
+        var data;
+        try { if (typeof response !== 'string' || response.length > 1048576) throw Error('response'); data = JSON.parse(response); } catch (e) { data = null; }
+        finish(data);
+      };
+      work.timer = setTimeout(function () { finish(null); }, 18000);
+      try { bridge.call('luna://com.jakubjirak.service/replay', JSON.stringify({ channel: row.parts[0], id: row.parts[1], background: true })); }
+      catch (e) { finish(null); }
+    }
+    worker(); worker();
+  }
   function saveWatched() {
     if (!historyDirty) return;
     try { localStorage.setItem('kick-watched-videos', JSON.stringify(watched)); } catch (e) { /* Keep this session's history if storage is unavailable. */ }
@@ -73,7 +162,7 @@ if (typeof document !== 'undefined') (function () {
     var entry = previous || { key: key, finished: false };
     entry.position = Math.min(position, 2592000);
     entry.duration = isFinite(duration) && duration > 0 ? Math.min(duration, 2592000) : 0;
-    entry.finished = !!ended || entry.finished;
+    entry.finished = !!ended || entry.finished && current.startAt !== 0;
     if (watched[0] !== entry) watched = [entry].concat(watched.filter(function (other) {
       return other.key !== key;
     })).slice(0, 200);
@@ -82,10 +171,11 @@ if (typeof document !== 'undefined') (function () {
   }
 
   function setScreen(name) {
+    closeResume(false); cancelContinue();
     screen = name;
     ['home', 'catalog', 'watch'].forEach(function (id) { el(id).hidden = id !== name; });
     window.scrollTo(0, 0);
-    if (name === 'home') refreshRecentStatus(); else cancelRecentStatus();
+    if (name === 'home') { renderContinue(); refreshRecentStatus(); } else cancelRecentStatus();
   }
   function cancelRequest() {
     generation++;
@@ -319,12 +409,13 @@ if (typeof document !== 'undefined') (function () {
     }
     append(text.slice(index), '');
   }
-  function startVideo(item) {
+  function startVideo(item, startAt) {
     if (!item || typeof item.url !== 'string' ||
       !/^https:\/\/(?:stream\.kick\.com|(?:[a-z0-9-]+\.)+live-video\.net)\/[^\s?#]+\.m3u8(?:\?[^\s#]*)?$/.test(item.url)) {
       el('videos-status').textContent = t('invalid_video_url');
       return;
     }
+    item.startAt = startAt || 0;
     current = item;
     scrubbing = false;
     setScreen('watch');
@@ -410,7 +501,7 @@ if (typeof document !== 'undefined') (function () {
         button.setAttribute('aria-label', title.textContent + ', ' + details.textContent + ', ' +
           (latest ? t('last_watched') + ', ' : '') + badge.textContent);
       }
-      button.addEventListener('click', function () { startVideo(item); });
+      button.addEventListener('click', function () { chooseVideo(item); });
       list.appendChild(button); videoButtons.push(button);
     });
     el('pages').hidden = count <= 1;
@@ -428,7 +519,7 @@ if (typeof document !== 'undefined') (function () {
     el('catalog-retry').hidden = !videosError;
     el('videos-status').textContent = videosError || (data.videos.length ? '' : t('no_replays'));
   }
-  function startChannel(value, autoplay) {
+  function startChannel(value, autoplay, replayId) {
     var name = kickChannel(value);
     if (!name) {
       el('error').textContent = t('invalid_channel_input');
@@ -469,7 +560,17 @@ if (typeof document !== 'undefined') (function () {
       remember(name);
       renderCatalog(data);
       if (autoplay && data.live && !document.hidden) startVideo(data.live);
-      else showCatalog();
+      else {
+        showCatalog();
+        if (replayId) {
+          el('videos-status').textContent = t('continue_loading');
+          callService('replay', { channel: name, id: replayId }, function (reply) {
+            var selected = reply.returnValue && reply.video && reply.video.id === replayId ? reply.video : null;
+            el('videos-status').textContent = selected ? '' : t('continue_unavailable');
+            if (selected && !document.hidden) chooseVideo(selected);
+          });
+        }
+      }
     });
   }
   function toggle() {
@@ -506,6 +607,13 @@ if (typeof document !== 'undefined') (function () {
     el('duration').textContent = total;
     el('seek').setAttribute('aria-valuetext', t('time_of', { elapsed: elapsed, total: total }));
   }
+  el('resume-choice').hidden = true;
+  el('resume-cancel').addEventListener('click', function () { closeResume(true); });
+  el('resume-start').addEventListener('click', function () { var item = resumeItem; closeResume(false); if (item) startVideo(item, 0); });
+  el('resume-continue').addEventListener('click', function () { var item = resumeItem, at = item && resumePosition(item); closeResume(false); if (item) startVideo(item, at); });
+  [-1, 1].forEach(function (delta) {
+    el(delta < 0 ? 'continue-previous' : 'continue-next').addEventListener('click', function () { continuePage += delta; renderContinue(); (continueControls[0] || input).focus(); });
+  });
   el('channel-form').addEventListener('submit', function (event) { event.preventDefault(); startChannel(input.value, true); });
   el('recordings').addEventListener('click', function () { startChannel(input.value, false); });
   el('catalog-back').addEventListener('click', goHome);
@@ -535,7 +643,7 @@ if (typeof document !== 'undefined') (function () {
   el('watch').addEventListener('mousemove', showControls);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
-      cancelRecentStatus();
+      cancelRecentStatus(); cancelContinue(); closeResume(false);
       var interrupted = !!request;
       cancelRequest();
       preparing = false;
@@ -547,12 +655,26 @@ if (typeof document !== 'undefined') (function () {
         el('catalog-retry').hidden = false;
       }
     } else if (current) { showControls(); el('toggle').focus(); }
-    else if (screen === 'home') refreshRecentStatus();
+    else if (screen === 'home') { renderContinue(); refreshRecentStatus(); }
+    else if (screen === 'catalog') (videoButtons[0] || el('catalog-back')).focus();
   });
-  window.addEventListener('pagehide', function () { cancelRecentStatus(); cancelRequest(); player.suspend(); });
-  window.addEventListener('online', refreshRecentStatus);
+  window.addEventListener('pagehide', function () { cancelContinue(); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
+  window.addEventListener('online', function () { if (screen === 'home' && !document.hidden) { renderContinue(); refreshRecentStatus(); } });
   document.addEventListener('keydown', function (event) {
     var key = event.keyCode;
+    if (resumeItem) {
+      var choices = [el('resume-continue'), el('resume-start'), el('resume-cancel')];
+      if (key === 9) {
+        event.preventDefault(); var choice = choices.indexOf(event.target);
+        if (choice < 0) choice = event.shiftKey ? 0 : -1;
+        choices[(choice + (event.shiftKey ? -1 : 1) + 3) % 3].focus();
+      } else if (key === 461 || key === 27) { event.preventDefault(); closeResume(true); }
+      else if (key >= 37 && key <= 40) {
+        event.preventDefault();
+        choices[Math.max(0, Math.min(2, choices.indexOf(event.target) + (key === 37 || key === 38 ? -1 : 1)))].focus();
+      }
+      return;
+    }
     if (key === 461 || key === 27) {
       event.preventDefault();
       if (screen === 'watch') showCatalog();
@@ -582,7 +704,8 @@ if (typeof document !== 'undefined') (function () {
       if (key >= 37 && key <= 40) showControls();
     }
     var controls = screen === 'home' ? [input, el('play'), el('recordings')].concat(recentControls,
-      el('recent-pages').hidden ? [] : [el('recent-previous'), el('recent-next')]) :
+      el('recent-pages').hidden ? [] : [el('recent-previous'), el('recent-next')], continueControls,
+      el('continue-pages').hidden ? [] : [el('continue-previous'), el('continue-next')]) :
       screen === 'catalog' ? (el('live').hidden ? [] : [el('live')]).concat(videoButtons,
         el('catalog-retry').hidden ? [] : [el('catalog-retry')],
         el('pages').hidden ? [] : [el('previous-page'), el('next-page')].filter(function (b) { return !b.disabled; }), [el('catalog-back')]) :
@@ -594,8 +717,16 @@ if (typeof document !== 'undefined') (function () {
       event.preventDefault();
       var rowTarget = recentIndex + (key === 38 ? -2 : 2);
       (rowTarget < 0 ? el('recordings') : recentControls[rowTarget] ||
-        (!el('recent-next').disabled ? el('recent-next') : recentControls[recentIndex])).focus();
+        (!el('recent-next').disabled ? el('recent-next') : continueControls[0] || recentControls[recentIndex])).focus();
       return;
+    }
+    var continueIndex = continueControls.indexOf(event.target);
+    if (screen === 'home' && continueIndex >= 0 && (key === 38 || key === 40)) {
+      event.preventDefault();
+      var shelfTarget = continueIndex + (key === 38 ? -1 : 1) * (window.innerWidth <= 800 ? 2 : 4);
+      var shelfControl = shelfTarget < 0 ? recentControls[Math.max(0, recentControls.length - 2 + continueIndex % 2)] || el('recordings') :
+        continueControls[shelfTarget] || (!el('continue-next').disabled ? el('continue-next') : continueControls[continueIndex]);
+      shelfControl.focus(); shelfControl.scrollIntoView({ block: 'nearest' }); return;
     }
     var cardIndex = videoButtons.indexOf(event.target);
     if (screen === 'catalog' && cardIndex >= 0 && (key === 38 || key === 40)) {
@@ -612,7 +743,7 @@ if (typeof document !== 'undefined') (function () {
       var next = index < 0 ? 0 : Math.max(0, Math.min(controls.length - 1, index + (key === 37 || key === 38 ? -1 : 1)));
       if (!controls[next]) return;
       controls[next].focus();
-      if (screen === 'catalog') controls[next].scrollIntoView({ block: 'nearest' });
+      if (screen === 'catalog' || screen === 'home') controls[next].scrollIntoView({ block: 'nearest' });
     }
   });
   try {

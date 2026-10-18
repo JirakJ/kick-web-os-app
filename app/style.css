@@ -167,3 +167,15 @@ footer > * { min-width: 0; max-width: 100%; }
   #videos button:nth-child(3n) { margin-right: 0; }
  }
 }
+
+#continue-section { margin: 0 0 30px; }
+#continue-list { display: flex; flex-wrap: wrap; }
+.continue-row { display: flex; width: calc(50% - 16px); margin: 0 16px 16px 0; min-width: 0; }
+.continue-row button:first-child { flex: 1; text-align: left; overflow: hidden; font-size: 23px; }
+.continue-row button:last-child { flex: 0 0 54px; padding: 10px; margin-left: 8px; }
+#continue-pages { display: flex; align-items: center; justify-content: center; }
+#continue-number { margin: 0 20px; }
+.modal { position: fixed; inset: 0; top: 0; right: 0; bottom: 0; left: 0; z-index: 10; background: rgba(0,0,0,.9); display: flex; align-items: center; justify-content: center; padding: 5vh 5vw; }
+.modal-card { max-height: 90vh; overflow: auto; width: 100%; max-width: 1100px; padding: 30px; background: #16191c; }
+.modal-card button { margin: 10px 18px 10px 0; }
+@media (max-width: 800px) { .continue-row { width: 100%; margin-right: 0; } }
