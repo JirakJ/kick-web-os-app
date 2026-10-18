@@ -95,6 +95,7 @@
           <span id="duration">0:00</span>
         </div>
       </div>
+      <button id="jump-time" type="button" data-i18n="jump_title">Go to time</button>
       <button id="toggle" type="button" data-i18n="pause">Pause</button>
       <button id="reconnect" type="button" data-i18n="reconnect">Reconnect</button>
       <button id="quality-button" type="button" data-i18n="quality_title">Playback quality</button>
@@ -102,6 +103,13 @@
     </div>
     <button id="back" type="button" data-i18n="change_channel">Change channel</button>
   </section>
+  <section id="jump-dialog" class="modal" role="dialog" aria-modal="true" aria-labelledby="jump-heading" hidden><div class="modal-card">
+    <h2 id="jump-heading" data-i18n="jump_title">Go to time</h2><div class="jump-fields">
+    <label id="jump-hours-label" for="jump-hours" data-i18n="hours">Hours</label><input id="jump-hours" type="tel" maxlength="3" autocomplete="off">
+    <label id="jump-minutes-label" for="jump-minutes" data-i18n="minutes">Minutes</label><input id="jump-minutes" type="tel" maxlength="2" autocomplete="off">
+    <label id="jump-seconds-label" for="jump-seconds" data-i18n="seconds">Seconds</label><input id="jump-seconds" type="tel" maxlength="2" autocomplete="off"></div>
+    <p id="jump-preview" role="status"></p><p id="jump-error" role="alert"></p><button id="jump-back" type="button" data-i18n="jump_back">−10 minutes</button><button id="jump-forward" type="button" data-i18n="jump_forward">+10 minutes</button><button id="jump-confirm" type="button" data-i18n="confirm">Confirm</button><button id="jump-cancel" type="button" data-i18n="cancel">Cancel</button>
+  </div></section>
   <section id="saved-search" class="modal" role="dialog" aria-modal="true" aria-labelledby="saved-heading" hidden><div class="modal-card">
     <h2 id="saved-heading" data-i18n="find_saved">Find saved channels</h2><label id="saved-label" for="saved-query" data-i18n="search_query">Search text</label><input id="saved-query" type="text" maxlength="200" autocomplete="off"><button id="saved-clear" type="button" data-i18n="clear">Clear</button>
     <p id="saved-count" role="status"></p><div id="saved-results"></div><button id="saved-previous" type="button" data-i18n="page_previous">← Previous</button><span id="saved-number"></span><button id="saved-next" type="button" data-i18n="page_next">Next →</button><button id="saved-cancel" type="button" data-i18n="cancel">Cancel</button>

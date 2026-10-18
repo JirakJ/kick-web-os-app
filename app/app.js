@@ -46,11 +46,12 @@ if (typeof document !== 'undefined') (function () {
   var requestTimer;
   var controlsTimer;
   var generation = 0;
-  var scrubbing = false;
+  var scrubbing = false, jumpOpen = false;
   var timelineState = '';
   var player = KickPlayer(el('video-host'), { status: mediaStatus, change: function (next) {
-    var transition = playback.phase !== next.phase || playback.paused !== next.paused;
+    var transition = playback.phase !== next.phase || playback.paused !== next.paused, durationChanged = playback.duration !== next.duration;
     playback = next;
+    if (jumpOpen && durationChanged) jumpPreview();
     el('quality-button').disabled = preparing || !!next.network;
     if (next.network) closeQuality();
     var label = next.phase === 'error' ? t('retry') : next.paused ? t('resume') : t('pause');
@@ -110,6 +111,33 @@ if (typeof document !== 'undefined') (function () {
     catalogQuery = String(el('replay-query').value || '').slice(0, 200); page = 0;
     el('replay-filter').textContent = t('filter_' + catalogFilter); el('replay-sort').textContent = t('order_' + catalogOrder); renderVideos();
   }
+  function closeJump(focus) {
+    var wasOpen = jumpOpen; jumpOpen = false; el('jump-dialog').hidden = true;
+    if (focus && wasOpen && screen === 'watch') { showControls(); el('jump-time').focus(); }
+  }
+  function readJump() {
+    var values = ['jump-hours', 'jump-minutes', 'jump-seconds'].map(function (id) { return String(el(id).value || '').trim(); });
+    if (!/^\d{1,3}$/.test(values[0]) || !/^\d{1,2}$/.test(values[1]) || !/^\d{1,2}$/.test(values[2]) || +values[0] > 720 || +values[1] > 59 || +values[2] > 59) return null;
+    return +values[0] * 3600 + +values[1] * 60 + +values[2];
+  }
+  function jumpPreview() {
+    var target = readJump();
+    el('jump-error').textContent = target === null ? t('jump_invalid') : '';
+    el('jump-preview').textContent = target === null ? '' : t('jump_target', { time: formatTime(Math.min(target, Math.max(0, playback.duration - 0.1))) });
+    el('jump-confirm').disabled = target === null;
+    return target;
+  }
+  function jumpFields(target) {
+    target = Math.floor(Math.max(0, Math.min(Math.max(0, playback.duration - 0.1), target)));
+    el('jump-hours').value = String(Math.floor(target / 3600));
+    el('jump-minutes').value = ('0' + Math.floor(target % 3600 / 60)).slice(-2);
+    el('jump-seconds').value = ('0' + target % 60).slice(-2); jumpPreview();
+  }
+  function openJump(delta) {
+    if (!current || current.isLive || preparing || playback.phase === 'error' || !playback.duration) return;
+    jumpFields(playback.position + (delta || 0)); jumpOpen = true; el('jump-dialog').hidden = false; showControls(); el('jump-hours').focus();
+  }
+  function jumpStep(delta) { var target = readJump(); if (target !== null) jumpFields(target + delta); else jumpPreview(); }
   function videoKey(item) {
     return item && !item.isLive && typeof item.id === 'string' && /^[a-z0-9-]{1,64}$/.test(item.id) ?
       kickChannel(input.value) + ':' + item.id : '';
@@ -309,7 +337,7 @@ if (typeof document !== 'undefined') (function () {
   }
 
   function setScreen(name) {
-    closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelContinue();
+    closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelContinue();
     screen = name;
     ['home', 'catalog', 'watch'].forEach(function (id) { el(id).hidden = id !== name; });
     window.scrollTo(0, 0);
@@ -326,7 +354,7 @@ if (typeof document !== 'undefined') (function () {
     saveWatched();
     clearTimeout(controlsTimer);
     preparing = false;
-    el('toggle').disabled = false; el('quality-button').disabled = true; closeQuality();
+    el('toggle').disabled = false; el('quality-button').disabled = true; closeJump(false); closeQuality();
     player.stop();
   }
   function goHome() {
@@ -456,7 +484,7 @@ if (typeof document !== 'undefined') (function () {
     el('playback-controls').hidden = false;
     el('back').hidden = false;
     clearTimeout(controlsTimer);
-    if (!playback.paused && !playback.seeking && !scrubbing && !preparing && el('quality-choice').hidden && el('playback-status').hidden) {
+    if (!playback.paused && !playback.seeking && !scrubbing && !preparing && !jumpOpen && el('quality-choice').hidden && el('playback-status').hidden) {
       controlsTimer = setTimeout(function () {
         hidingControls = true;
         el('watch').focus();
@@ -633,7 +661,7 @@ if (typeof document !== 'undefined') (function () {
     scrubbing = false;
     setScreen('watch');
     setVideoTitle(el('video-title'), (item.isLive ? t('live_badge') + ' · ' : '') + item.title);
-    el('timeline').hidden = !!item.isLive;
+    el('timeline').hidden = el('jump-time').hidden = !!item.isLive;
     el('seek').value = 0;
     el('seek').max = 0;
     el('quality').textContent = t('quality_default');
@@ -824,6 +852,13 @@ if (typeof document !== 'undefined') (function () {
     el('seek').setAttribute('aria-valuetext', t('time_of', { elapsed: elapsed, total: total }));
   }
   el('resume-choice').hidden = true;
+  closeJump(false);
+  el('jump-time').addEventListener('click', function () { openJump(0); });
+  ['jump-hours', 'jump-minutes', 'jump-seconds'].forEach(function (id) { el(id).addEventListener('input', jumpPreview); });
+  el('jump-back').addEventListener('click', function () { jumpStep(-600); });
+  el('jump-forward').addEventListener('click', function () { jumpStep(600); });
+  el('jump-cancel').addEventListener('click', function () { closeJump(true); });
+  el('jump-confirm').addEventListener('click', function () { var target = jumpPreview(); if (target === null || !jumpOpen) return; player.seekTo(target); closeJump(true); });
   closeSearch(false, false);
   el('find-saved').addEventListener('click', function () { el('saved-query').value = ''; savedPage = 0; renderSavedSearch(); el('saved-search').hidden = false; el('saved-query').focus(); });
   el('saved-query').addEventListener('input', function () { savedPage = 0; renderSavedSearch(); });
@@ -892,7 +927,7 @@ if (typeof document !== 'undefined') (function () {
   el('watch').addEventListener('mousemove', showControls);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
-      cancelRecentStatus(); cancelContinue(); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false);
+      cancelRecentStatus(); cancelContinue(); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false);
       var interrupted = !!request;
       cancelRequest();
       preparing = false;
@@ -907,11 +942,22 @@ if (typeof document !== 'undefined') (function () {
     else if (screen === 'home') { renderContinue(); refreshRecentStatus(); }
     else if (screen === 'catalog') (videoButtons[0] || el('catalog-back')).focus();
   });
-  window.addEventListener('pagehide', function () { cancelContinue(); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
+  window.addEventListener('pagehide', function () { cancelContinue(); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
   window.addEventListener('offline', function () { if (screen === 'watch') player.offline(); });
   window.addEventListener('online', function () { if (screen === 'watch' && !document.hidden) player.online(); if (screen === 'home' && !document.hidden) { renderContinue(); refreshRecentStatus(); } });
   document.addEventListener('keydown', function (event) {
     var key = event.keyCode;
+    if (jumpOpen) {
+      if (key === 461 || key === 27) { event.preventDefault(); closeJump(true); }
+      else if (key === 412 || key === 417) { event.preventDefault(); jumpStep(key === 412 ? -600 : 600); }
+      else if (key === 9 || key >= 37 && key <= 40) {
+        var jumpControls = ['jump-hours', 'jump-minutes', 'jump-seconds', 'jump-back', 'jump-forward', 'jump-confirm', 'jump-cancel'].map(el).filter(function (control) { return !control.disabled; });
+        if (jumpControls.indexOf(event.target) < 3 && (key === 37 || key === 39)) return;
+        event.preventDefault(); var ji = jumpControls.indexOf(event.target), jd = key === 9 ? event.shiftKey ? -1 : 1 : key === 37 || key === 38 ? -1 : 1;
+        var jt = jumpControls[(Math.max(0, ji) + jd + jumpControls.length) % jumpControls.length]; jt.focus(); jt.scrollIntoView({ block: 'nearest' });
+      }
+      return;
+    }
     if (!el('saved-search').hidden || toolsSnapshot) {
       var savedOpen = !el('saved-search').hidden, searchInput = el(savedOpen ? 'saved-query' : 'replay-query');
       var searchControls = savedOpen ? [searchInput, el('saved-clear')].concat(savedSearchButtons, [el('saved-previous'), el('saved-next'), el('saved-cancel')]) :
@@ -982,7 +1028,7 @@ if (typeof document !== 'undefined') (function () {
         showControls();
         return;
       }
-      if (key === 412 || key === 417) { event.preventDefault(); seek(key === 412 ? -10 : 10); return; }
+      if (key === 412 || key === 417) { event.preventDefault(); openJump(key === 412 ? -600 : 600); return; }
       if (key >= 37 && key <= 40) showControls();
     }
     var controls = screen === 'home' ? [input, el('play'), el('recordings'), el('favorite-channel'), el('find-saved')].concat(recentControls,
@@ -991,7 +1037,7 @@ if (typeof document !== 'undefined') (function () {
       screen === 'catalog' ? [el('catalog-search')].concat(el('live').hidden ? [] : [el('live')], videoButtons,
         el('catalog-retry').hidden ? [] : [el('catalog-retry')],
         el('pages').hidden ? [] : [el('previous-page'), el('next-page')].filter(function (b) { return !b.disabled; }), [el('catalog-back'), el('catalog-favorite')]) :
-      (current && current.isLive ? [] : [el('seek')]).concat([el('toggle'), el('reconnect'), el('quality-button'), el('watch-recordings'), el('back')]);
+      (current && current.isLive ? [] : [el('seek'), el('jump-time')]).concat([el('toggle'), el('reconnect'), el('quality-button'), el('watch-recordings'), el('back')]);
     controls = controls.filter(function (control) { return !control.disabled; });
     var index = controls.indexOf(event.target);
     var recentIndex = recentControls.indexOf(event.target);

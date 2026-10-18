@@ -200,3 +200,8 @@ footer > * { min-width: 0; max-width: 100%; }
 
 #saved-results button { display: block; width: 100%; margin: 10px 0; }
 #search-summary { color: #a9afb7; font-size: 22px; }
+
+.jump-fields { display: flex; align-items: center; flex-wrap: wrap; }
+.jump-fields input { width: 5em; margin: 8px 18px 12px 8px; }
+.jump-fields label { margin: 8px 0; }
+#jump-error { color: #ffb4b4; }

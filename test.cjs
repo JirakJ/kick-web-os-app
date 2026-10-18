@@ -421,6 +421,30 @@ boot(searchStore,'ok','en-US');submit('example');respond({live:null,videos:[{...
 click('catalog-search');elements['replay-query'].value='target';elements['replay-query'].handlers.input();assert.equal(elements.videos.children.length,1,'Search includes the full 200-code-point title');key(461);
 console.log('Local search: passed (saved channels, Unicode titles, viewing filters, deterministic sort, cancel/focus and no per-key requests).');
 
+// Large jumps preview without native seeks until explicit confirmation.
+boot(qualityStore,'ok','en-US');submit('example');respond({live:null,videos:[{...vod,id:'long-replay',duration:18000}]});openReplay();
+node().duration=18000;node().handlers.durationchange();node()._time=120;node().handlers.timeupdate();click('toggle');
+click('jump-time');assert.equal(elements['jump-dialog'].hidden,false);click('jump-forward');assert.equal(node().seeks.length,0);
+assert.match(elements['jump-preview'].textContent,/12:00/);click('jump-cancel');advance(300);assert.equal(node().seeks.length,0);
+click('jump-time');elements['jump-hours'].value='2';elements['jump-minutes'].value='34';elements['jump-seconds'].value='56';elements['jump-seconds'].handlers.input();
+assert.match(elements['jump-preview'].textContent,/2:34:56/);click('jump-confirm');advance(300);assert.deepEqual(node().seeks,[9296]);seeked();assert.equal(node().paused,true);
+click('jump-time');elements['jump-minutes'].value='60';click('jump-confirm');assert.equal(elements['jump-dialog'].hidden,false);assert.ok(elements['jump-error'].textContent);
+elements['jump-hours'].value='700';elements['jump-minutes'].value='00';elements['jump-seconds'].value='00';elements['jump-hours'].handlers.input();click('jump-confirm');advance(300);assert.equal(node().seeks.at(-1),17999.9);seeked();
+click('jump-time');key(461);assert.equal(elements['jump-dialog'].hidden,true);assert.equal(document.activeElement,elements['jump-time']);
+elements.watch.focus();key(37);advance(300);seeked();assert.equal(node().seeks.at(-1),17989.9,'Single arrows retain 10-second steps');
+key(417);assert.equal(elements['jump-dialog'].hidden,false);const beforeFastSeek=node().seeks.length;key(417);key(412);advance(300);assert.equal(node().seeks.length,beforeFastSeek);
+document.hidden=true;document.handlers.visibilitychange();assert.equal(elements['jump-dialog'].hidden,true);document.hidden=false;document.handlers.visibilitychange();advance(60000);assert.equal(videoSource(),undefined);
+boot(qualityStore,'ok','en-US');submit('example');respond();assert.equal(elements['jump-time'].hidden,true);key(417);assert.equal(elements['jump-dialog'].hidden,true);
+
+// A committed target survives decoder recovery without an overlapping seek.
+boot(qualityStore,'ok','en-US');submit('example');respond({live:null,videos:[{...vod,id:'recover-jump'}]});openReplay();node().error={code:3};node().handlers.error();
+click('jump-time');elements['jump-hours'].value='0';elements['jump-minutes'].value='04';elements['jump-seconds'].value='00';click('jump-confirm');advance(600);
+assert.equal(options().option.transmission.playTime.start,240000);assert.equal(node().seeks.length,0);key(461);advance(60000);assert.equal(videoSource(),undefined);
+boot(qualityStore,'ok','en-US');submit('example');respond({live:null,videos:[{...vod,id:'duration-correction'}]});openReplay();
+node().duration=600;node().handlers.durationchange();click('jump-time');elements['jump-hours'].value='0';elements['jump-minutes'].value='09';elements['jump-seconds'].value='00';elements['jump-minutes'].handlers.input();assert.match(elements['jump-preview'].textContent,/9:00/);
+node().duration=300;node().handlers.durationchange();assert.match(elements['jump-preview'].textContent,/4:59/,'Preview follows corrected native duration before confirmation');key(461);
+console.log('Long replay jumps: passed (preview/confirm/cancel, validation, clamping, paused seeks and suspend/live guards).');
+
 // A new replay selection offers saved progress; dismissing it never mounts media.
 const resumeData=new Map([['kick-watched-videos',JSON.stringify([{key:'returner:resume-a',position:123,duration:600,finished:false}])]]);
 const resumeStorage={getItem:k=>resumeData.get(k)||null,setItem:(k,v)=>resumeData.set(k,v)};
