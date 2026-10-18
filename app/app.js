@@ -39,6 +39,7 @@ if (typeof document !== 'undefined') (function () {
   var watched = [], historyDirty = false, historyWrittenAt = 0;
   var recentButtons = [], recentControls = [];
   var videoButtons = [];
+  var releaseCache = null, installedVersion = el('app-version').textContent.replace(/^v/, '');
   var current = null;
   var catalog = null;
   var screen = 'home';
@@ -138,6 +139,47 @@ if (typeof document !== 'undefined') (function () {
     jumpFields(playback.position + (delta || 0)); jumpOpen = true; el('jump-dialog').hidden = false; showControls(); el('jump-hours').focus();
   }
   function jumpStep(delta) { var target = readJump(); if (target !== null) jumpFields(target + delta); else jumpPreview(); }
+  function versionParts(value) {
+    var match = typeof value === 'string' && value.length <= 96 && value.match(/^v?((?:0|[1-9][0-9]{0,3}))\.((?:0|[1-9][0-9]{0,3}))\.((?:0|[1-9][0-9]{0,3}))(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/);
+    return match ? [+match[1], +match[2], +match[3]] : null;
+  }
+  function compareVersions(a, b) {
+    a = versionParts(a); b = versionParts(b);
+    if (!a || !b) return null;
+    for (var i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i] ? 1 : -1;
+    return 0;
+  }
+  function validRelease(release) {
+    return release && versionParts(release.version) && typeof release.url === 'string' &&
+      (release.url === 'https://github.com/JirakJ/kick-web-os-app/releases/tag/v' + release.version || release.url === 'https://github.com/JirakJ/kick-web-os-app/releases/tag/' + release.version) &&
+      typeof release.notes === 'string' && release.notes.length <= 2000 && typeof release.checkedAt === 'number' && isFinite(release.checkedAt) && release.checkedAt > 0 && release.checkedAt <= Date.now() + 60000;
+  }
+  function showRelease(cached) {
+    el('installed-version').textContent = t('installed_version', { version: installedVersion });
+    el('latest-version').textContent = releaseCache ? t('latest_version', { version: releaseCache.version }) : t('update_not_checked');
+    el('release-notes').textContent = releaseCache ? releaseCache.notes : '';
+    el('release-url').textContent = releaseCache ? releaseCache.url : '';
+    el('update-cache-note').textContent = cached && releaseCache ? t('update_cached') : '';
+    if (releaseCache) {
+      var order = compareVersions(releaseCache.version, installedVersion);
+      el('update-status').textContent = t(order > 0 ? 'update_available' : order < 0 ? 'update_development' : 'update_current');
+    } else el('update-status').textContent = t('update_not_checked');
+  }
+  function openAbout() { setScreen('about'); el('check-updates').disabled = false; showRelease(true); el('check-updates').focus(); }
+  function closeAbout() { goHome(); el('about-button').focus(); }
+  function checkUpdates() {
+    if (screen !== 'about' || document.hidden) return;
+    if (navigator.onLine === false) { el('update-status').textContent = t('update_unavailable'); return; }
+    el('check-updates').disabled = true; el('update-status').textContent = t('update_checking');
+    callService('updates', {}, function (data) {
+      el('check-updates').disabled = false;
+      if (screen !== 'about' || document.hidden) return;
+      if (!data.returnValue || !validRelease(data.release)) { el('update-status').textContent = t('update_unavailable'); return; }
+      releaseCache = { version: data.release.version, url: data.release.url, notes: titleSlice(data.release.notes), checkedAt: data.release.checkedAt };
+      try { localStorage.setItem('kick-release-cache', JSON.stringify(releaseCache)); } catch (e) { /* Optional offline cache. */ }
+      showRelease(!!data.cached);
+    });
+  }
   function videoKey(item) {
     return item && !item.isLive && typeof item.id === 'string' && /^[a-z0-9-]{1,64}$/.test(item.id) ?
       kickChannel(input.value) + ':' + item.id : '';
@@ -339,7 +381,7 @@ if (typeof document !== 'undefined') (function () {
   function setScreen(name) {
     closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelContinue();
     screen = name;
-    ['home', 'catalog', 'watch'].forEach(function (id) { el(id).hidden = id !== name; });
+    ['home', 'catalog', 'watch', 'about'].forEach(function (id) { el(id).hidden = id !== name; });
     window.scrollTo(0, 0);
     if (name === 'home') { renderContinue(); refreshRecentStatus(); } else cancelRecentStatus();
   }
@@ -852,6 +894,9 @@ if (typeof document !== 'undefined') (function () {
     el('seek').setAttribute('aria-valuetext', t('time_of', { elapsed: elapsed, total: total }));
   }
   el('resume-choice').hidden = true;
+  el('about-button').addEventListener('click', openAbout);
+  el('about-back').addEventListener('click', closeAbout);
+  el('check-updates').addEventListener('click', checkUpdates);
   closeJump(false);
   el('jump-time').addEventListener('click', function () { openJump(0); });
   ['jump-hours', 'jump-minutes', 'jump-seconds'].forEach(function (id) { el(id).addEventListener('input', jumpPreview); });
@@ -930,6 +975,7 @@ if (typeof document !== 'undefined') (function () {
       cancelRecentStatus(); cancelContinue(); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false);
       var interrupted = !!request;
       cancelRequest();
+      if (screen === 'about') { el('check-updates').disabled = false; el('update-status').textContent = t('update_unavailable'); }
       preparing = false;
       el('toggle').disabled = false;
       clearTimeout(controlsTimer);
@@ -1007,6 +1053,7 @@ if (typeof document !== 'undefined') (function () {
       event.preventDefault();
       if (screen === 'watch') showCatalog();
       else if (screen === 'catalog') goHome();
+      else if (screen === 'about') closeAbout();
       else if (typeof webOSSystem !== 'undefined') webOSSystem.platformBack();
       return;
     }
@@ -1031,13 +1078,13 @@ if (typeof document !== 'undefined') (function () {
       if (key === 412 || key === 417) { event.preventDefault(); openJump(key === 412 ? -600 : 600); return; }
       if (key >= 37 && key <= 40) showControls();
     }
-    var controls = screen === 'home' ? [input, el('play'), el('recordings'), el('favorite-channel'), el('find-saved')].concat(recentControls,
+    var controls = screen === 'home' ? [input, el('play'), el('recordings'), el('favorite-channel'), el('find-saved'), el('about-button')].concat(recentControls,
       el('recent-pages').hidden ? [] : [el('recent-previous'), el('recent-next')], favoriteControls, el('favorite-pages').hidden ? [] : [el('favorite-previous'), el('favorite-next')], continueControls,
       el('continue-pages').hidden ? [] : [el('continue-previous'), el('continue-next')]) :
       screen === 'catalog' ? [el('catalog-search')].concat(el('live').hidden ? [] : [el('live')], videoButtons,
         el('catalog-retry').hidden ? [] : [el('catalog-retry')],
         el('pages').hidden ? [] : [el('previous-page'), el('next-page')].filter(function (b) { return !b.disabled; }), [el('catalog-back'), el('catalog-favorite')]) :
-      (current && current.isLive ? [] : [el('seek'), el('jump-time')]).concat([el('toggle'), el('reconnect'), el('quality-button'), el('watch-recordings'), el('back')]);
+      screen === 'about' ? [el('check-updates'), el('about-back')] : (current && current.isLive ? [] : [el('seek'), el('jump-time')]).concat([el('toggle'), el('reconnect'), el('quality-button'), el('watch-recordings'), el('back')]);
     controls = controls.filter(function (control) { return !control.disabled; });
     var index = controls.indexOf(event.target);
     var recentIndex = recentControls.indexOf(event.target);
@@ -1113,6 +1160,7 @@ if (typeof document !== 'undefined') (function () {
     });
   } catch (e) { /* Ignore corrupt or unavailable favorite storage. */ }
   try { var savedQuality = localStorage.getItem('kick-quality-preference'); if (/^(?:auto|[1-9][0-9]{0,3})$/.test(savedQuality) && (savedQuality === 'auto' || +savedQuality <= 2160)) qualityPreference = savedQuality; } catch (e) { /* Auto default. */ }
+  try { var rawRelease = localStorage.getItem('kick-release-cache') || ''; if (rawRelease.length <= 8192) { var savedRelease = JSON.parse(rawRelease); if (validRelease(savedRelease)) releaseCache = savedRelease; } } catch (e) { /* Ignore invalid update cache. */ }
   input.value = recents[0] || '';
   renderRecents(); renderFavorites();
   setScreen('home');

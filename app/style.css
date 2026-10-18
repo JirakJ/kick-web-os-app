@@ -205,3 +205,9 @@ footer > * { min-width: 0; max-width: 100%; }
 .jump-fields input { width: 5em; margin: 8px 18px 12px 8px; }
 .jump-fields label { margin: 8px 0; }
 #jump-error { color: #ffb4b4; }
+
+#about { padding: 4vh 5vw; min-height: 100vh; }
+#about p, #release-notes { max-width: 70em; line-height: 1.5; }
+#release-notes { white-space: pre-wrap; font-family: inherit; }
+#about button { margin: 12px 20px 12px 0; }
+#update-cache-note { color: #c5cbd3; }

@@ -72,6 +72,7 @@ function boot(localStorage = storage, bridgeMode = 'ok', locale = 'cs-CZ', onlin
     const attrs=Object.fromEntries([...tag.matchAll(/([a-z0-9-]+)="([^"]*)"/g)].map(([,n,v])=>[n,v]));
     if(!attrs.id&&!attrs['data-i18n']&&!attrs['data-i18n-attr'])continue;
     const node=element(attrs.id||'');if(attrs.id)elements[attrs.id]=node;
+    if(attrs.id==='app-version')node.textContent='v'+appVersion;
     for(const name of ['data-i18n','data-i18n-attr','placeholder','aria-label'])if(name in attrs)node.attrs[name]=attrs[name];
     if(attrs['data-i18n']||attrs['data-i18n-attr'])labelled.push(node);
   }
@@ -445,6 +446,19 @@ node().duration=600;node().handlers.durationchange();click('jump-time');elements
 node().duration=300;node().handlers.durationchange();assert.match(elements['jump-preview'].textContent,/4:59/,'Preview follows corrected native duration before confirmation');key(461);
 console.log('Long replay jumps: passed (preview/confirm/cancel, validation, clamping, paused seeks and suspend/live guards).');
 
+// Updates are viewer initiated, bounded, plain-text and tied to the official repository.
+const updateStore={data:{},getItem(k){return this.data[k]||null;},setItem(k,v){this.data[k]=v;}};
+function updateReply(version='0.10.0',extra={}){bridges.at(-1).onservicecallback(JSON.stringify({returnValue:true,release:{version,url:'https://github.com/JirakJ/kick-web-os-app/releases/tag/v'+version,notes:'<script>plain notes</script>',checkedAt:clock,...extra}}));}
+boot(updateStore,'ok','en-US');const startupRequests=bridges.length;click('about-button');assert.equal(bridges.length,startupRequests,'Opening About must not automatically check');
+click('check-updates');assert.ok(bridges.at(-1).uri.endsWith('/updates'));updateReply();assert.match(elements['update-status'].textContent,/available/i);
+assert.equal(elements['release-notes'].textContent,'<script>plain notes</script>');assert.match(elements['install-guide'].textContent,/Dev Manager/);assert.match(elements['checksum-guide'].textContent,/not.*signature/i);
+click('check-updates');updateReply('0.7.5');assert.match(elements['update-status'].textContent,/newer.*stable/i);
+click('check-updates');updateReply('0.8.0');assert.match(elements['update-status'].textContent,/current/i);
+click('check-updates');updateReply('0.9.0',{url:'https://evil.test/updates'});assert.match(elements['update-status'].textContent,/unavailable/i);assert.ok(!elements['release-url'].textContent.includes('evil'));
+click('check-updates');const obsoleteUpdate=bridges.at(-1);key(461);assert.equal(obsoleteUpdate.cancelled,true);obsoleteUpdate.onservicecallback(JSON.stringify({returnValue:true,release:{version:'99.0.0'}}));assert.equal(elements.home.hidden,false);click('about-button');assert.equal(elements['check-updates'].disabled,false,'Cancelled check can be retried after reopening About');
+boot(updateStore,'ok','en-US',false);click('about-button');assert.match(elements['latest-version'].textContent,/0.8.0/);const offlineUpdates=bridges.length;click('check-updates');assert.equal(bridges.length,offlineUpdates);assert.match(elements['update-status'].textContent,/unavailable/i);
+console.log('Updates UI: passed (viewer initiation, semantic status, safe notes/links, offline cache and cancellation).');
+
 // A new replay selection offers saved progress; dismissing it never mounts media.
 const resumeData=new Map([['kick-watched-videos',JSON.stringify([{key:'returner:resume-a',position:123,duration:600,finished:false}])]]);
 const resumeStorage={getItem:k=>resumeData.get(k)||null,setItem:(k,v)=>resumeData.set(k,v)};
@@ -783,6 +797,7 @@ console.log('Localization: passed ('+i18n.languages.length+' languages, key cove
 
 async function testService() {
   const {EventEmitter}=require('node:events');
+  let serviceNow=1000000, releases=[];
   let handlers={}, calls=[], replies=[], status=200, transport='ok', waiting=[], aborted=0, agents=[], resets={};
   const settle=async(condition)=>{const until=Date.now()+5000;while(!condition()&&Date.now()<until)await new Promise(r=>setImmediate(r));assert.ok(condition(),'Reply arrived');};
   const gzip=text=>require('node:zlib').gzipSync(Buffer.from(text,'utf8'));
@@ -811,14 +826,14 @@ async function testService() {
       if(transport==='response-error'){res.emit('error',Error('response failed'));return;}
       if(transport==='large'){res.emit('data','ž'.repeat(600000));res.emit('end');return;}
       if(transport==='invalid'){res.emit('data','null');res.emit('end');return;}
-      res.emit('data',options.hostname==='kick.com' ? JSON.stringify(options.path.endsWith('/videos')?recordings:responseData) : playlist);res.emit('end');
+      res.emit('data',options.hostname==='api.github.com'?JSON.stringify(releases):options.hostname==='kick.com' ? JSON.stringify(options.path.endsWith('/videos')?recordings:responseData) : playlist);res.emit('end');
     };
     if(transport==='wait')waiting.push(deliver);else queueMicrotask(deliver);
     return req;
   }};
   function Service(name){assert.equal(name,'com.jakubjirak.service');this.register=(name,fn)=>{handlers[name]=fn;};}
   https.Agent=class extends require('node:https').Agent{constructor(options){super(options);agents.push(options);}};
-  const serviceContext=vm.createContext({require(name){if(name==='https')return https;if(name==='zlib')return require('node:zlib');if(name==='webos-service')return Service;throw Error('Unexpected dependency: '+name);},Promise,Buffer,
+  const serviceContext=vm.createContext({Date:{now:()=>serviceNow},require(name){if(name==='https')return https;if(name==='zlib')return require('node:zlib');if(name==='webos-service')return Service;throw Error('Unexpected dependency: '+name);},Promise,Buffer,
     setTimeout(fn,ms){assert.equal(ms,12000);const id={};serviceTimers.set(id,fn);return id;},clearTimeout(id){serviceTimers.delete(id);}});
   vm.runInContext('Array.from = undefined;',serviceContext);
   vm.runInContext(fs.readFileSync('service/index.js','utf8'),serviceContext);
@@ -957,6 +972,16 @@ async function testService() {
   assert.equal(calls.length,foregroundReplayStart+1,'Selected history replay keeps foreground capacity while four background requests finish');
   transport='ok';waiting.splice(0).forEach(fn=>fn());await new Promise(r=>setImmediate(r));
   assert.ok(replies.some(r=>r.video&&r.video.id==='selected-replay'));
+
+  transport='ok';status=200;replies=[];
+  const release=(version,extra={})=>({tag_name:'v'+version,html_url:'https://github.com/JirakJ/kick-web-os-app/releases/tag/v'+version,body:'Safe <b>notes</b>',draft:false,prerelease:false,...extra});
+  const checkUpdates=()=>handlers.updates({payload:{url:'https://evil.test'},respond(d){replies.push(d);}});
+  releases=[release('0.9.0'),release('0.10.0'),release('99.0.0',{prerelease:true}),release('99.1.0',{draft:true}),release('1.0.0-rc.1'),release('10.0.0',{html_url:'https://evil.test'}),release('10.0.0+bad..build')];
+  checkUpdates();await new Promise(r=>setImmediate(r));assert.equal(replies[0].release.version,'0.10.0');assert.equal(calls.at(-1).hostname,'api.github.com');assert.equal(calls.at(-1).path,'/repos/JirakJ/kick-web-os-app/releases?per_page=10');assert.ok(calls.at(-1).headers['User-Agent']);
+  const updateCalls=calls.length;replies=[];checkUpdates();await new Promise(r=>setImmediate(r));assert.equal(calls.length,updateCalls,'Fresh update metadata is cached');
+  serviceNow+=21600001;releases={message:'bad data'};replies=[];checkUpdates();await new Promise(r=>setImmediate(r));assert.equal(replies[0].returnValue,false);
+  const negativeCalls=calls.length;checkUpdates();await new Promise(r=>setImmediate(r));assert.equal(calls.length,negativeCalls,'Malformed/rate-limited checks back off');
+  serviceNow+=60001;status=429;replies=[];checkUpdates();await new Promise(r=>setImmediate(r));assert.equal(replies[0].returnValue,false);status=200;
   console.log('TV service: passed (channel validation, fixed API origin, public replays only, media URL validation, offline and HTTP errors).');
 }
 testService().catch(e=>{console.error(e);process.exitCode=1;});
