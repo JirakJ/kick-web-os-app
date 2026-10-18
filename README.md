@@ -8,12 +8,12 @@ The interface follows the TV's system language (Czech, Slovak, English, German, 
 
 [Download the latest installable IPK](https://github.com/JirakJ/kick-web-os-app/releases/latest).
 
-**0.8.0 has completed TV acceptance.** All eight features passed sequential PR/main GHA checks and scoped native verification. The release workflow publishes the IPK and checksums only after every main-branch CI job succeeds. See the [device audit](docs/production-audit.md#tv-acceptance-for-080) for measurements and remaining hardware coverage limits.
+**0.8.1 keeps the version and settings visible in the home footer and adds channel-row hearts.** The UI passed native TV acceptance, following the eight features accepted in 0.8.0. The release workflow publishes the IPK and checksums only after every main-branch CI job succeeds. See the [device audit](docs/production-audit.md) for measurements and remaining hardware coverage limits.
 
 ## Features
 
 - Live streams and public replays, including a replay picker when a channel is offline.
-- Up to 50 independently ordered favorite channels, six per page, with remote-only move/save/cancel controls and visible LIVE/offline/unknown status.
+- Up to 50 independently ordered favorite channels, six per page, with row hearts, remote-only move/save/cancel controls and visible LIVE/offline/unknown status.
 - Up to 50 recent channels stored locally, six per page, with a **LIVE** badge for live channels and an individual remove button.
 - Interface language taken from the TV's locale, including the launcher title, with English as the fallback.
 - Replay thumbnails, titles, dates and durations, with six recordings per page.
@@ -52,7 +52,7 @@ npm test
 npm run package
 ```
 
-The output is `dist/com.jakubjirak_0.8.0_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
+The output is `dist/com.jakubjirak_0.8.1_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
 
 Build dependencies pin security updates and two documented [local backports](vendor/security/README.md) for fixes that have no official release yet. `npm test` also checks the installed CLI dependencies against hostile brace patterns, proxy trust inputs and numeric precision values. These development dependencies are not shipped to the TV.
 
@@ -86,9 +86,9 @@ Button labels below are the English strings; the app shows them in the TV's lang
 | Select a channel | Enter its name or `https://kick.com/channel` |
 | Start live playback | **Play live**, or select a recent channel |
 | Browse replays | **Replays**; arrows move through cards and page buttons |
-| Favorite/unfavorite a channel | **Add favorite / Remove favorite** on home or in its catalog |
+| Favorite/unfavorite a channel | The **♡ / ♥** button beside the channel input, a recent-channel row or its catalog heading |
 | Reorder favorites | **Move**, then **Move up / Move down**, **Save**; **Back** cancels the preview |
-| Remove a saved channel | Select **×** beside its name; **← / →** moves between the channel and remove button |
+| Remove a saved channel | Select **×** beside a recent channel; **← / →** moves between its name, heart and remove button |
 | More recent channels | Use the arrow buttons below the list |
 | Confirm | **OK** |
 | Pause/resume | **OK** on the video or seek bar; dedicated Play/Pause buttons also work |
@@ -156,6 +156,6 @@ The bundled [Noto Emoji font](app/fonts/README.md) is Copyright 2013 Google LLC 
 
 References: [LG JavaScript services](https://webostv.developer.lge.com/develop/guides/js-service-usage), [HLS support](https://webostv.developer.lge.com/faq/streaming-http-live-streaming-hls-troubleshooting), [media options](https://webostv.developer.lge.com/develop/guides/mediaoption-parameter), [resuming media](https://webostv.developer.lge.com/develop/guides/resuming-media-with-mediaoption).
 
-Update metadata uses the [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release). SHA256SUMS checks integrity, not publisher signatures. Same-ID upgrades from 0.7.5 and between 0.8.0 candidates preserved app storage on the tested TV. Keep the previous IPK for rollback; no downgrade was required.
+Update metadata uses the [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release). SHA256SUMS checks integrity, not publisher signatures. Same-ID upgrades from 0.7.5 through 0.8.1 candidates preserved app storage on the tested TV. Keep the previous IPK for rollback; no downgrade was required.
 
 Browser checks run with `npx playwright install chromium` followed by `npm run test:browser` (or `PLAYWRIGHT_CHANNEL=chrome npm run test:browser` for an installed local Chrome). CI verifies all 13 locales at 1280×720 and 1920×1080 in all four size/contrast combinations and retains screenshots/results. Luna/media fixtures exercise actual DOM/CSS/focus, not native decoding or Voice Guide. The ES5/Node0.12 suites and CSS fallback review preserve legacy compatibility; an actual pre-Grid TV engine remains a separate device check.

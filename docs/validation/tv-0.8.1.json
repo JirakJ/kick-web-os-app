@@ -1,0 +1,633 @@
+{
+  "version": "0.8.1",
+  "checkedAt": "2026-10-18T10:38:48.578043+00:00",
+  "device": {
+    "model": "LG 55NANO863NA",
+    "webOS": "5.6.2",
+    "firmware": "04.64.00",
+    "browser": "Chromium 68",
+    "serviceNode": "8.12.0"
+  },
+  "candidate": {
+    "archiveSHA256": "ee3b309817a5394701a56aaa29455943b0f91b3c7dde303b7a76592b0be4219f",
+    "installedPayloadFiles": 27,
+    "payloadSHA256": {
+      "usr/palm/applications/com.jakubjirak/app.js": "08990b1156ea3524c3f3d32eae7059cd6f59f75e4b77c48977ff8a7fd4886bfb",
+      "usr/palm/applications/com.jakubjirak/appinfo.json": "7589f0bc47bb08e0a49b184b00f4c187f9d73c6f51518eea933a28bb6a55242e",
+      "usr/palm/applications/com.jakubjirak/i18n.js": "334425dbd0b2270a21f5d876a023b9922d3cf1427fb75611fa7ea23b856d9ac0",
+      "usr/palm/applications/com.jakubjirak/icon.png": "99670cf22d5145894d7a60636b3142374629ee5f22020631bbae5d62dc22e42f",
+      "usr/palm/applications/com.jakubjirak/index.html": "814773ae6dec983509547b7087d3e6250ddf162b2d669f0dec2379b3ef80b678",
+      "usr/palm/applications/com.jakubjirak/largeIcon.png": "80428c0a08d72ce4eb605a46cc72394cdfa90cc31d8b70428043635aa505eb31",
+      "usr/palm/applications/com.jakubjirak/player.js": "8990d4fce5c9c5e438781b725896eae058b3bc0b6a09304667d886249854a43d",
+      "usr/palm/applications/com.jakubjirak/style.css": "deeb2589f8aee0bd5e8bcd1890c698510a1fa0c4823bf8be0145deb6a05ffbd0",
+      "usr/palm/services/com.jakubjirak.service/index.js": "cc98bf93b4136b1445b049a6a23c168d44a729d46a8902c4e1b8951668f18d25",
+      "usr/palm/services/com.jakubjirak.service/package.json": "5dde11e1fc4d1c1abd01176d3e89b041a826761efdc77c5f26348062ccc48aa4",
+      "usr/palm/services/com.jakubjirak.service/services.json": "89f3328e042705cf50d3ba7704dd5944cde49b9704f07b40707666b5a56bf349",
+      "usr/palm/applications/com.jakubjirak/fonts/NotoEmoji-Regular.woff2": "72149441d478acb7e5e4fe27adbabde4330f86affed8b3301e4bc4c4d92d53c1",
+      "usr/palm/applications/com.jakubjirak/fonts/OFL.txt": "79d348cb5161481f603dcda564fb129a9b2c11d7012dcad820af045fed75c020",
+      "usr/palm/applications/com.jakubjirak/fonts/README.md": "65fa242f1f2b1f94296e0d5c2ab6fd4a360dac7246ea3508895ef7371aadae10",
+      "usr/palm/applications/com.jakubjirak/resources/cs/appinfo.json": "19336ff05c3bd9c3173e2725dd66d5344c26fbd501e9241d9bc8b32648c1729b",
+      "usr/palm/applications/com.jakubjirak/resources/de/appinfo.json": "bcda3b2d3f71d76135ee6f99f1007a3ce0fec2c172715a43cd36412d0e6443e1",
+      "usr/palm/applications/com.jakubjirak/resources/en/appinfo.json": "3aee95122e2e1bccb98ced227adb7a4f5581769a77d0a6fa683afeda52c17feb",
+      "usr/palm/applications/com.jakubjirak/resources/es/appinfo.json": "bd30e89c01061a1a7ce50a3d84ba6709926a986d083bf175fe9286d01b93c022",
+      "usr/palm/applications/com.jakubjirak/resources/fr/appinfo.json": "f58f7719215dc574bab09ecc2195fea93eadc6c185c9ecddd1cd3fe43a00f0d0",
+      "usr/palm/applications/com.jakubjirak/resources/hu/appinfo.json": "fa5ef5406689b712ba6741d50382263da251a4c3371b64d240b0620dadae2e6f",
+      "usr/palm/applications/com.jakubjirak/resources/it/appinfo.json": "dad7ccd57c64d840edc90e75dba519ce8eed66282f6971373819f45b397938e0",
+      "usr/palm/applications/com.jakubjirak/resources/pl/appinfo.json": "fe4770b1bf0d3b767c9a2aa87143bec3fe13933b14693c8fe9f3f5a9d9cab3e1",
+      "usr/palm/applications/com.jakubjirak/resources/pt/appinfo.json": "a78b9aebeade3caec8cf778187d8da49c71c3a445cfff4d33fc4dc3619917a60",
+      "usr/palm/applications/com.jakubjirak/resources/ru/appinfo.json": "3855a3561fec005ee4e86d20a520a09c64f02bc32bad538f1c4b50d6ac0d078c",
+      "usr/palm/applications/com.jakubjirak/resources/sk/appinfo.json": "d8b29fb7cfb93a031da9538175e05f8bbc732714ec1d3d5b6a9f2bebeeaa73d9",
+      "usr/palm/applications/com.jakubjirak/resources/tr/appinfo.json": "52ede0c6e53029112fa193626aa326fd2f8ef108d3de25728b26198052e3e991",
+      "usr/palm/applications/com.jakubjirak/resources/uk/appinfo.json": "5baf4a900eee1ae69ab461bba9a12f472fa70c5c011c3dd727b479fc865fd1be"
+    },
+    "sourceSHA256": {
+      "app/app.js": "a1913c24ea63ddf232c53b24a2da2b98f538bc74be41198184ba283092890fcd",
+      "app/appinfo.json": "7589f0bc47bb08e0a49b184b00f4c187f9d73c6f51518eea933a28bb6a55242e",
+      "app/index.html": "814773ae6dec983509547b7087d3e6250ddf162b2d669f0dec2379b3ef80b678",
+      "app/style.css": "deeb2589f8aee0bd5e8bcd1890c698510a1fa0c4823bf8be0145deb6a05ffbd0",
+      "app/player.js": "80debaf44b85249c09f5538be5003ba6542716169e968578829ec5404923bc36",
+      "app/i18n.js": "3fd397f8a56d95801ac5b7fcce5323faf1c956429cad3eabdd754db0ff5c399c",
+      "service/index.js": "1195caeaf3be7dd18476876fb4ec70444669237f3bf44bb720194252d662cf32",
+      "service/package.json": "5dde11e1fc4d1c1abd01176d3e89b041a826761efdc77c5f26348062ccc48aa4",
+      "package.json": "df68e050ea54310c2e199613c6f87be18b9eebe5275a9c87fe509a7cbdfc2c75",
+      "package-lock.json": "0b3c265fec485e4a77fff7d1b381665f0b8e9319b555f19dea9a9d68be40b5dc",
+      "test.cjs": "e429ef00a6dbcf417a21e9475d2cc0f2754f0ea779163d85e2d2f6df212aaa37",
+      "test-browser.cjs": "cacf49534603b37269b1e9ad89fa6bda3d92096029965836c3b4d2ca61295e93"
+    },
+    "publication": "The CI release workflow rebuilds this source; the release archive will receive its own SHA256SUMS after every main CI job succeeds. Compare all payload hashes before promotion."
+  },
+  "nativeUI": {
+    "status": "passed",
+    "at": "2026-10-18T10:36:47.993Z",
+    "version": "0.8.1",
+    "originalStoragePreservedOnUpgrade": true,
+    "rowHeartsPreserveInputRecentsHistory": true,
+    "favorites": 7,
+    "recentHeartDownPreservesColumn": true,
+    "checks": [
+      {
+        "stage": "initial",
+        "version": {
+          "top": 978.8125,
+          "bottom": 1003.8125,
+          "left": 1773,
+          "right": 1824
+        },
+        "footer": {
+          "top": 953.8125,
+          "bottom": 1036.8125,
+          "left": 96,
+          "right": 1824
+        },
+        "about": {
+          "top": 978.8125,
+          "bottom": 1028.8125,
+          "left": 685.5,
+          "right": 950.5
+        },
+        "access": {
+          "top": 978.8125,
+          "bottom": 1028.8125,
+          "left": 962.5,
+          "right": 1118.5
+        },
+        "height": 1080,
+        "scrollTop": 0,
+        "fullFocusOutlines": true
+      },
+      {
+        "stage": "populated-and-scrolled",
+        "version": {
+          "top": 978.8125,
+          "bottom": 1003.8125,
+          "left": 1773,
+          "right": 1824
+        },
+        "footer": {
+          "top": 953.8125,
+          "bottom": 1036.8125,
+          "left": 96,
+          "right": 1824
+        },
+        "about": {
+          "top": 978.8125,
+          "bottom": 1028.8125,
+          "left": 685.5,
+          "right": 950.5
+        },
+        "access": {
+          "top": 978.8125,
+          "bottom": 1028.8125,
+          "left": 962.5,
+          "right": 1118.5
+        },
+        "height": 1080,
+        "scrollTop": 721,
+        "fullFocusOutlines": true
+      },
+      {
+        "stage": "about-return",
+        "version": {
+          "top": 978.8125,
+          "bottom": 1003.8125,
+          "left": 1773,
+          "right": 1824
+        },
+        "footer": {
+          "top": 953.8125,
+          "bottom": 1036.8125,
+          "left": 96,
+          "right": 1824
+        },
+        "about": {
+          "top": 978.8125,
+          "bottom": 1028.8125,
+          "left": 685.5,
+          "right": 950.5
+        },
+        "access": {
+          "top": 978.8125,
+          "bottom": 1028.8125,
+          "left": 962.5,
+          "right": 1118.5
+        },
+        "height": 1080,
+        "scrollTop": 0,
+        "fullFocusOutlines": true
+      },
+      {
+        "stage": "1920/{\"large\":false,\"high\":false}",
+        "version": {
+          "top": 978.8125,
+          "bottom": 1003.8125,
+          "left": 1773,
+          "right": 1824
+        },
+        "footer": {
+          "top": 953.8125,
+          "bottom": 1036.8125,
+          "left": 96,
+          "right": 1824
+        },
+        "about": {
+          "top": 978.8125,
+          "bottom": 1028.8125,
+          "left": 685.5,
+          "right": 950.5
+        },
+        "access": {
+          "top": 978.8125,
+          "bottom": 1028.8125,
+          "left": 962.5,
+          "right": 1118.5
+        },
+        "height": 1080,
+        "scrollTop": 721,
+        "fullFocusOutlines": true
+      },
+      {
+        "stage": "1920/{\"large\":false,\"high\":true}",
+        "version": {
+          "top": 978.8125,
+          "bottom": 1003.8125,
+          "left": 1773,
+          "right": 1824
+        },
+        "footer": {
+          "top": 953.8125,
+          "bottom": 1036.8125,
+          "left": 96,
+          "right": 1824
+        },
+        "about": {
+          "top": 978.8125,
+          "bottom": 1028.8125,
+          "left": 685.5,
+          "right": 950.5
+        },
+        "access": {
+          "top": 978.8125,
+          "bottom": 1028.8125,
+          "left": 962.5,
+          "right": 1118.5
+        },
+        "height": 1080,
+        "scrollTop": 721,
+        "fullFocusOutlines": true
+      },
+      {
+        "stage": "1920/{\"large\":true,\"high\":false}",
+        "version": {
+          "top": 971.8125,
+          "bottom": 1004.8125,
+          "left": 1753,
+          "right": 1824
+        },
+        "footer": {
+          "top": 946.8125,
+          "bottom": 1036.8125,
+          "left": 96,
+          "right": 1824
+        },
+        "about": {
+          "top": 971.8125,
+          "bottom": 1028.8125,
+          "left": 615,
+          "right": 949
+        },
+        "access": {
+          "top": 971.8125,
+          "bottom": 1028.8125,
+          "left": 961,
+          "right": 1152
+        },
+        "height": 1080,
+        "scrollTop": 1043,
+        "fullFocusOutlines": true
+      },
+      {
+        "stage": "1920/{\"large\":true,\"high\":true}",
+        "version": {
+          "top": 971.8125,
+          "bottom": 1004.8125,
+          "left": 1753,
+          "right": 1824
+        },
+        "footer": {
+          "top": 946.8125,
+          "bottom": 1036.8125,
+          "left": 96,
+          "right": 1824
+        },
+        "about": {
+          "top": 971.8125,
+          "bottom": 1028.8125,
+          "left": 615,
+          "right": 949
+        },
+        "access": {
+          "top": 971.8125,
+          "bottom": 1028.8125,
+          "left": 961,
+          "right": 1152
+        },
+        "height": 1080,
+        "scrollTop": 1043,
+        "fullFocusOutlines": true
+      },
+      {
+        "stage": "1280/{\"large\":false,\"high\":false}",
+        "version": {
+          "top": 666.203125,
+          "bottom": 691.203125,
+          "left": 455,
+          "right": 506
+        },
+        "footer": {
+          "top": 583.203125,
+          "bottom": 691.203125,
+          "left": 64,
+          "right": 1216
+        },
+        "about": {
+          "top": 608.203125,
+          "bottom": 658.203125,
+          "left": 771,
+          "right": 1036
+        },
+        "access": {
+          "top": 608.203125,
+          "bottom": 658.203125,
+          "left": 1048,
+          "right": 1204
+        },
+        "height": 720,
+        "scrollTop": 1048,
+        "fullFocusOutlines": true
+      },
+      {
+        "stage": "1280/{\"large\":false,\"high\":true}",
+        "version": {
+          "top": 666.203125,
+          "bottom": 691.203125,
+          "left": 455,
+          "right": 506
+        },
+        "footer": {
+          "top": 583.203125,
+          "bottom": 691.203125,
+          "left": 64,
+          "right": 1216
+        },
+        "about": {
+          "top": 608.203125,
+          "bottom": 658.203125,
+          "left": 771,
+          "right": 1036
+        },
+        "access": {
+          "top": 608.203125,
+          "bottom": 658.203125,
+          "left": 1048,
+          "right": 1204
+        },
+        "height": 720,
+        "scrollTop": 1048,
+        "fullFocusOutlines": true
+      },
+      {
+        "stage": "1280/{\"large\":true,\"high\":false}",
+        "version": {
+          "top": 658.203125,
+          "bottom": 691.203125,
+          "left": 574,
+          "right": 645
+        },
+        "footer": {
+          "top": 568.203125,
+          "bottom": 691.203125,
+          "left": 64,
+          "right": 1216
+        },
+        "about": {
+          "top": 593.203125,
+          "bottom": 650.203125,
+          "left": 667,
+          "right": 1001
+        },
+        "access": {
+          "top": 593.203125,
+          "bottom": 650.203125,
+          "left": 1013,
+          "right": 1204
+        },
+        "height": 720,
+        "scrollTop": 1534,
+        "fullFocusOutlines": true
+      },
+      {
+        "stage": "1280/{\"large\":true,\"high\":true}",
+        "version": {
+          "top": 658.203125,
+          "bottom": 691.203125,
+          "left": 574,
+          "right": 645
+        },
+        "footer": {
+          "top": 568.203125,
+          "bottom": 691.203125,
+          "left": 64,
+          "right": 1216
+        },
+        "about": {
+          "top": 593.203125,
+          "bottom": 650.203125,
+          "left": 667,
+          "right": 1001
+        },
+        "access": {
+          "top": 593.203125,
+          "bottom": 650.203125,
+          "left": 1013,
+          "right": 1204
+        },
+        "height": 720,
+        "scrollTop": 1534,
+        "fullFocusOutlines": true
+      }
+    ]
+  },
+  "focusRegression": {
+    "status": "passed",
+    "top": 850.484375,
+    "bottom": 942.484375,
+    "containerTop": 142.578125,
+    "containerBottom": 953.8125
+  },
+  "nativeStress": {
+    "status": "passed",
+    "at": "2026-10-18T10:37:47.765Z",
+    "version": "0.8.1",
+    "playbackSmoke": true,
+    "homeCycles": 65,
+    "samples": [
+      {
+        "stage": "warm-home",
+        "dom": {
+          "documents": 1,
+          "nodes": 579,
+          "jsEventListeners": 97
+        },
+        "heap": {
+          "usedSize": 1843680,
+          "totalSize": 4349952
+        },
+        "videos": 0
+      },
+      {
+        "stage": "after-20-home-cycles",
+        "dom": {
+          "documents": 1,
+          "nodes": 579,
+          "jsEventListeners": 97
+        },
+        "heap": {
+          "usedSize": 1843652,
+          "totalSize": 4874240
+        },
+        "videos": 0
+      },
+      {
+        "stage": "after-40-home-cycles",
+        "dom": {
+          "documents": 1,
+          "nodes": 579,
+          "jsEventListeners": 97
+        },
+        "heap": {
+          "usedSize": 1843708,
+          "totalSize": 4874240
+        },
+        "videos": 0
+      },
+      {
+        "stage": "after-60-home-cycles",
+        "dom": {
+          "documents": 1,
+          "nodes": 579,
+          "jsEventListeners": 97
+        },
+        "heap": {
+          "usedSize": 2240784,
+          "totalSize": 5365760
+        },
+        "videos": 0
+      }
+    ],
+    "playback": [
+      {
+        "id": "_cGvvG9PLu0sYXV",
+        "videoInfo": {
+          "aspectRatio": "16:9",
+          "parWidth": 1,
+          "hdrType": "none",
+          "SEI": {
+            "maxDisplayMasteringLuminance": 0,
+            "displayPrimariesX0": 0,
+            "displayPrimariesX1": 0,
+            "displayPrimariesX2": 0,
+            "displayPrimariesY0": 0,
+            "displayPrimariesY1": 0,
+            "displayPrimariesY2": 0,
+            "maxContentLightLevel": 0,
+            "minDisplayMasteringLuminance": 0,
+            "whitePointX": 0,
+            "whitePointY": 0,
+            "maxPicAverageLightLevel": 0
+          },
+          "userData": "(null)",
+          "frameRate": 60,
+          "mode3D": "2d",
+          "path": "network",
+          "storeDemo8k": 0,
+          "width": 1920,
+          "vdec_ch": 2,
+          "height": 1080,
+          "codec": "media-info",
+          "pixelAspectRatio": "1:1",
+          "parHeight": 1,
+          "rotation": 0,
+          "actual3D": "2d",
+          "bitRate": 230000,
+          "mediaId": "_cGvvG9PLu0sYXV",
+          "VUI": {
+            "matrixCoeffs": 0,
+            "transferCharacteristics": 1,
+            "colorPrimaries": 1
+          },
+          "LRType": -1,
+          "scanType": "progressive",
+          "afd": 24
+        },
+        "audioInfo": {
+          "track": 0,
+          "immersive": "none",
+          "dualMono": false,
+          "mediaId": "_cGvvG9PLu0sYXV"
+        },
+        "audioMute": {
+          "isMuteOn": false
+        },
+        "currentTime": {
+          "currentTime": 854,
+          "mediaId": "_cGvvG9PLu0sYXV"
+        },
+        "state": "play"
+      }
+    ],
+    "noRemainingMediaPipeline": true
+  },
+  "additionalSettledStress": {
+    "status": "passed",
+    "samples": [
+      {
+        "additionalHomeCycles": 0,
+        "dom": {
+          "documents": 1,
+          "nodes": 579,
+          "jsEventListeners": 97
+        },
+        "heap": {
+          "usedSize": 2199404,
+          "totalSize": 4841472
+        }
+      },
+      {
+        "additionalHomeCycles": 20,
+        "dom": {
+          "documents": 1,
+          "nodes": 579,
+          "jsEventListeners": 97
+        },
+        "heap": {
+          "usedSize": 2240580,
+          "totalSize": 4841472
+        }
+      },
+      {
+        "additionalHomeCycles": 40,
+        "dom": {
+          "documents": 1,
+          "nodes": 579,
+          "jsEventListeners": 97
+        },
+        "heap": {
+          "usedSize": 2240244,
+          "totalSize": 4841472
+        }
+      },
+      {
+        "additionalHomeCycles": 60,
+        "dom": {
+          "documents": 1,
+          "nodes": 579,
+          "jsEventListeners": 97
+        },
+        "heap": {
+          "usedSize": 2240468,
+          "totalSize": 4841472
+        }
+      }
+    ]
+  },
+  "browser": {
+    "screens": 1144,
+    "locales": 13,
+    "viewports": [
+      "1280x720",
+      "1920x1080"
+    ],
+    "sizeContrastModes": 4,
+    "mediaLuna": "fixtures"
+  },
+  "review": "Independent read-only review passed after the focus-outline fix. Timer cancellation independently verified.",
+  "limits": [
+    "Native navigation automated through Web Inspector; physical handset unverified.",
+    "720p is a Web Inspector viewport override; physical TV output remains 1920x1080.",
+    "Native audio telemetry active/unmuted; audible output unverified.",
+    "Voice Guide off and unchanged; spoken accessibility unverified.",
+    "Physical Wi-Fi/router restart, naturally expired sources, multi-hour soak, actual pre-Grid engine and 4K/1440p decoding unverified."
+  ],
+  "localEvidenceSHA256": {
+    "installed-final.json": "7e0c139b992eb6136bc40b0c789e5cd5feead66687283657ba33ef183e32c6ba",
+    "ui-acceptance.json": "004183f9a0829fb99ce9a17725afbd8454e0336ce46656730d2444d12bebafc9",
+    "focus-gutter.json": "d0f07c4cba581fbce76a7ad40c1cb888d41866fc7d1febfba1f8cef442a7a2cf",
+    "ui-stress.json": "e8f50bd49bcbeb313570eeac97d49542c4b6a0d1fb66faa7e8b559fa1b282357",
+    "ui-settle.json": "4d8a13d5c3f101bb498d428ac8d81cbf9b643a55d7a857bed73706d7a4013102",
+    "unit-final.log": "e513c9f42294708da750b9da04ba669a7b436fbe2fd369f105f6d8a00d7f8419",
+    "browser-final.log": "10577f5802a51971c58a1e6c78dd05a0b6346ee6c6218111cbd8c38e428ae4e2",
+    "ui-final.log": "fd3d7d5464d036b4c3c10da1282d55427b68f1c4705a8b87e8c5ac47109664ef",
+    "focus-gutter-native-red.log": "99612078f118d6561d9a8780abecdc782ca7cc592d0053b230b73b239c696bbd",
+    "focus-gutter-red.log": "0ca764ec9ee40f2d744e1982f3c52f4935e0dc92f6a1709a0f166c436bf0b55d",
+    "focus-gutter-green.log": "507924a6112094527bb5529f0979a4e285ab04ba2ab8e4f41d605357b0fe17d2",
+    "footer-red.log": "71d9882a6629db6daa926851d085c66d8105533879516bebe404b6f75e103118",
+    "hearts-red.log": "6c76ab6e3154f1410a819d67e56b3ed49a136050c352056d67c41b9d49077177",
+    "review.md": "7824b49133717f7bd6c70ba27cb56f7f173904a63452a9c2d6dec894d3b4d171",
+    "02-scrolled-footer.png": "38568b46e829632f3e02dcbb42eb54ba006fe033de0c8625c3f9efd27bc09862",
+    "03-home-hearts.png": "b9c20565d4263d1d0a7d7a3e5cdc7bf3f4d0f8f2fe2804d439a0e7be712aea91",
+    "owner-restored.json": "cec4c3e99893a16f24dc0939356a09d842ae8b40e50d8ba7f7b9d5c821016e12"
+  },
+  "ownerStorageRestoration": {
+    "status": "passed",
+    "at": "2026-10-18T10:39:18.269Z",
+    "version": "v0.8.1",
+    "restoredKeys": [
+      "kick-channel",
+      "kick-recent-channels",
+      "kick-watched-videos"
+    ],
+    "recents": 6,
+    "historyCount": 12,
+    "exactOriginalStorageRestored": true
+  }
+}

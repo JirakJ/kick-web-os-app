@@ -48,9 +48,25 @@ if (typeof document !== 'undefined') (function () {
   var request = null;
   var requestTimer;
   var controlsTimer;
+  var homeFocusTimer;
   var generation = 0;
   var scrubbing = false, jumpOpen = false;
   var timelineState = '';
+  function cancelHomeFocus() { clearTimeout(homeFocusTimer); homeFocusTimer = null; }
+  function revealHomeFocus() {
+    cancelHomeFocus();
+    if (screen !== 'home' || document.hidden) return;
+    // Run after the browser and directional handler finish their nearest scrolling.
+    // Old TV engines do not support CSS scroll-padding for the focus outline.
+    homeFocusTimer = setTimeout(function () {
+      homeFocusTimer = null;
+      var region = el('home-content'), active = document.activeElement;
+      if (screen !== 'home' || document.hidden || !active || !region.contains(active)) return;
+      var box = active.getBoundingClientRect(), bounds = region.getBoundingClientRect();
+      if (box.top < bounds.top + 12) region.scrollTop += box.top - bounds.top - 12;
+      else if (box.bottom > bounds.bottom - 12) region.scrollTop += box.bottom - bounds.bottom + 12;
+    }, 0);
+  }
   var player = KickPlayer(el('video-host'), { status: mediaStatus, change: function (next) {
     var transition = playback.phase !== next.phase || playback.paused !== next.paused, durationChanged = playback.duration !== next.duration;
     playback = next;
@@ -213,11 +229,20 @@ if (typeof document !== 'undefined') (function () {
     try { localStorage.setItem('kick-favorites', JSON.stringify(favorites)); } catch (e) { /* Retain session favorites. */ }
   }
   function favoriteLabels() {
-    var name = kickChannel(input.value), key = favorites.indexOf(name) < 0 ? 'favorite_add' : 'favorite_remove';
+    var name = kickChannel(input.value);
     ['favorite-channel', 'catalog-favorite'].forEach(function (id) {
-      el(id).textContent = t(key); el(id).disabled = !name;
-      el(id).setAttribute('aria-label', t(key) + (name ? ': ' + name : ''));
+      favoriteIcon(el(id), name); el(id).disabled = !name;
     });
+    recentButtons.forEach(function (button, index) {
+      favoriteIcon(recentControls[index * 3 + 1], recents[recentPage * 6 + index]);
+    });
+  }
+  function favoriteIcon(button, name) {
+    var saved = favorites.indexOf(name) >= 0, label = t(saved ? 'favorite_remove' : 'favorite_add');
+    button.textContent = saved ? '♥' : '♡';
+    button.setAttribute('aria-pressed', saved ? 'true' : 'false');
+    button.setAttribute('aria-label', label + (name ? ': ' + name : ''));
+    button.setAttribute('title', label);
   }
   function closeFavoriteMove(save) {
     el('favorite-move').hidden = true;
@@ -269,7 +294,7 @@ if (typeof document !== 'undefined') (function () {
         el('favorite-move').hidden = false; moveFavorite(0);
         (!el('favorite-move-up').disabled ? el('favorite-move-up') : !el('favorite-move-down').disabled ? el('favorite-move-down') : el('favorite-move-save')).focus();
       });
-      remove.textContent = '×'; remove.setAttribute('aria-label', t('favorite_remove') + ': ' + name);
+      remove.textContent = '♥'; remove.setAttribute('aria-label', t('favorite_remove') + ': ' + name); remove.setAttribute('aria-pressed', 'true');
       remove.addEventListener('click', function () {
         cancelRecentStatus(); favorites = favorites.filter(function (value) { return value !== name; });
         saveFavorites(); renderFavorites(); refreshRecentStatus(); (favoriteControls[0] || input).focus();
@@ -280,8 +305,11 @@ if (typeof document !== 'undefined') (function () {
     favoriteLabels(); showRecentStatus();
   }
   function toggleFavorite() {
+    toggleNamedFavorite(kickChannel(input.value));
+  }
+  function toggleNamedFavorite(name) {
     closeFavoriteMove(false);
-    var name = kickChannel(input.value), index = favorites.indexOf(name);
+    var index = favorites.indexOf(name);
     if (!name) return;
     if (index < 0 && favorites.length >= 50) { el(screen === 'catalog' ? 'catalog-favorite-feedback' : 'favorite-feedback').textContent = t('favorites_limit'); return; }
     el(screen === 'catalog' ? 'catalog-favorite-feedback' : 'favorite-feedback').textContent = '';
@@ -402,9 +430,10 @@ if (typeof document !== 'undefined') (function () {
   function setScreen(name) {
     closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelContinue();
     screen = name;
+    cancelHomeFocus();
     ['home', 'catalog', 'watch', 'about'].forEach(function (id) { el(id).hidden = id !== name; });
     window.scrollTo(0, 0);
-    if (name === 'home') { renderContinue(); refreshRecentStatus(); } else cancelRecentStatus();
+    if (name === 'home') { el('home-content').scrollTop = 0; renderContinue(); refreshRecentStatus(); } else cancelRecentStatus();
   }
   function cancelRequest() {
     generation++;
@@ -450,6 +479,9 @@ if (typeof document !== 'undefined') (function () {
       var live = document.createElement('span');
       live.className = 'recent-live'; live.textContent = t('live_badge'); live.hidden = true; button.appendChild(live);
       button.addEventListener('click', function () { startChannel(name, true); });
+      var favorite = document.createElement('button');
+      favorite.type = 'button'; favorite.className = 'recent-favorite'; favoriteIcon(favorite, name);
+      favorite.addEventListener('click', function () { toggleNamedFavorite(name); });
       var remove = document.createElement('button');
       remove.type = 'button'; remove.className = 'recent-remove'; remove.textContent = '×';
       remove.setAttribute('aria-label', t('remove_channel_named', { name: name }));
@@ -464,8 +496,8 @@ if (typeof document !== 'undefined') (function () {
         (recentButtons[Math.min(index, recentButtons.length - 1)] || input).focus();
         refreshRecentStatus();
       });
-      row.appendChild(button); row.appendChild(remove); list.appendChild(row);
-      recentButtons.push(button); recentControls.push(button, remove);
+      row.appendChild(button); row.appendChild(favorite); row.appendChild(remove); list.appendChild(row);
+      recentButtons.push(button); recentControls.push(button, favorite, remove);
     });
     el('recent-pages').hidden = pages <= 1;
     el('recent-previous').disabled = recentPage === 0;
@@ -1000,6 +1032,7 @@ if (typeof document !== 'undefined') (function () {
   el('watch').addEventListener('mousemove', showControls);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
+      cancelHomeFocus();
       cancelRecentStatus(); cancelContinue(); closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false);
       var interrupted = !!request;
       cancelRequest();
@@ -1016,7 +1049,8 @@ if (typeof document !== 'undefined') (function () {
     else if (screen === 'home') { renderContinue(); refreshRecentStatus(); }
     else if (screen === 'catalog') (videoButtons[0] || el('catalog-back')).focus();
   });
-  window.addEventListener('pagehide', function () { cancelContinue(); closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
+  window.addEventListener('pagehide', function () { cancelContinue(); closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); cancelHomeFocus(); });
+  document.addEventListener('focusin', revealHomeFocus);
   window.addEventListener('offline', function () { if (screen === 'watch') player.offline(); });
   window.addEventListener('online', function () { if (screen === 'watch' && !document.hidden) player.online(); if (screen === 'home' && !document.hidden) { renderContinue(); refreshRecentStatus(); } });
   document.addEventListener('keydown', function (event) {
@@ -1123,9 +1157,9 @@ if (typeof document !== 'undefined') (function () {
       if (key === 412 || key === 417) { event.preventDefault(); openJump(key === 412 ? -600 : 600); return; }
       if (key >= 37 && key <= 40) showControls();
     }
-    var controls = screen === 'home' ? [input, el('play'), el('recordings'), el('favorite-channel'), el('find-saved'), el('about-button'), el('accessibility-button')].concat(recentControls,
+    var controls = screen === 'home' ? [input, el('favorite-channel'), el('play'), el('recordings'), el('find-saved')].concat(recentControls,
       el('recent-pages').hidden ? [] : [el('recent-previous'), el('recent-next')], favoriteControls, el('favorite-pages').hidden ? [] : [el('favorite-previous'), el('favorite-next')], continueControls,
-      el('continue-pages').hidden ? [] : [el('continue-previous'), el('continue-next')]) :
+      el('continue-pages').hidden ? [] : [el('continue-previous'), el('continue-next')], [el('about-button'), el('accessibility-button')]) :
       screen === 'catalog' ? [el('catalog-search')].concat(el('live').hidden ? [] : [el('live')], videoButtons,
         el('catalog-retry').hidden ? [] : [el('catalog-retry')],
         el('pages').hidden ? [] : [el('previous-page'), el('next-page')].filter(function (b) { return !b.disabled; }), [el('catalog-back'), el('catalog-favorite')]) :
@@ -1135,24 +1169,26 @@ if (typeof document !== 'undefined') (function () {
     var recentIndex = recentControls.indexOf(event.target);
     if (screen === 'home' && recentIndex >= 0 && (key === 38 || key === 40)) {
       event.preventDefault();
-      var rowTarget = recentIndex + (key === 38 ? -2 : 2);
-      (rowTarget < 0 ? el('recordings') : recentControls[rowTarget] ||
-        (!el('recent-next').disabled ? el('recent-next') : favoriteControls[0] || continueControls[0] || recentControls[recentIndex])).focus();
+      var rowTarget = recentIndex + (key === 38 ? -3 : 3);
+      var recentControl = rowTarget < 0 ? el('recordings') : recentControls[rowTarget] ||
+        (!el('recent-next').disabled ? el('recent-next') : favoriteControls[0] || continueControls[0] || el('about-button'));
+      recentControl.focus(); recentControl.scrollIntoView({ block: 'nearest' });
       return;
     }
     var favoriteIndex = favoriteControls.indexOf(event.target);
     if (screen === 'home' && favoriteIndex >= 0 && (key === 38 || key === 40)) {
       event.preventDefault(); var favoriteTarget = favoriteIndex + (key === 38 ? -1 : 1) * (window.innerWidth <= 800 ? 3 : 6);
-      var favoriteControl = favoriteTarget < 0 ? recentControls[Math.max(0, recentControls.length - 2)] || (el('favorite-channel').disabled ? el('recordings') : el('favorite-channel')) :
-        favoriteControls[favoriteTarget] || (!el('favorite-next').disabled ? el('favorite-next') : continueControls[0] || favoriteControls[favoriteIndex]);
+      var favoriteControl = favoriteTarget < 0 ? recentControls[Math.max(0, recentControls.length - 3)] || (el('favorite-channel').disabled ? el('recordings') : el('favorite-channel')) :
+        favoriteControls[favoriteTarget] || (!el('favorite-next').disabled ? el('favorite-next') : continueControls[0] || el('about-button'));
       favoriteControl.focus(); favoriteControl.scrollIntoView({ block: 'nearest' }); return;
     }
     var continueIndex = continueControls.indexOf(event.target);
     if (screen === 'home' && continueIndex >= 0 && (key === 38 || key === 40)) {
       event.preventDefault();
       var shelfTarget = continueIndex + (key === 38 ? -1 : 1) * (window.innerWidth <= 800 ? 2 : 4);
-      var shelfControl = shelfTarget < 0 ? favoriteControls[Math.max(0, favoriteControls.length - 3 + (continueIndex % 2 ? 2 : 0))] || recentControls[Math.max(0, recentControls.length - 2 + continueIndex % 2)] || el('recordings') :
-        continueControls[shelfTarget] || (!el('continue-next').disabled ? el('continue-next') : continueControls[continueIndex]);
+      var recentOffset = continueIndex % 2 ? 2 : 0;
+      var shelfControl = shelfTarget < 0 ? favoriteControls[Math.max(0, favoriteControls.length - 3 + recentOffset)] || recentControls[Math.max(0, recentControls.length - 3 + recentOffset)] || el('recordings') :
+        continueControls[shelfTarget] || (!el('continue-next').disabled ? el('continue-next') : el('about-button'));
       shelfControl.focus(); shelfControl.scrollIntoView({ block: 'nearest' }); return;
     }
     var cardIndex = videoButtons.indexOf(event.target);

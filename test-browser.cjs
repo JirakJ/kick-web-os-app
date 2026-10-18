@@ -63,6 +63,16 @@ const output='artifacts/browser';fs.mkdirSync(output,{recursive:true});for(const
    }
    await page.waitForFunction(()=>document.querySelectorAll('#favorite-list button').length===18);
    await audit('home');
+   const footerBoxes=await page.evaluate(()=>{const bounds=id=>{const r=document.getElementById(id).getBoundingClientRect();return{top:r.top,bottom:r.bottom,left:r.left,right:r.right};};return{footer:document.querySelector('footer').getBoundingClientRect().toJSON(),version:bounds('app-version'),about:bounds('about-button'),accessibility:bounds('accessibility-button'),height:innerHeight};});
+   assert(footerBoxes.version.top>=0&&footerBoxes.version.bottom<=footerBoxes.height,'Home version stays visible above the screen edge with populated shelves');
+   for(const id of ['about','accessibility'])assert(footerBoxes[id].top>=footerBoxes.footer.top&&footerBoxes[id].bottom<=footerBoxes.footer.bottom,'Secondary actions stay within the visible footer');
+   for(const selector of ['.recent-row:last-child .recent-favorite','.favorite-row:last-child button:last-child','.continue-row:last-child button:last-child']){
+    await page.evaluate(selector=>{const e=document.querySelector(selector);e.focus();e.scrollIntoView({block:'nearest'});},selector);
+    await page.waitForTimeout(25);
+    const focusBox=await page.evaluate(()=>{const a=document.activeElement.getBoundingClientRect(),b=document.getElementById('home-content').getBoundingClientRect();return{top:a.top,bottom:a.bottom,containerTop:b.top,containerBottom:b.bottom};});
+    assert(focusBox.top>=focusBox.containerTop+10&&focusBox.bottom<=focusBox.containerBottom-10,'Scrolling home controls retain the complete focus outline above the footer: '+selector+' '+JSON.stringify(focusBox));
+   }
+
    await page.click('#accessibility-button');await audit('settings');await page.click('#accessibility-close');
    await page.click('#find-saved');await page.fill('#saved-query','channel');await audit('saved-search');await page.click('#saved-cancel');
    await page.click('#recordings');await page.waitForFunction(()=>document.querySelectorAll('#videos>button').length===6);await audit('catalog');

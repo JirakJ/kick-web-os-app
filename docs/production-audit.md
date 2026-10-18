@@ -1,3 +1,44 @@
+# Home UI acceptance for 0.8.1
+
+Checked on 18 October 2026 on the same LG 55NANO863NA / webOS 5.6.2 /
+Chromium 68 device. The local candidate IPK SHA256 is
+`ee3b309817a5394701a56aaa29455943b0f91b3c7dde303b7a76592b0be4219f`;
+all 27 installed app/service payload files matched. CI builds the release package
+from the reviewed source; its archive will receive a separate SHA256SUMS after
+every main CI job succeeds.
+
+The home header/footer now stay outside the scrollable channel shelves. Version,
+About and updates and Accessibility remained visible before/after scrolling and
+returning from dialogs. Hearts beside the channel input, each recent channel and
+the catalog title add/remove that channel. Seven favorites, unchanged entered
+channel/history/recents on row toggles, pressed/accessible labels and directional
+heart-column navigation passed. The original three owner storage keys survived
+upgrade exactly. After acceptance, the original six recents and twelve history
+entries were restored exactly and test-only preferences removed.
+
+The first review found a focus outline clipped by the new scroll boundary.
+Failing native/browser reproductions now pass with a focus gutter; a bounded,
+cancelled callback handles old TV scrolling without retaining retired controls.
+Independent review covered 32 controls and timer cancellation. Eleven native
+checkpoints included eight 720p/1080p text/contrast combinations; 720p uses a Web
+Inspector viewport override. All 1,144 browser screens across 13 locales passed.
+
+A real replay smoke test decoded at 1920×1080/60 with active unmuted audio and
+one native pipeline. Returning home released the decoder. Repeated heart toggles
+and About returns retained 579 DOM nodes and 97 listeners at settled samples;
+no video nodes remained. This is bounded regression coverage, not a multi-hour
+leak guarantee. The longer player/network acceptance below remains applicable;
+player and service runtime code did not change in 0.8.1.
+
+[Candidate measurements and payload hashes](validation/tv-0.8.1.json) bind this
+acceptance to the tested files. Local evidence is under
+`artifacts/tv-0.8.1-20261018/`; owner storage backups are not published. Navigation
+used Web Inspector input rather than a physical handset. The physical/audio,
+Voice Guide, pre-Grid and long-soak limits below still apply. v0.8.0 remains
+available for rollback.
+
+---
+
 # TV acceptance for 0.8.0
 
 Checked on 18 October 2026 on LG 55NANO863NA, firmware 04.64.00 / webOS 5.6.2,
