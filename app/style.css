@@ -116,7 +116,7 @@ footer > * { min-width: 0; max-width: 100%; }
 #seek::-webkit-slider-runnable-track { height: 6px; background: transparent; }
 #seek::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; margin-top: -8px; background: #53fc18; border: 2px solid #c6ffb2; }
 #seek:disabled { opacity: .45; cursor: default; }
-#seek:focus { outline: none; }
+#seek:focus { outline: 4px solid #53fc18; outline-offset: 5px; }
 #seek:focus::-webkit-slider-thumb { background: #fff; border-color: #53fc18; }
 @media (max-height: 850px) {
  body, input, button { font-size: 23px; }
@@ -211,3 +211,53 @@ footer > * { min-width: 0; max-width: 100%; }
 #release-notes { white-space: pre-wrap; font-family: inherit; }
 #about button { margin: 12px 20px 12px 0; }
 #update-cache-note { color: #c5cbd3; }
+
+/* App-only accessibility. No scaling transform: geometry and focus use the painted sizes. */
+[data-text-size="large"] body, [data-text-size="large"] input, [data-text-size="large"] button { font-size: 36px; }
+[data-text-size="large"] label, [data-text-size="large"] #catalog h2 { font-size: 30px; }
+[data-text-size="large"] .header-note, [data-text-size="large"] footer { font-size: 28px; }
+[data-text-size="large"] .eyebrow, [data-text-size="large"] #catalog .eyebrow { font-size: 28px; }
+[data-text-size="large"] #recent h2 { font-size: 34px; }
+[data-text-size="large"] #recent-channels .recent-play, [data-text-size="large"] #recent-pages button,
+[data-text-size="large"] .favorite-row button:first-child, [data-text-size="large"] .continue-row button:first-child { font-size: 30px; }
+[data-text-size="large"] .recent-live, [data-text-size="large"] .favorite-state { font-size: 24px; line-height: 30px; }
+[data-text-size="large"] #recent-page-number, [data-text-size="large"] #page-number, [data-text-size="large"] #pages button { font-size: 28px; }
+[data-text-size="large"] #catalog-back, [data-text-size="large"] #back, [data-text-size="large"] #live { font-size: 30px; }
+[data-text-size="large"] #channel-status, [data-text-size="large"] #videos-status, [data-text-size="large"] #search-summary,
+[data-text-size="large"] #error, [data-text-size="large"] .favorite-feedback { font-size: 28px; }
+[data-text-size="large"] #videos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+[data-text-size="large"] .video-title { font-size: 30px; line-height: 36px; height: 72px; }
+[data-text-size="large"] #videos button small { font-size: 26px; }
+[data-text-size="large"] .watched-badge, [data-text-size="large"] .last-watched { font-size: 24px; line-height: 30px; }
+[data-text-size="large"] #video-title { font-size: 40px; }
+[data-text-size="large"] #quality, [data-text-size="large"] #quality-selection, [data-text-size="large"] #quality-actual,
+[data-text-size="large"] #timeline label { font-size: 26px; }
+[data-text-size="large"] .seek-row span { font-size: 32px; }
+@media (max-width: 560px) { [data-text-size="large"] #videos { grid-template-columns: minmax(0, 1fr); } }
+@supports not (display: grid) {
+ [data-text-size="large"] #videos button { width: calc(50% - 11px); }
+ [data-text-size="large"] #videos button:nth-child(3n) { margin-right: 22px; }
+ [data-text-size="large"] #videos button:nth-child(2n) { margin-right: 0; }
+ @media (max-width: 560px) { [data-text-size="large"] #videos button { width: 100%; margin-right: 0 !important; } }
+}
+[data-contrast="high"], [data-contrast="high"] body, [data-contrast="high"] #home, [data-contrast="high"] #catalog,
+[data-contrast="high"] #about, [data-contrast="high"] .modal-card { color: #fff; background: #000; }
+[data-contrast="high"] p, [data-contrast="high"] label, [data-contrast="high"] small, [data-contrast="high"] footer,
+[data-contrast="high"] .header-note, [data-contrast="high"] .eyebrow, [data-contrast="high"] .recent-name,
+[data-contrast="high"] .favorite-state, [data-contrast="high"] #quality, [data-contrast="high"] #quality-selection,
+[data-contrast="high"] #quality-actual, [data-contrast="high"] #elapsed, [data-contrast="high"] #duration { color: #fff !important; }
+[data-contrast="high"] button, [data-contrast="high"] input { color: #fff !important; background: #000 !important; border: 2px solid #fff !important; }
+[data-contrast="high"] button.primary { color: #000 !important; background: #fff !important; }
+[data-contrast="high"] button:disabled { opacity: .65; border-style: dashed !important; }
+[data-contrast="high"] :focus { outline: 5px solid #ffff00; outline-offset: 5px; }
+[data-contrast="high"] #playback-controls { background: #000; }
+[data-contrast="high"] #playback-status, [data-contrast="high"] .watched-badge { background: #000; color: #fff; border: 2px solid #fff; }
+[data-contrast="high"] .last-watched, [data-contrast="high"] .recent-live { color: #000; background: #fff; }
+/* Color emoji have taller glyph metrics than letters on some desktop/TV fonts. */
+.title-symbol { font-size: .92em; }
+[data-contrast="high"] #seek { background: transparent !important; }
+[data-contrast="high"] #seek:focus { outline: 5px solid #ffff00; outline-offset: 5px; }
+[data-contrast="high"] #seek-progress::-webkit-progress-bar { background: #000; border: 1px solid #fff; }
+[data-contrast="high"] #seek-progress::-webkit-progress-value { background: #fff; }
+[data-contrast="high"] #seek::-webkit-slider-thumb { background: #fff; border-color: #000; }
+[data-contrast="high"] #seek:focus::-webkit-slider-thumb { border-color: #ffff00; }

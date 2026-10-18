@@ -64,7 +64,7 @@ const storage = {getItem(key){return stored.get(key)||null;},setItem(key,value){
 function boot(localStorage = storage, bridgeMode = 'ok', locale = 'cs-CZ', online = true, startClock = 1000) {
   elements = {}; bridges = []; timers = new Map(); clock = startClock; created = {}; textWrites = {}; timerAllocations = 0; wallClockOffset = 0;
   const labelled=[];
-  document = {hidden:false,activeElement:null,handlers:{},
+  document = {hidden:false,activeElement:null,handlers:{},documentElement:{attrs:{},setAttribute(k,v){this.attrs[k]=v;}},
     getElementById(id){return elements[id];},createElement(tag){created[tag]=(created[tag]||0)+1;return element();},
     querySelectorAll(selector){assert.equal(selector,'[data-i18n],[data-i18n-attr]');return labelled;},
     addEventListener(name,fn){this.handlers[name]=fn;}};
@@ -73,7 +73,7 @@ function boot(localStorage = storage, bridgeMode = 'ok', locale = 'cs-CZ', onlin
     if(!attrs.id&&!attrs['data-i18n']&&!attrs['data-i18n-attr'])continue;
     const node=element(attrs.id||'');if(attrs.id)elements[attrs.id]=node;
     if(attrs.id==='app-version')node.textContent='v'+appVersion;
-    for(const name of ['data-i18n','data-i18n-attr','placeholder','aria-label'])if(name in attrs)node.attrs[name]=attrs[name];
+    for(const name of ['data-i18n','data-i18n-attr','placeholder','aria-label','aria-live','aria-atomic'])if(name in attrs)node.attrs[name]=attrs[name];
     if(attrs['data-i18n']||attrs['data-i18n-attr'])labelled.push(node);
   }
   window={innerWidth:1920,handlers:{},addEventListener(name,fn){this.handlers[name]=fn;},scrollTo(){}};
@@ -461,6 +461,21 @@ boot(updateStore,'ok','en-US',false,clock);click('about-button');assert.match(el
 navigator.onLine=true;click('check-updates');bridges.at(-1).onservicecallback(JSON.stringify({returnValue:false,retryAt:clock+21600000}));
 boot(updateStore,'ok','en-US',true,clock+6001);click('about-button');click('check-updates');assert.equal(bridges.length,0,'Rate-limit backoff survives app/service recreation');
 console.log('Updates UI: passed (viewer initiation, semantic status, safe notes/links, offline cache and cancellation).');
+
+// Accessibility preferences persist, survive unavailable storage and retain remote focus.
+const accessibleStore={data:{},getItem(k){return this.data[k]||null;},setItem(k,v){this.data[k]=v;}};
+boot(accessibleStore,'ok','en-US');click('accessibility-button');click('text-size');click('high-contrast');
+assert.equal(document.documentElement.attrs['data-text-size'],'large');assert.equal(document.documentElement.attrs['data-contrast'],'high');
+assert.equal(elements['high-contrast'].attrs['aria-pressed'],'true');key(461);assert.equal(document.activeElement,elements['accessibility-button']);
+boot(accessibleStore,'ok','en-US');assert.equal(document.documentElement.attrs['data-text-size'],'large');assert.equal(document.documentElement.attrs['data-contrast'],'high');
+submit('example');respond({live:null,videos:Array.from({length:6},(_,i)=>({...vod,id:'accessible-'+i,title:'Record '+i}))});
+elements.videos.firstChild.focus();key(40);assert.equal(document.activeElement,elements.videos.children[2],'Large-text grid navigation follows two columns');key(461);
+click('accessibility-button');click('accessibility-reset');assert.equal(document.documentElement.attrs['data-text-size'],'normal');assert.equal(document.documentElement.attrs['data-contrast'],'normal');
+elements['accessibility-close'].focus();key(9);assert.equal(document.activeElement,elements['text-size']);
+document.hidden=true;document.handlers.visibilitychange();assert.equal(elements['accessibility-dialog'].hidden,true);
+boot({getItem(){throw Error('Denied');},setItem(){throw Error('Full');}},'ok','en-US');click('accessibility-button');click('text-size');assert.equal(document.documentElement.attrs['data-text-size'],'large');
+assert.equal(elements['playback-status'].attrs['aria-live'],'polite');assert.equal(elements['playback-status'].attrs['aria-atomic'],'true');
+console.log('Accessibility: passed (bounded persistence, reset, remote focus, grid columns, lifecycle and denied storage).');
 
 // A new replay selection offers saved progress; dismissing it never mounts media.
 const resumeData=new Map([['kick-watched-videos',JSON.stringify([{key:'returner:resume-a',position:123,duration:600,finished:false}])]]);
