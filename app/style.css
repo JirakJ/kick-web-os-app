@@ -30,7 +30,7 @@ input { width: 100%; padding: 24px; background: #16191c; color: #fff; border-col
 input::placeholder { color: #979da5; }
 :focus { outline: 4px solid #53fc18; outline-offset: 5px; }
 #home { height: 100vh; min-height: 0; overflow: hidden; padding: 4vh 5vw; display: flex; flex-direction: column; }
-#home-content { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; margin: 0 -12px; padding: 12px; }
+#home-content { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 0; }
 #home > header, #home > footer { flex-shrink: 0; }
 .channel-row, .catalog-title-row { display: flex; align-items: center; }
 .channel-row input, .catalog-title-row h1 { flex: 1; min-width: 0; }
@@ -136,7 +136,7 @@ footer > * { min-width: 0; max-width: 100%; }
  input { padding: 18px; }
  .recent-row { margin: 8px 0; }
  #recent-channels .recent-play { padding: 10px 14px; font-size: 22px; }
- #catalog h1 { font-size: 44px; }
+ #catalog h1 { font-size: 44px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
  .video-preview { padding-bottom: 36%; }
  .video-title { font-size: 21px; line-height: 26px; height: 52px; }
  #videos button small { font-size: 18px; }
@@ -272,3 +272,107 @@ footer > * { min-width: 0; max-width: 100%; }
 [data-contrast="high"] #seek-progress::-webkit-progress-value { background: #fff; }
 [data-contrast="high"] #seek::-webkit-slider-thumb { background: #fff; border-color: #000; }
 [data-contrast="high"] #seek:focus::-webkit-slider-thumb { border-color: #ffff00; }
+
+/* A TV overview occupies one screen. Lists page within the measured panel height. */
+#home { padding: 3vh 4vw; }
+#home > header { padding-bottom: 1.5vh; }
+#home .brand { font-size: 44px; }
+#home .content { flex: 0 0 auto; padding: 2vh 0; }
+#home .selection { max-width: none; display: flex; align-items: center; }
+.selection-copy { flex: 0 0 36%; min-width: 0; padding-right: 3vw; }
+#home .eyebrow { font-size: 20px; margin-bottom: 10px; }
+#home h1 { font-size: 44px; letter-spacing: -1px; margin-bottom: 14px; }
+#home-intro { font-size: 22px; color: #a9afb7; line-height: 1.4; margin: 0; }
+#channel-form { flex: 1; min-width: 0; }
+#home label { font-size: 22px; margin-bottom: 8px; }
+#home input { padding: 14px 20px; }
+#home .favorite-heart { padding: 8px 0; font-size: 32px; }
+#home #error { font-size: 22px; margin: 8px 0; }
+#home #error:empty { display: none; }
+#home .home-actions { margin-top: 14px; }
+#home .home-actions button { font-size: 23px; padding: 12px 18px; margin: 0 12px 8px 0; }
+#home #play span { margin-left: 12px; }
+#home .favorite-feedback { width: 100%; margin: 0; }
+.home-shelves { display: flex; flex: 1; min-height: 0; padding: 10px 0; }
+#home .home-shelves > section { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; }
+#home .home-shelves > section:not([hidden]) ~ section:not([hidden]) { margin-left: 24px; padding-left: 24px; border-left: 1px solid #292d32; }
+#home .home-shelves h2 { font-size: 26px; line-height: 1.2; min-height: 2.4em; margin: 0 0 18px; }
+#recent { width: auto; }
+#recent-channels, #favorite-list, #continue-list { flex: 1; min-height: 0; display: block; }
+#home .recent-row, #home .favorite-row, #home .continue-row { display: flex; align-items: stretch; width: 100%; height: 58px; margin: 0 0 12px; }
+#home .recent-row button, #home .favorite-row button, #home .continue-row button { height: 100%; margin: 0; padding: 8px; font-size: 24px; }
+#home .recent-play, #home .favorite-row button:first-child, #home .continue-row button:first-child { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+#home .recent-favorite, #home .recent-remove, #home .favorite-row button:not(:first-child), #home .continue-row button:not(:first-child) { flex: 0 0 44px; margin-left: 8px; }
+#home .recent-favorite { font-size: 28px; }
+#home .favorite-state { display: none; }
+#home .favorite-row button:first-child { display: flex; align-items: center; }
+#home .favorite-row button:first-child > span:first-child { flex: 1; min-width: 50%; overflow: hidden; text-overflow: ellipsis; }
+#home .favorite-state:not(:empty) { display: inline-block; flex: 0 1 auto; max-width: 40%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 6px; font-size: 16px; }
+#home .recent-live { font-size: 16px; line-height: 20px; padding: 2px 4px; margin-left: 4px; }
+#home .recent-play::before { margin-right: 8px; }
+#home #recent-pages, #home #favorite-pages, #home #continue-pages { flex: 0 0 46px; height: 46px; padding: 0; margin: 14px 0 0; display: flex; align-items: center; justify-content: space-between; }
+#home #recent-pages button, #home #favorite-pages button, #home #continue-pages button { height: 46px; min-width: 46px; padding: 4px 12px; font-size: 24px; }
+#home #recent-page-number, #home #favorite-number, #home #continue-number { font-size: 22px; margin: 0 8px; }
+#home > footer { align-items: center; padding-top: 14px; font-size: 19px; }
+#home #footer-actions button { font-size: 20px; padding: 8px 12px; margin-bottom: 0; }
+[data-text-size="large"] #home h1 { font-size: 50px; }
+[data-text-size="large"] #home-intro, [data-text-size="large"] #home label, [data-text-size="large"] #home .eyebrow { font-size: 28px; }
+[data-text-size="large"] #home input { font-size: 32px; }
+[data-text-size="large"] #home .home-actions button { font-size: 28px; }
+[data-text-size="large"] #home .home-shelves h2 { font-size: 32px; }
+[data-text-size="large"] #home .recent-row, [data-text-size="large"] #home .favorite-row, [data-text-size="large"] #home .continue-row { height: 68px; }
+[data-text-size="large"] #home .recent-row button, [data-text-size="large"] #home .favorite-row button, [data-text-size="large"] #home .continue-row button { font-size: 30px; }
+[data-text-size="large"] #home .recent-live, [data-text-size="large"] #home .favorite-state:not(:empty) { font-size: 24px; line-height: 30px; }
+[data-text-size="large"] #home > footer, [data-text-size="large"] #home #footer-actions button { font-size: 26px; }
+[data-text-size="large"] #home #recent-page-number, [data-text-size="large"] #home #favorite-number, [data-text-size="large"] #home #continue-number { font-size: 28px; }
+@media (max-height: 850px) {
+ #home .brand { font-size: 34px; }
+ #home .tv-label, #home .header-note { font-size: 20px; }
+ #home h1 { font-size: 36px; }
+ #home-intro { display: none; }
+ #home .eyebrow { font-size: 20px; margin-bottom: 8px; }
+ #home .content { padding: 1vh 0; }
+ #home .selection-copy { flex-basis: 32%; }
+ #home .home-actions { margin-top: 10px; }
+ #home .home-actions button { font-size: 20px; padding: 10px 12px; }
+ #home .recent-row, #home .favorite-row, #home .continue-row { height: 46px; }
+ #home .recent-row button, #home .favorite-row button, #home .continue-row button { font-size: 22px; padding: 4px 6px; }
+ #home .home-shelves h2 { font-size: 24px; margin-bottom: 14px; }
+ #home > footer { font-size: 16px; }
+ #home #footer-actions button { font-size: 18px; }
+ [data-text-size="large"] #home h1 { font-size: 40px; }
+ [data-text-size="large"] #home .eyebrow { font-size: 25px; }
+ [data-text-size="large"] #home .home-actions button { font-size: 26px; }
+ [data-text-size="large"] #home .recent-row, [data-text-size="large"] #home .favorite-row, [data-text-size="large"] #home .continue-row { height: 58px; }
+ [data-text-size="large"] #home .recent-row button, [data-text-size="large"] #home .favorite-row button, [data-text-size="large"] #home .continue-row button { font-size: 28px; }
+ [data-text-size="large"] #home .home-shelves h2 { font-size: 28px; }
+ [data-text-size="large"] #home > footer, [data-text-size="large"] #home #footer-actions button { font-size: 24px; }
+}
+
+/* Fit the replay catalogue as well; thumbnail space follows the available height. */
+#catalog { height: 100vh; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 3vh 4vw; }
+#catalog .catalog-header, #catalog > h2, #catalog > p, #catalog > nav { flex-shrink: 0; }
+#catalog .catalog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; width: 50%; max-width: 50%; }
+#catalog .catalog-actions button { flex: 1; width: auto; font-size: 22px; padding: 10px 14px; margin: 0 0 8px 8px; }
+#catalog #catalog-search { flex: 0 0 100%; }
+#catalog h1 { font-size: 44px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#catalog #videos { flex: 1; min-height: 0; grid-template-rows: repeat(2, minmax(0, 1fr)); }
+#catalog #videos button { display: flex; flex-direction: column; align-items: stretch; height: 100%; }
+#catalog .video-preview { flex: 1; width: 100%; height: auto; min-height: 120px; padding-bottom: 0; }
+#catalog .video-title, #catalog #videos button small { flex-shrink: 0; }
+#catalog #pages { padding: 14px 0 0; }
+#catalog #pages button { padding: 8px 16px; font-size: 22px; }
+#catalog #page-number { margin: 0 20px; font-size: 22px; }
+[data-text-size="large"] #catalog .catalog-actions button { font-size: 28px; }
+[data-text-size="large"] #catalog h1 { font-size: 50px; }
+[data-text-size="large"] #catalog .video-preview { min-height: 128px; }
+[data-text-size="large"] #catalog #pages button, [data-text-size="large"] #catalog #page-number { font-size: 28px; }
+@supports not (display: grid) {
+ #catalog #videos[data-rows="1"] button { height: 100%; }
+ #catalog #videos[data-rows="2"] button { height: calc(50% - 11px); }
+}
+#catalog > h2 { margin: 8px 0 4px; }
+#catalog #search-summary { margin: 4px 0 8px; }
+#catalog #videos-status { margin: 4px 0 8px; }
+#catalog #channel-status { margin: 4px 0; }
+#catalog .favorite-feedback { margin: 4px 0 8px; }

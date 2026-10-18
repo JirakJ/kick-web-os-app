@@ -1,0 +1,505 @@
+{
+  "version": "0.8.2",
+  "checkedAt": "2026-10-18T11:32:30.032141+00:00",
+  "device": {
+    "model": "LG 55NANO863NA",
+    "webOS": "5.6.2",
+    "firmware": "04.64.00",
+    "browser": "Chromium 68",
+    "serviceNode": "8.12.0"
+  },
+  "candidate": {
+    "archiveSHA256": "45bdd3f41cd685e596ce1489aeeddf3eed6f46f2003548c3a59d168d73a73d02",
+    "installedPayloadFiles": 27,
+    "payloadSHA256": {
+      "usr/palm/applications/com.jakubjirak/app.js": "ec796ebf46ea13bd6a77a6f12682ec42187f667f4d9f02afcd31c433eb079a38",
+      "usr/palm/applications/com.jakubjirak/appinfo.json": "00158c17e3a8fa4f57062fa9e921cec0e3c5f110593bfd031c71eebe15d098f8",
+      "usr/palm/applications/com.jakubjirak/i18n.js": "334425dbd0b2270a21f5d876a023b9922d3cf1427fb75611fa7ea23b856d9ac0",
+      "usr/palm/applications/com.jakubjirak/icon.png": "99670cf22d5145894d7a60636b3142374629ee5f22020631bbae5d62dc22e42f",
+      "usr/palm/applications/com.jakubjirak/index.html": "a25452728c8245fc44fbc093dee5167ee3223d3ce5d287c7296e8d4c4ad4f780",
+      "usr/palm/applications/com.jakubjirak/largeIcon.png": "80428c0a08d72ce4eb605a46cc72394cdfa90cc31d8b70428043635aa505eb31",
+      "usr/palm/applications/com.jakubjirak/player.js": "8990d4fce5c9c5e438781b725896eae058b3bc0b6a09304667d886249854a43d",
+      "usr/palm/applications/com.jakubjirak/style.css": "b0747a7e55245b5acab67bf64b85aa092cefba29c22a472bb700dbb7217b67b9",
+      "usr/palm/services/com.jakubjirak.service/index.js": "cc98bf93b4136b1445b049a6a23c168d44a729d46a8902c4e1b8951668f18d25",
+      "usr/palm/services/com.jakubjirak.service/package.json": "12eaa2e9ce945e0712a89e40554d4f0265caa85428dbede6d7685c8a4c3ed4fc",
+      "usr/palm/services/com.jakubjirak.service/services.json": "89f3328e042705cf50d3ba7704dd5944cde49b9704f07b40707666b5a56bf349",
+      "usr/palm/applications/com.jakubjirak/fonts/NotoEmoji-Regular.woff2": "72149441d478acb7e5e4fe27adbabde4330f86affed8b3301e4bc4c4d92d53c1",
+      "usr/palm/applications/com.jakubjirak/fonts/OFL.txt": "79d348cb5161481f603dcda564fb129a9b2c11d7012dcad820af045fed75c020",
+      "usr/palm/applications/com.jakubjirak/fonts/README.md": "65fa242f1f2b1f94296e0d5c2ab6fd4a360dac7246ea3508895ef7371aadae10",
+      "usr/palm/applications/com.jakubjirak/resources/cs/appinfo.json": "19336ff05c3bd9c3173e2725dd66d5344c26fbd501e9241d9bc8b32648c1729b",
+      "usr/palm/applications/com.jakubjirak/resources/de/appinfo.json": "bcda3b2d3f71d76135ee6f99f1007a3ce0fec2c172715a43cd36412d0e6443e1",
+      "usr/palm/applications/com.jakubjirak/resources/en/appinfo.json": "3aee95122e2e1bccb98ced227adb7a4f5581769a77d0a6fa683afeda52c17feb",
+      "usr/palm/applications/com.jakubjirak/resources/es/appinfo.json": "bd30e89c01061a1a7ce50a3d84ba6709926a986d083bf175fe9286d01b93c022",
+      "usr/palm/applications/com.jakubjirak/resources/fr/appinfo.json": "f58f7719215dc574bab09ecc2195fea93eadc6c185c9ecddd1cd3fe43a00f0d0",
+      "usr/palm/applications/com.jakubjirak/resources/hu/appinfo.json": "fa5ef5406689b712ba6741d50382263da251a4c3371b64d240b0620dadae2e6f",
+      "usr/palm/applications/com.jakubjirak/resources/it/appinfo.json": "dad7ccd57c64d840edc90e75dba519ce8eed66282f6971373819f45b397938e0",
+      "usr/palm/applications/com.jakubjirak/resources/pl/appinfo.json": "fe4770b1bf0d3b767c9a2aa87143bec3fe13933b14693c8fe9f3f5a9d9cab3e1",
+      "usr/palm/applications/com.jakubjirak/resources/pt/appinfo.json": "a78b9aebeade3caec8cf778187d8da49c71c3a445cfff4d33fc4dc3619917a60",
+      "usr/palm/applications/com.jakubjirak/resources/ru/appinfo.json": "3855a3561fec005ee4e86d20a520a09c64f02bc32bad538f1c4b50d6ac0d078c",
+      "usr/palm/applications/com.jakubjirak/resources/sk/appinfo.json": "d8b29fb7cfb93a031da9538175e05f8bbc732714ec1d3d5b6a9f2bebeeaa73d9",
+      "usr/palm/applications/com.jakubjirak/resources/tr/appinfo.json": "52ede0c6e53029112fa193626aa326fd2f8ef108d3de25728b26198052e3e991",
+      "usr/palm/applications/com.jakubjirak/resources/uk/appinfo.json": "5baf4a900eee1ae69ab461bba9a12f472fa70c5c011c3dd727b479fc865fd1be"
+    },
+    "sourceSHA256": {
+      "app/app.js": "0c01a68ccc4fbc56e43184c9c4df56728f994443eb4977dba61c9baaa7a86fce",
+      "app/index.html": "a25452728c8245fc44fbc093dee5167ee3223d3ce5d287c7296e8d4c4ad4f780",
+      "app/style.css": "b0747a7e55245b5acab67bf64b85aa092cefba29c22a472bb700dbb7217b67b9",
+      "app/appinfo.json": "00158c17e3a8fa4f57062fa9e921cec0e3c5f110593bfd031c71eebe15d098f8",
+      "app/player.js": "80debaf44b85249c09f5538be5003ba6542716169e968578829ec5404923bc36",
+      "app/i18n.js": "3fd397f8a56d95801ac5b7fcce5323faf1c956429cad3eabdd754db0ff5c399c",
+      "service/index.js": "1195caeaf3be7dd18476876fb4ec70444669237f3bf44bb720194252d662cf32",
+      "service/package.json": "12eaa2e9ce945e0712a89e40554d4f0265caa85428dbede6d7685c8a4c3ed4fc",
+      "package.json": "c4bc2525c1cce95aadb28d88400f994f7325f6ea45c2b09e9cf4bc7442787051",
+      "package-lock.json": "f7f6099bacb1311e69cc39f73d578116c0b58580a3b83c38556e20a8a79585bd",
+      "test.cjs": "05cfeec95197d4e4a3e474e5a42d808a390d63a63cc01666396716b971e3c64b",
+      "test-browser.cjs": "f59ca9481d1b3c1be431d5373569cfaa04afd2992dd35c24a044515b6c23cf50",
+      ".github/workflows/release.yml": "0d4195ad85ae5818d3fc1c0edc899e94fe9d384c28efbaef07e47e55ee57c985"
+    },
+    "publication": "CI rebuilds this source; all app/service payload hashes must match this native-accepted candidate before promotion. The public archive and screenshots receive SHA256SUMS after all main CI jobs succeed."
+  },
+  "nativeLayout": {
+    "status": "passed",
+    "at": "2026-10-18T11:30:51.087Z",
+    "checks": [
+      {
+        "stage": "owner-data-after-upgrade",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          6,
+          0,
+          6
+        ],
+        "viewport": [
+          1920,
+          1080
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "1920/{\"large\":false,\"high\":false}",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          6,
+          6,
+          6
+        ],
+        "viewport": [
+          1920,
+          1080
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "catalog-1920/false/false",
+        "bad": [],
+        "cards": 6,
+        "page": "1 / 5",
+        "overflow": 0
+      },
+      {
+        "stage": "after-pagination-1920/false/false",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          6,
+          6,
+          6
+        ],
+        "viewport": [
+          1920,
+          1080
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "1920/{\"large\":false,\"high\":true}",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          6,
+          6,
+          6
+        ],
+        "viewport": [
+          1920,
+          1080
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "catalog-1920/false/true",
+        "bad": [],
+        "cards": 6,
+        "page": "1 / 5",
+        "overflow": 0
+      },
+      {
+        "stage": "after-pagination-1920/false/true",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          6,
+          6,
+          6
+        ],
+        "viewport": [
+          1920,
+          1080
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "1920/{\"large\":true,\"high\":false}",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          5,
+          5,
+          5
+        ],
+        "viewport": [
+          1920,
+          1080
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "catalog-1920/true/false",
+        "bad": [],
+        "cards": 4,
+        "page": "1 / 8",
+        "overflow": 0
+      },
+      {
+        "stage": "after-pagination-1920/true/false",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          5,
+          5,
+          5
+        ],
+        "viewport": [
+          1920,
+          1080
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "1920/{\"large\":true,\"high\":true}",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          5,
+          5,
+          5
+        ],
+        "viewport": [
+          1920,
+          1080
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "catalog-1920/true/true",
+        "bad": [],
+        "cards": 4,
+        "page": "1 / 8",
+        "overflow": 0
+      },
+      {
+        "stage": "after-pagination-1920/true/true",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          5,
+          5,
+          5
+        ],
+        "viewport": [
+          1920,
+          1080
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "1280/{\"large\":false,\"high\":false}",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          3,
+          3,
+          3
+        ],
+        "viewport": [
+          1280,
+          720
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "catalog-1280/false/false",
+        "bad": [],
+        "cards": 3,
+        "page": "1 / 10",
+        "overflow": 0
+      },
+      {
+        "stage": "after-pagination-1280/false/false",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          3,
+          3,
+          3
+        ],
+        "viewport": [
+          1280,
+          720
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "1280/{\"large\":false,\"high\":true}",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          3,
+          3,
+          3
+        ],
+        "viewport": [
+          1280,
+          720
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "catalog-1280/false/true",
+        "bad": [],
+        "cards": 3,
+        "page": "1 / 10",
+        "overflow": 0
+      },
+      {
+        "stage": "after-pagination-1280/false/true",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          3,
+          3,
+          3
+        ],
+        "viewport": [
+          1280,
+          720
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "1280/{\"large\":true,\"high\":false}",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          2,
+          2,
+          2
+        ],
+        "viewport": [
+          1280,
+          720
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "catalog-1280/true/false",
+        "bad": [],
+        "cards": 2,
+        "page": "1 / 15",
+        "overflow": 0
+      },
+      {
+        "stage": "after-pagination-1280/true/false",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          2,
+          2,
+          2
+        ],
+        "viewport": [
+          1280,
+          720
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "1280/{\"large\":true,\"high\":true}",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          2,
+          2,
+          2
+        ],
+        "viewport": [
+          1280,
+          720
+        ],
+        "version": "v0.8.2"
+      },
+      {
+        "stage": "catalog-1280/true/true",
+        "bad": [],
+        "cards": 2,
+        "page": "1 / 15",
+        "overflow": 0
+      },
+      {
+        "stage": "after-pagination-1280/true/true",
+        "overflow": 0,
+        "pageOverflow": 0,
+        "bad": [],
+        "rows": [
+          2,
+          2,
+          2
+        ],
+        "viewport": [
+          1280,
+          720
+        ],
+        "version": "v0.8.2"
+      }
+    ],
+    "allSeededItemsReachable": true,
+    "seededDisplayData": true,
+    "originalStoragePreserved": true,
+    "physicalHandset": false,
+    "viewport720IsOverride": true
+  },
+  "nativePlayback": {
+    "publicReplay": true,
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "sampledPipelines": 1,
+    "audio": {
+      "isMuteOn": false
+    },
+    "audibleOutputVerified": false
+  },
+  "resizeStress": {
+    "changes": 20,
+    "before": {
+      "stage": "warm-home",
+      "dom": {
+        "documents": 1,
+        "nodes": 690,
+        "jsEventListeners": 102
+      },
+      "heap": {
+        "usedSize": 2245372,
+        "totalSize": 5365760
+      }
+    },
+    "after": {
+      "stage": "after-20-resizes",
+      "dom": {
+        "documents": 1,
+        "nodes": 690,
+        "jsEventListeners": 102
+      },
+      "heap": {
+        "usedSize": 2245700,
+        "totalSize": 5365760
+      }
+    },
+    "noRemainingPipeline": true
+  },
+  "ownerStorageRestoration": {
+    "status": "passed",
+    "at": "2026-10-18T11:31:28.065Z",
+    "version": "v0.8.2",
+    "restoredKeys": [
+      "kick-channel",
+      "kick-recent-channels",
+      "kick-watched-videos"
+    ],
+    "recents": 6,
+    "historyCount": 12,
+    "exactOriginalStorageRestored": true
+  },
+  "screenshots": {
+    "language": "en",
+    "capturedFromNativeTV": true,
+    "locale": "App-session Web Inspector language override using shipped English strings; TV system locale unchanged, original app language restored on restart.",
+    "savedLists": "Demonstration public channel choices; actual public replay and metadata.",
+    "filesSHA256": {
+      "home.png": "e16c9cff6e9a1d1179f1143c9f5e923797ac5850a43c102e4e4daf2622e3e951",
+      "home-large.png": "e85008a030397c12a85d5afddb8c4b1ded55a8711b635d1a807e3fecba605ef6",
+      "replays.png": "9b73b27f28047ea3e3356908f1e8273795318bfced84c83e508d399488c45642",
+      "player.png": "6a3abc9f8bfe7dec639df586d6a32a102ca6bfec90a5de234f677b8897f19596"
+    }
+  },
+  "browser": {
+    "screens": 1144,
+    "locales": 13,
+    "viewports": [
+      "1280x720",
+      "1920x1080"
+    ],
+    "sizeContrastModes": 4,
+    "mediaLuna": "fixtures",
+    "extraCases": [
+      "unknown status",
+      "maximum-length channel",
+      "Continue unavailable",
+      "search cancel across resize",
+      "hidden-pager focus",
+      "legacy flex-start preview width"
+    ]
+  },
+  "review": "Independent read-only review passed after fixes for resizing, intrinsic card sizing, content changes and unavailable statuses.",
+  "limits": [
+    "720p native checks use a Web Inspector viewport override; physical output stays 1920x1080.",
+    "Navigation uses Web Inspector events; physical handset remains unverified.",
+    "Voice Guide off and unchanged; spoken accessibility and audible output unverified.",
+    "Multi-hour soak, physical Wi-Fi/router restart, naturally expired sources, actual pre-Grid engine and actual4K/1440p remain outside this patch acceptance."
+  ],
+  "localEvidenceSHA256": {
+    "artifacts/tv-0.8.2-20261018/installed-release.json": "863bc908bb2154564285323810147048a6536433cf3c7f549cdedde4275d9338",
+    "artifacts/tv-0.8.2-20261018/fit-acceptance.json": "91013e65b0cfa3075c5575869ee50fb7c00d1786f63bc0f5c07b90145caad01b",
+    "artifacts/tv-0.8.2-20261018/screenshots.json": "b75ae3fe3a63b04b020830a26bd7f1044c9c1d30f036c394442b3e654c17b81a",
+    "artifacts/tv-0.8.2-20261018/owner-restored.json": "56c9ca4dde76d8d7cc27a1984c25bcbd2c4953fd0e42a07b08b2aefb03077bf4",
+    "artifacts/tv-0.8.2-20261018/release-native.log": "6d608088ffdefae624c04d3f8994b7400607b01fb35b6dbf4242dd6452aa3f8a",
+    "artifacts/tv-0.8.2-20261018/release-english-captures.log": "33c86b0862b06ecf002502535d55379da05b0d6d0f3de35d492909a80493bcd7",
+    "artifacts/tv-0.8.2-20261018/preview-width-red.json": "59a6e76c4e8b18bbb20ab2f4c496a6c7edb9c02d71a6f9afe06a6d1553f956ae",
+    "artifacts/fit-home-0.8.2-20261018/red.log": "ccf80ed571feafda502e992fbbb56bcdba799f46b54cd731bd876738f2135594",
+    "artifacts/fit-home-0.8.2-20261018/navigation-red.log": "48c7b09266939cede82e5118cefc12d57869906ac54b077a194bcb52b9970c15",
+    "artifacts/fit-home-0.8.2-20261018/unknown-red.log": "b54b4e6b98e1e45faa65b21534438677f3c8003a446d535da5c8a10e52211d02",
+    "artifacts/fit-home-0.8.2-20261018/unknown-green.log": "a5ff0f95b92ee2a014520337d7fb43d93dfcdb08d823ed818b514174fc7d6155",
+    "artifacts/fit-home-0.8.2-20261018/catalog-red.log": "49238e200ace0539a63f94263f1d112eb43cb94ef33224a8a7f18013d1a824c5",
+    "artifacts/fit-home-0.8.2-20261018/catalog-card-red.log": "a5f3702c0dce8adbfab5a89f58802d38261867ecc8bb3361bb93ae9a6e8b723c",
+    "artifacts/fit-home-0.8.2-20261018/release-unit.log": "db0198d7b3cc3e52300c6fa23da1eeedf46675a47733e97002ff72b190121f9d",
+    "artifacts/fit-home-0.8.2-20261018/release-browser-final.log": "a29ac9aa02320c969052ef7edd1753349aa1204df4bd275307e9f0ab5a90bb93"
+  }
+}
