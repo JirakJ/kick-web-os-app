@@ -182,20 +182,39 @@ service.register('prepare', function (message) {
   }
   getText(parts[1], path).then(function (body) {
     if (body.trim().indexOf('#EXTM3U') !== 0) throw failure('bad_playlist', 'Invalid video playlist.');
-    var variants = [];
-    body.split(/\r?\n/).forEach(function (line) {
-      if (line.indexOf('#EXT-X-STREAM-INF:') !== 0) return;
+    var variants = [], lines = body.split(/\r?\n/), audio = Object.create(null);
+    lines.forEach(function (line) {
+      if (line.indexOf('#EXT-X-MEDIA:') !== 0 || !/(?:[:,])TYPE=AUDIO(?:,|$)/.test(line)) return;
+      var group = line.match(/(?:[:,])GROUP-ID="([^"]{1,128})"/);
+      if (group) audio[group[1]] = audio[group[1]] === false || /(?:[:,])URI=/.test(line) ? false : true;
+    });
+    function variantURL(value) {
+      if (!value || value.length >= 4096 || /[\s\\#]/.test(value)) return '';
+      if (/^https:\/\//.test(value)) return mediaURL(value);
+      if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(value)) return '';
+      var relative = value.charAt(0) === '/' ? value : parts[2].split('?')[0].replace(/[^/]*$/, '') + value;
+      var query = relative.indexOf('?'), suffix = query < 0 ? '' : relative.slice(query);
+      var segments = (query < 0 ? relative : relative.slice(0, query)).split('/'), normalized = [];
+      segments.forEach(function (part) { if (part === '..') normalized.pop(); else if (part && part !== '.') normalized.push(part); });
+      return mediaURL('https://' + parts[1] + '/' + normalized.join('/') + suffix);
+    }
+    for (var i = 0; i < lines.length && variants.length < 64; i++) {
+      var line = lines[i];
+      if (line.indexOf('#EXT-X-STREAM-INF:') !== 0) continue;
       var size = line.match(/(?:[:,])RESOLUTION=(\d+)x(\d+)/);
       var bps = line.match(/(?:[:,])BANDWIDTH=(\d+)/);
-      var fps = line.match(/(?:[:,])FRAME-RATE=([\d.]+)/);
-      if (size && bps && +size[1] > 0 && +size[2] > 0 && +bps[1] > 0 && +bps[1] <= 200000000 && +size[1] <= 3840 && +size[2] <= 2160) {
+      var fps = line.match(/(?:[:,])FRAME-RATE=([\d.]+)/), group = line.match(/(?:[:,])AUDIO="([^"]{1,128})"/);
+      var next = i + 1;
+      while (next < lines.length && !lines[next].trim()) next++;
+      var url = next < lines.length ? variantURL(lines[next].trim()) : '';
+      if (size && bps && +size[1] > 0 && +size[2] > 0 && +bps[1] > 0 && +bps[1] <= 200000000 && +size[1] <= 3840 && +size[2] <= 2160 && url) {
         var rate = fps ? +fps[1] : 0;
-        variants.push({ width: +size[1], height: +size[2], bitrate: +bps[1], fps: isFinite(rate) && rate > 0 && rate <= 240 ? rate : 0 });
+        if (!variants.some(function (v) { return v.url === url; })) variants.push({ width: +size[1], height: +size[2], bitrate: +bps[1],
+          fps: isFinite(rate) && rate > 0 && rate <= 240 ? rate : 0, url: url, manual: !/(?:[:,])AUDIO=/.test(line) || !!group && (line.match(/(?:[:,])AUDIO=/g) || []).length === 1 && audio[group[1]] === true });
       }
-    });
+    }
     variants.sort(function (a, b) { return b.height - a.height || b.width - a.width || b.fps - a.fps || b.bitrate - a.bitrate; });
-    // Keep the master playlist: webOS handles grouped audio and network adaptation.
-    respond(message, { returnValue: true, best: variants[0] || null });
+    respond(message, { returnValue: true, best: variants[0] || null, variants: variants });
   }).catch(function (e) { respond(message, errorReply(e)); });
 });
 
