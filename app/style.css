@@ -179,3 +179,17 @@ footer > * { min-width: 0; max-width: 100%; }
 .modal-card { max-height: 90vh; overflow: auto; width: 100%; max-width: 1100px; padding: 30px; background: #16191c; }
 .modal-card button { margin: 10px 18px 10px 0; }
 @media (max-width: 800px) { .continue-row { width: 100%; margin-right: 0; } }
+
+#favorites-section { margin-bottom: 30px; }
+#favorite-list { display: flex; flex-wrap: wrap; }
+.favorite-row { display: flex; width: calc(50% - 16px); margin: 0 16px 16px 0; min-width: 0; }
+.favorite-row button:first-child { flex: 1; min-width: 0; text-align: left; font-size: 23px; overflow: hidden; }
+.favorite-row button:first-child > span { display: block; overflow: hidden; text-overflow: ellipsis; }
+.favorite-state { font-size: 18px; font-weight: 400; color: #bbc0c6; }
+.favorite-row button:not(:first-child) { flex: 0 0 48px; padding: 8px; margin-left: 8px; }
+#favorite-pages { display: flex; align-items: center; justify-content: center; }
+#favorite-number { margin: 0 20px; }
+@media (max-width: 800px) { .favorite-row { width: 100%; margin-right: 0; } }
+
+.favorite-feedback { color: #ffb4b4; font-size: 22px; }
+.favorite-feedback:empty { display: none; }

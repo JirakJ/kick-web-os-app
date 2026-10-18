@@ -25,6 +25,8 @@
         <div class="home-actions">
           <button id="play" type="submit" class="primary"><span id="play-label" data-i18n="play_live">Play live</span> <span aria-hidden="true">▶</span></button>
           <button id="recordings" type="button" data-i18n="recordings">Replays</button>
+          <button id="favorite-channel" type="button"></button>
+          <p id="favorite-feedback" role="status" class="favorite-feedback"></p>
         </div>
       </form>
     </section>
@@ -38,6 +40,10 @@
       </nav>
     </section>
     </div>
+    <section id="favorites-section" aria-labelledby="favorites-heading" hidden>
+      <h2 id="favorites-heading" data-i18n="favorites_heading">Favorite channels</h2><div id="favorite-list"></div>
+      <nav id="favorite-pages" aria-label="Favorite channel pages" data-i18n-attr="aria-label:favorite_pages_label" hidden><button id="favorite-previous" type="button" data-i18n="page_previous">← Previous</button><span id="favorite-number"></span><button id="favorite-next" type="button" data-i18n="page_next">Next →</button></nav>
+    </section>
     <section id="continue-section" aria-labelledby="continue-heading" hidden>
       <h2 id="continue-heading" data-i18n="continue_heading">Continue watching</h2>
       <div id="continue-list"></div>
@@ -53,6 +59,7 @@
         <p id="channel-status" role="status"></p>
       </div>
       <div class="catalog-actions">
+        <button id="catalog-favorite" type="button"></button><p id="catalog-favorite-feedback" role="status" class="favorite-feedback"></p>
         <button id="catalog-back" type="button" data-i18n="change_channel">Change channel</button>
         <button id="live" type="button" class="primary" hidden><span class="live-dot" aria-hidden="true"></span><span id="live-label" data-i18n="play_live">Play live</span></button>
       </div>
@@ -89,6 +96,11 @@
     </div>
     <button id="back" type="button" data-i18n="change_channel">Change channel</button>
   </section>
+  <section id="favorite-move" class="modal" role="dialog" aria-modal="true" aria-labelledby="favorite-move-heading" hidden><div class="modal-card">
+    <h2 id="favorite-move-heading" data-i18n="favorite_move_title">Reorder favorite channels</h2><p id="favorite-move-info"></p>
+    <button id="favorite-move-up" type="button" data-i18n="move_up">Move up</button><button id="favorite-move-down" type="button" data-i18n="move_down">Move down</button>
+    <button id="favorite-move-save" type="button" data-i18n="save">Save</button><button id="favorite-move-cancel" type="button" data-i18n="cancel">Cancel</button>
+  </div></section>
   <section id="resume-choice" class="modal" role="dialog" aria-modal="true" aria-labelledby="resume-heading" hidden>
     <div class="modal-card"><h2 id="resume-heading" data-i18n="resume_title">Continue this replay?</h2><p id="resume-info"></p>
       <button id="resume-continue" type="button" class="primary"></button>

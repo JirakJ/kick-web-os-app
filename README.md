@@ -13,6 +13,7 @@ The interface follows the TV's system language (Czech, Slovak, English, German, 
 ## Features
 
 - Live streams and public replays, including a replay picker when a channel is offline.
+- Up to 50 independently ordered favorite channels, six per page, with remote-only move/save/cancel controls and visible LIVE/offline/unknown status.
 - Up to 50 recent channels stored locally, six per page, with a **LIVE** badge for live channels and an individual remove button.
 - Interface language taken from the TV's locale, including the launcher title, with English as the fallback.
 - Replay thumbnails, titles, dates and durations, with six recordings per page.
@@ -80,6 +81,8 @@ Button labels below are the English strings; the app shows them in the TV's lang
 | Select a channel | Enter its name or `https://kick.com/channel` |
 | Start live playback | **Play live**, or select a recent channel |
 | Browse replays | **Replays**; arrows move through cards and page buttons |
+| Favorite/unfavorite a channel | **Add favorite / Remove favorite** on home or in its catalog |
+| Reorder favorites | **Move**, then **Move up / Move down**, **Save**; **Back** cancels the preview |
 | Remove a saved channel | Select **×** beside its name; **← / →** moves between the channel and remove button |
 | More recent channels | Use the arrow buttons below the list |
 | Confirm | **OK** |

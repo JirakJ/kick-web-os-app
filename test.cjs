@@ -48,6 +48,7 @@ function element(id = '') {
     addEventListener(name, fn) { this.handlers[name] = fn; },
     removeEventListener(name, fn) { if (this.handlers[name] === fn) delete this.handlers[name]; },
     focus() {
+      if(this.disabled)return;
       const old = document.activeElement;
       document.activeElement = this;
       if (old !== this && old?.handlers.blur) old.handlers.blur();
@@ -253,6 +254,73 @@ for(const operation of ['pause','removeAttribute']){
  else assert.equal(failed.loads.length,1,'Never reload a source whose purge failed');
 }
 console.log('Player and TV UI: passed (serialized seeking, bounded recovery, stale events, stalled/failed media, lifecycle, API failures, history, grid navigation).');
+
+// Favorites stay independent of recents and support persisted, cancellable ordering.
+const favoriteHistory='[{"key":"alpha:saved","position":111,"duration":600,"finished":false}]';
+const favoriteData=new Map([['kick-favorites',JSON.stringify(['Alpha','beta','alpha','bad name'])],['kick-watched-videos',favoriteHistory]]);
+const favoriteStorage={getItem:k=>favoriteData.get(k)||null,setItem:(k,v)=>favoriteData.set(k,v)};
+boot(favoriteStorage);
+const favoriteNames=()=>elements['favorite-list']?.children.map(row=>row.firstChild.firstChild.textContent);
+assert.deepEqual(favoriteNames(),['alpha','beta'],'Favorites canonicalize, deduplicate and render independently of recents');
+assert.equal(elements.recent.hidden,true);
+elements['favorite-list'].firstChild.firstChild.focus();key(38);assert.equal(document.activeElement,elements.recordings,'Up from favorites-only home reaches an enabled action');
+assert.equal(elements['favorite-list'].firstChild.firstChild.children[1].textContent,'Stav není dostupný');
+const favoriteStatus=bridges.find(b=>b.uri.endsWith('/statuses'));
+favoriteStatus.onservicecallback(JSON.stringify({returnValue:true,statuses:[{channel:'alpha',live:true},{channel:'beta',live:false}]}));
+assert.equal(elements['favorite-list'].firstChild.firstChild.children[1].textContent,'ŽIVĚ');
+assert.equal(elements['favorite-list'].children[1].firstChild.children[1].textContent,'Offline');
+elements.channel.value='Gamma';elements.channel.handlers.input();click('favorite-channel');
+assert.deepEqual(JSON.parse(favoriteData.get('kick-favorites')),['alpha','beta','gamma']);
+submit('alpha');respond({live:null});click('catalog-back');
+assert.deepEqual(favoriteNames(),['alpha','beta','gamma'],'Opening a channel never reorders favorites');
+elements['recent-channels'].firstChild.children[1].handlers.click();
+assert.deepEqual(favoriteNames(),['alpha','beta','gamma'],'Removing recents cannot remove favorites');
+assert.equal(favoriteData.get('kick-watched-videos'),favoriteHistory,'Favorite changes preserve replay history');
+assert.equal(elements['favorite-channel'].disabled,true,'Removing the last recent updates the empty channel action');
+// Reordering previews in memory; Back cancels and Save persists.
+elements['favorite-list'].children[1].children[1].handlers.click();assert.equal(elements['favorite-move'].hidden,false);
+key(9,{shiftKey:true});assert.equal(document.activeElement,elements['favorite-move-cancel']);key(9);assert.equal(document.activeElement,elements['favorite-move-up']);
+click('favorite-move-up');assert.deepEqual(favoriteNames(),['beta','alpha','gamma']);
+assert.deepEqual(JSON.parse(favoriteData.get('kick-favorites')),['alpha','beta','gamma']);key(461);
+assert.deepEqual(favoriteNames(),['alpha','beta','gamma']);assert.equal(elements['favorite-move'].hidden,true);
+elements['favorite-list'].children[1].children[1].handlers.click();click('favorite-move-up');click('favorite-move-save');
+assert.deepEqual(JSON.parse(favoriteData.get('kick-favorites')),['beta','alpha','gamma']);
+boot(favoriteStorage);assert.deepEqual(favoriteNames(),['beta','alpha','gamma'],'Chosen order survives an app restart');
+// Removing a favorite invalidates its status cache, bounding retained channel entries.
+const cacheFavorites=new Map([['kick-favorites','["cache-one","cache-two"]']]);
+boot({getItem:k=>cacheFavorites.get(k)||null,setItem:(k,v)=>cacheFavorites.set(k,v)});
+bridges.at(-1).onservicecallback(JSON.stringify({returnValue:true,statuses:[{channel:'cache-one',live:true},{channel:'cache-two',live:false}]}));
+const cachedRequests=bridges.length;elements['favorite-list'].firstChild.children[2].handlers.click();
+elements.channel.value='cache-one';elements.channel.handlers.input();click('favorite-channel');
+assert.equal(bridges.length,cachedRequests+1,'A removed favorite cannot retain stale status when re-added');
+assert.deepEqual(bridges.at(-1).payload.channels,['cache-one']);
+const fullFavorites=new Map([['kick-favorites',JSON.stringify(Array.from({length:50},(_,i)=>'fav-'+i))]]);
+boot({getItem:k=>fullFavorites.get(k)||null,setItem:(k,v)=>fullFavorites.set(k,v)});
+assert.equal(favoriteNames().length,6);
+elements['favorite-list'].children[5].children[1].handlers.click();click('favorite-move-down');assert.equal(elements['favorite-number'].textContent,'2 / 9');key(461);
+assert.equal(elements['favorite-number'].textContent,'1 / 9');assert.equal(favoriteNames()[5],'fav-5');
+assert.equal(JSON.parse(fullFavorites.get('kick-favorites'))[5],'fav-5');
+elements.channel.value='extra';elements.channel.handlers.input();click('favorite-channel');
+assert.equal(JSON.parse(fullFavorites.get('kick-favorites')).length,50);assert.match(elements['favorite-feedback'].textContent,/50/);
+for(let i=0;i<8;i++)click('favorite-next');assert.equal(favoriteNames().length,2);
+elements['favorite-list'].firstChild.children[2].handlers.click();elements['favorite-list'].firstChild.children[2].handlers.click();
+assert.equal(favoriteNames().length,6);assert.equal(elements['favorite-number'].textContent,'8 / 8');
+boot({getItem(){throw Error('Denied');},setItem(){throw Error('Quota');}});
+elements.channel.value='session';elements.channel.handlers.input();click('favorite-channel');assert.deepEqual(favoriteNames(),['session']);
+// Visible favorites and recents share sequential status batches; hidden pages are not queried.
+boot({getItem:k=>k==='kick-favorites'?JSON.stringify(Array.from({length:12},(_,i)=>'pinned-'+i)):k==='kick-recent-channels'?JSON.stringify(Array.from({length:12},(_,i)=>'recent-'+i)):null,setItem(){}});
+const unionStatuses=()=>bridges.filter(b=>b.uri.endsWith('/statuses'));
+assert.equal(unionStatuses().length,1);assert.deepEqual(unionStatuses()[0].payload.channels,['pinned-0','pinned-1','pinned-2','pinned-3','pinned-4','pinned-5']);
+unionStatuses()[0].onservicecallback(JSON.stringify({returnValue:true,statuses:unionStatuses()[0].payload.channels.map(channel=>({channel,live:false}))}));
+assert.equal(unionStatuses().length,2);assert.deepEqual(unionStatuses()[1].payload.channels,['recent-0','recent-1','recent-2','recent-3','recent-4','recent-5']);
+unionStatuses()[1].onservicecallback(JSON.stringify({returnValue:true,statuses:unionStatuses()[1].payload.channels.map(channel=>({channel,live:false}))}));
+document.hidden=true;document.handlers.visibilitychange();const beforeHiddenStatuses=bridges.length;advance(120000);
+assert.equal(bridges.length,beforeHiddenStatuses,'No hidden-page or background polling after suspension');
+// Favorite feedback must never replace the channel's loading/error status.
+boot({getItem(){return null;},setItem(){}},'missing');submit('example');
+const catalogFailure=elements['channel-status'].textContent;click('catalog-favorite');
+assert.equal(elements['channel-status'].textContent,catalogFailure,'Favoriting keeps the channel service error visible');
+console.log('Favorites: passed (canonicalization, independent history, ordering, cancel/save, bounds, status and storage failures).');
 
 // A new replay selection offers saved progress; dismissing it never mounts media.
 const resumeData=new Map([['kick-watched-videos',JSON.stringify([{key:'returner:resume-a',position:123,duration:600,finished:false}])]]);
