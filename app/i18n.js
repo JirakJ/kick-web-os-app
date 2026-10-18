@@ -3,6 +3,13 @@ var KickI18n = (function () {
   'use strict';
   var strings = {
     en: {
+      accessibility_title: "Accessibility",
+      text_normal: "Text size: Normal",
+      text_large: "Text size: Large",
+      contrast_off: "High contrast: Off",
+      contrast_on: "High contrast: On",
+      accessibility_note: "These settings affect this app. TV Voice Guide support depends on the device and must be checked on the TV.",
+      done: "Done",
       about_title: "About and updates",
       check_updates: "Check for updates",
       back_home: "Back to home",
@@ -114,6 +121,13 @@ var KickI18n = (function () {
       svc_internal: 'The data from Kick could not be processed.'
     },
     cs: {
+      accessibility_title: "Přístupnost",
+      text_normal: "Velikost textu: Normální",
+      text_large: "Velikost textu: Velká",
+      contrast_off: "Vysoký kontrast: Vypnuto",
+      contrast_on: "Vysoký kontrast: Zapnuto",
+      accessibility_note: "Nastavení platí pro tuto aplikaci. Podpora hlasového průvodce závisí na TV a musí se ověřit přímo na zařízení.",
+      done: "Hotovo",
       about_title: "O aplikaci a aktualizace",
       check_updates: "Zkontrolovat aktualizace",
       back_home: "Zpět na úvod",
@@ -225,6 +239,13 @@ var KickI18n = (function () {
       svc_internal: 'Data z Kicku se nepodařilo zpracovat.'
     },
     sk: {
+      accessibility_title: "Prístupnosť",
+      text_normal: "Veľkosť textu: Normálna",
+      text_large: "Veľkosť textu: Veľká",
+      contrast_off: "Vysoký kontrast: Vypnutý",
+      contrast_on: "Vysoký kontrast: Zapnutý",
+      accessibility_note: "Nastavenia platia pre túto aplikáciu. Podpora hlasového sprievodcu závisí od TV a musí sa overiť na zariadení.",
+      done: "Hotovo",
       about_title: "O aplikácii a aktualizácie",
       check_updates: "Skontrolovať aktualizácie",
       back_home: "Späť na úvod",
@@ -336,6 +357,13 @@ var KickI18n = (function () {
       svc_internal: 'Dáta z Kicku sa nepodarilo spracovať.'
     },
     de: {
+      accessibility_title: "Barrierefreiheit",
+      text_normal: "Textgröße: Normal",
+      text_large: "Textgröße: Groß",
+      contrast_off: "Hoher Kontrast: Aus",
+      contrast_on: "Hoher Kontrast: Ein",
+      accessibility_note: "Diese Einstellungen gelten für diese App. Voice Guide hängt vom TV ab und muss am Gerät geprüft werden.",
+      done: "Fertig",
       about_title: "Info und Updates",
       check_updates: "Nach Updates suchen",
       back_home: "Zur Startseite",
@@ -447,6 +475,13 @@ var KickI18n = (function () {
       svc_internal: 'Die Daten von Kick konnten nicht verarbeitet werden.'
     },
     pl: {
+      accessibility_title: "Dostępność",
+      text_normal: "Rozmiar tekstu: Normalny",
+      text_large: "Rozmiar tekstu: Duży",
+      contrast_off: "Wysoki kontrast: Wyłączony",
+      contrast_on: "Wysoki kontrast: Włączony",
+      accessibility_note: "Ustawienia dotyczą tej aplikacji. Obsługa Voice Guide zależy od TV i wymaga sprawdzenia na urządzeniu.",
+      done: "Gotowe",
       about_title: "Informacje i aktualizacje",
       check_updates: "Sprawdź aktualizacje",
       back_home: "Powrót do strony głównej",
@@ -558,6 +593,13 @@ var KickI18n = (function () {
       svc_internal: 'Nie udało się przetworzyć danych z Kick.'
     },
     es: {
+      accessibility_title: "Accesibilidad",
+      text_normal: "Texto: Normal",
+      text_large: "Texto: Grande",
+      contrast_off: "Alto contraste: No",
+      contrast_on: "Alto contraste: Sí",
+      accessibility_note: "Estos ajustes afectan a la app. Voice Guide depende del televisor y debe comprobarse en el dispositivo.",
+      done: "Listo",
       about_title: "Información y actualizaciones",
       check_updates: "Buscar actualizaciones",
       back_home: "Volver al inicio",
@@ -669,6 +711,13 @@ var KickI18n = (function () {
       svc_internal: 'No se pudieron procesar los datos de Kick.'
     },
     pt: {
+      accessibility_title: "Acessibilidade",
+      text_normal: "Texto: Normal",
+      text_large: "Texto: Grande",
+      contrast_off: "Alto contraste: Não",
+      contrast_on: "Alto contraste: Sim",
+      accessibility_note: "Estes ajustes afetam o app. O suporte ao Voice Guide depende da TV e deve ser verificado no aparelho.",
+      done: "Concluído",
       about_title: "Sobre e atualizações",
       check_updates: "Verificar atualizações",
       back_home: "Voltar ao início",
@@ -780,6 +829,13 @@ var KickI18n = (function () {
       svc_internal: 'Não foi possível processar os dados do Kick.'
     },
     fr: {
+      accessibility_title: "Accessibilité",
+      text_normal: "Taille du texte : Normale",
+      text_large: "Taille du texte : Grande",
+      contrast_off: "Contraste élevé : Non",
+      contrast_on: "Contraste élevé : Oui",
+      accessibility_note: "Ces réglages concernent l’application. Voice Guide dépend du téléviseur et doit être vérifié sur l’appareil.",
+      done: "Terminé",
       about_title: "À propos et mises à jour",
       check_updates: "Vérifier les mises à jour",
       back_home: "Retour à l’accueil",
@@ -891,6 +947,13 @@ var KickI18n = (function () {
       svc_internal: 'Les données de Kick n’ont pas pu être traitées.'
     },
     it: {
+      accessibility_title: "Accessibilità",
+      text_normal: "Testo: Normale",
+      text_large: "Testo: Grande",
+      contrast_off: "Contrasto elevato: No",
+      contrast_on: "Contrasto elevato: Sì",
+      accessibility_note: "Queste impostazioni riguardano l’app. Voice Guide dipende dal televisore e va verificato sul dispositivo.",
+      done: "Fine",
       about_title: "Informazioni e aggiornamenti",
       check_updates: "Controlla aggiornamenti",
       back_home: "Torna alla home",
@@ -1002,6 +1065,13 @@ var KickI18n = (function () {
       svc_internal: 'Impossibile elaborare i dati di Kick.'
     },
     hu: {
+      accessibility_title: "Akadálymentesség",
+      text_normal: "Szövegméret: Normál",
+      text_large: "Szövegméret: Nagy",
+      contrast_off: "Erős kontraszt: Ki",
+      contrast_on: "Erős kontraszt: Be",
+      accessibility_note: "Ezek a beállítások erre az appra vonatkoznak. A Voice Guide támogatását a TV-n kell ellenőrizni.",
+      done: "Kész",
       about_title: "Névjegy és frissítések",
       check_updates: "Frissítések keresése",
       back_home: "Vissza a kezdőlapra",
@@ -1113,6 +1183,13 @@ var KickI18n = (function () {
       svc_internal: 'A Kick adatait nem sikerült feldolgozni.'
     },
     uk: {
+      accessibility_title: "Доступність",
+      text_normal: "Розмір тексту: Звичайний",
+      text_large: "Розмір тексту: Великий",
+      contrast_off: "Високий контраст: Вимкнено",
+      contrast_on: "Високий контраст: Увімкнено",
+      accessibility_note: "Ці налаштування діють у застосунку. Підтримку Voice Guide потрібно перевірити на телевізорі.",
+      done: "Готово",
       about_title: "Про застосунок та оновлення",
       check_updates: "Перевірити оновлення",
       back_home: "На головну",
@@ -1224,6 +1301,13 @@ var KickI18n = (function () {
       svc_internal: 'Не вдалося обробити дані з Kick.'
     },
     ru: {
+      accessibility_title: "Доступность",
+      text_normal: "Размер текста: Обычный",
+      text_large: "Размер текста: Крупный",
+      contrast_off: "Высокий контраст: Выключен",
+      contrast_on: "Высокий контраст: Включён",
+      accessibility_note: "Настройки действуют в приложении. Поддержку Voice Guide нужно проверить на телевизоре.",
+      done: "Готово",
       about_title: "О приложении и обновления",
       check_updates: "Проверить обновления",
       back_home: "На главную",
@@ -1335,6 +1419,13 @@ var KickI18n = (function () {
       svc_internal: 'Не удалось обработать данные с Kick.'
     },
     tr: {
+      accessibility_title: "Erişilebilirlik",
+      text_normal: "Metin boyutu: Normal",
+      text_large: "Metin boyutu: Büyük",
+      contrast_off: "Yüksek kontrast: Kapalı",
+      contrast_on: "Yüksek kontrast: Açık",
+      accessibility_note: "Bu ayarlar uygulamayı etkiler. Voice Guide desteği cihaza bağlıdır ve TV'de denenmelidir.",
+      done: "Bitti",
       about_title: "Hakkında ve güncellemeler",
       check_updates: "Güncellemeleri denetle",
       back_home: "Ana sayfaya dön",

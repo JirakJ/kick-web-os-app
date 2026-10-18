@@ -29,6 +29,7 @@ if (typeof document !== 'undefined') (function () {
   var playback = { paused: true, phase: 'idle', position: 0, duration: 0, ready: false, seeking: false };
   var preparing = false, qualityPreference = 'auto', qualityButtons = [];
   var hidingControls = false;
+  var accessibility = { size: 'normal', contrast: false }, accessibilityOpen = false;
   var page = 0, catalogQuery = '', catalogFilter = 'all', catalogOrder = 'newest', toolsSnapshot = null;
   var savedPage = 0, savedSearchButtons = [];
   var recents = [];
@@ -186,6 +187,19 @@ if (typeof document !== 'undefined') (function () {
       try { localStorage.setItem('kick-release-cache', JSON.stringify(releaseCache)); } catch (e) { /* Optional offline cache. */ }
       showRelease(!!data.cached);
     });
+  }
+  function applyAccessibility(save) {
+    document.documentElement.setAttribute('data-text-size', accessibility.size);
+    document.documentElement.setAttribute('data-contrast', accessibility.contrast ? 'high' : 'normal');
+    el('text-size').textContent = t(accessibility.size === 'large' ? 'text_large' : 'text_normal');
+    el('text-size').setAttribute('aria-pressed', accessibility.size === 'large' ? 'true' : 'false');
+    el('high-contrast').textContent = t(accessibility.contrast ? 'contrast_on' : 'contrast_off');
+    el('high-contrast').setAttribute('aria-pressed', accessibility.contrast ? 'true' : 'false');
+    if (save) try { localStorage.setItem('kick-accessibility', JSON.stringify(accessibility)); } catch (e) { /* Session preferences still work. */ }
+  }
+  function closeAccessibility(focus) {
+    var wasOpen = accessibilityOpen; accessibilityOpen = false; el('accessibility-dialog').hidden = true;
+    if (focus && wasOpen) el('accessibility-button').focus();
   }
   function videoKey(item) {
     return item && !item.isLive && typeof item.id === 'string' && /^[a-z0-9-]{1,64}$/.test(item.id) ?
@@ -386,7 +400,7 @@ if (typeof document !== 'undefined') (function () {
   }
 
   function setScreen(name) {
-    closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelContinue();
+    closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelContinue();
     screen = name;
     ['home', 'catalog', 'watch', 'about'].forEach(function (id) { el(id).hidden = id !== name; });
     window.scrollTo(0, 0);
@@ -901,6 +915,12 @@ if (typeof document !== 'undefined') (function () {
     el('seek').setAttribute('aria-valuetext', t('time_of', { elapsed: elapsed, total: total }));
   }
   el('resume-choice').hidden = true;
+  closeAccessibility(false);
+  el('accessibility-button').addEventListener('click', function () { accessibilityOpen = true; el('accessibility-dialog').hidden = false; el('text-size').focus(); });
+  el('text-size').addEventListener('click', function () { accessibility.size = accessibility.size === 'large' ? 'normal' : 'large'; applyAccessibility(true); });
+  el('high-contrast').addEventListener('click', function () { accessibility.contrast = !accessibility.contrast; applyAccessibility(true); });
+  el('accessibility-reset').addEventListener('click', function () { accessibility = { size: 'normal', contrast: false }; applyAccessibility(true); });
+  el('accessibility-close').addEventListener('click', function () { closeAccessibility(true); });
   el('about-button').addEventListener('click', openAbout);
   el('about-back').addEventListener('click', closeAbout);
   el('check-updates').addEventListener('click', checkUpdates);
@@ -979,7 +999,7 @@ if (typeof document !== 'undefined') (function () {
   el('watch').addEventListener('mousemove', showControls);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
-      cancelRecentStatus(); cancelContinue(); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false);
+      cancelRecentStatus(); cancelContinue(); closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false);
       var interrupted = !!request;
       cancelRequest();
       if (screen === 'about') { el('check-updates').disabled = false; el('update-status').textContent = t('update_unavailable'); }
@@ -995,11 +1015,20 @@ if (typeof document !== 'undefined') (function () {
     else if (screen === 'home') { renderContinue(); refreshRecentStatus(); }
     else if (screen === 'catalog') (videoButtons[0] || el('catalog-back')).focus();
   });
-  window.addEventListener('pagehide', function () { cancelContinue(); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
+  window.addEventListener('pagehide', function () { cancelContinue(); closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); });
   window.addEventListener('offline', function () { if (screen === 'watch') player.offline(); });
   window.addEventListener('online', function () { if (screen === 'watch' && !document.hidden) player.online(); if (screen === 'home' && !document.hidden) { renderContinue(); refreshRecentStatus(); } });
   document.addEventListener('keydown', function (event) {
     var key = event.keyCode;
+    if (accessibilityOpen) {
+      var settings = ['text-size', 'high-contrast', 'accessibility-reset', 'accessibility-close'].map(el);
+      if (key === 461 || key === 27) { event.preventDefault(); closeAccessibility(true); }
+      else if (key === 9 || key >= 37 && key <= 40) {
+        event.preventDefault(); var ai = settings.indexOf(event.target), ad = key === 9 ? event.shiftKey ? -1 : 1 : key === 37 || key === 38 ? -1 : 1;
+        var at = settings[(Math.max(0, ai) + ad + settings.length) % settings.length]; at.focus(); at.scrollIntoView({ block: 'nearest' });
+      }
+      return;
+    }
     if (jumpOpen) {
       if (key === 461 || key === 27) { event.preventDefault(); closeJump(true); }
       else if (key === 412 || key === 417) { event.preventDefault(); jumpStep(key === 412 ? -600 : 600); }
@@ -1085,7 +1114,7 @@ if (typeof document !== 'undefined') (function () {
       if (key === 412 || key === 417) { event.preventDefault(); openJump(key === 412 ? -600 : 600); return; }
       if (key >= 37 && key <= 40) showControls();
     }
-    var controls = screen === 'home' ? [input, el('play'), el('recordings'), el('favorite-channel'), el('find-saved'), el('about-button')].concat(recentControls,
+    var controls = screen === 'home' ? [input, el('play'), el('recordings'), el('favorite-channel'), el('find-saved'), el('about-button'), el('accessibility-button')].concat(recentControls,
       el('recent-pages').hidden ? [] : [el('recent-previous'), el('recent-next')], favoriteControls, el('favorite-pages').hidden ? [] : [el('favorite-previous'), el('favorite-next')], continueControls,
       el('continue-pages').hidden ? [] : [el('continue-previous'), el('continue-next')]) :
       screen === 'catalog' ? [el('catalog-search')].concat(el('live').hidden ? [] : [el('live')], videoButtons,
@@ -1120,7 +1149,7 @@ if (typeof document !== 'undefined') (function () {
     var cardIndex = videoButtons.indexOf(event.target);
     if (screen === 'catalog' && cardIndex >= 0 && (key === 38 || key === 40)) {
       event.preventDefault();
-      var columns = window.innerWidth <= 560 ? 1 : window.innerWidth <= 800 ? 2 : 3;
+      var columns = window.innerWidth <= 560 ? 1 : accessibility.size === 'large' || window.innerWidth <= 800 ? 2 : 3;
       var card = cardIndex + (key === 38 ? -columns : columns);
       var target = card < 0 ? (el('live').hidden ? el('catalog-back') : el('live')) :
         card >= videoButtons.length ? (!el('pages').hidden && !el('next-page').disabled ? el('next-page') : el('catalog-back')) : videoButtons[card];
@@ -1169,6 +1198,8 @@ if (typeof document !== 'undefined') (function () {
   try { var savedQuality = localStorage.getItem('kick-quality-preference'); if (/^(?:auto|[1-9][0-9]{0,3})$/.test(savedQuality) && (savedQuality === 'auto' || +savedQuality <= 2160)) qualityPreference = savedQuality; } catch (e) { /* Auto default. */ }
   try { var rawRelease = localStorage.getItem('kick-release-cache') || ''; if (rawRelease.length <= 8192) { var savedRelease = JSON.parse(rawRelease); if (validRelease(savedRelease)) releaseCache = savedRelease; } } catch (e) { /* Ignore invalid update cache. */ }
   try { var savedRetry = localStorage.getItem('kick-update-retry-at'); if (/^[0-9]{1,13}$/.test(savedRetry) && +savedRetry > Date.now() && +savedRetry <= 4102444800000) updateRetryAt = +savedRetry; } catch (e) { /* Session-only backoff. */ }
+  try { var rawAccessibility = localStorage.getItem('kick-accessibility') || ''; if (rawAccessibility.length <= 256) { var savedAccessibility = JSON.parse(rawAccessibility); if (savedAccessibility && (savedAccessibility.size === 'normal' || savedAccessibility.size === 'large') && typeof savedAccessibility.contrast === 'boolean') accessibility = { size: savedAccessibility.size, contrast: savedAccessibility.contrast }; } } catch (e) { /* Use readable defaults. */ }
+  applyAccessibility(false);
   input.value = recents[0] || '';
   renderRecents(); renderFavorites();
   setScreen('home');

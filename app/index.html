@@ -28,6 +28,7 @@
           <button id="find-saved" type="button" data-i18n="find_saved">Find saved channels</button>
           <button id="favorite-channel" type="button"></button>
           <button id="about-button" type="button" data-i18n="about_title">About and updates</button>
+          <button id="accessibility-button" type="button" data-i18n="accessibility_title">Accessibility</button>
           <p id="favorite-feedback" role="status" class="favorite-feedback"></p>
         </div>
       </form>
@@ -86,7 +87,7 @@
   </section>
   <section id="watch" aria-label="Player" data-i18n-attr="aria-label:player_label" tabindex="-1" hidden>
     <div id="video-host"></div>
-    <p id="playback-status" role="status"></p>
+    <p id="playback-status" role="status" aria-live="polite" aria-atomic="true"></p>
     <div id="playback-controls">
       <p id="video-title"></p>
       <p id="quality" data-i18n="quality_default">Highest available quality</p>
@@ -110,6 +111,10 @@
     </div>
     <button id="back" type="button" data-i18n="change_channel">Change channel</button>
   </section>
+  <section id="accessibility-dialog" class="modal" role="dialog" aria-modal="true" aria-labelledby="accessibility-heading" hidden><div class="modal-card">
+    <h2 id="accessibility-heading" data-i18n="accessibility_title">Accessibility</h2><p id="accessibility-note" data-i18n="accessibility_note">These settings affect this app. TV Voice Guide support depends on the device and must be checked on the TV.</p>
+    <button id="text-size" type="button"></button><button id="high-contrast" type="button"></button><button id="accessibility-reset" type="button" data-i18n="reset">Reset</button><button id="accessibility-close" type="button" data-i18n="done">Done</button>
+  </div></section>
   <section id="jump-dialog" class="modal" role="dialog" aria-modal="true" aria-labelledby="jump-heading" hidden><div class="modal-card">
     <h2 id="jump-heading" data-i18n="jump_title">Go to time</h2><div class="jump-fields">
     <label id="jump-hours-label" for="jump-hours" data-i18n="hours">Hours</label><input id="jump-hours" type="tel" maxlength="3" autocomplete="off">
