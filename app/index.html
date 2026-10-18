@@ -13,6 +13,7 @@
 <body>
   <main id="home">
     <header><span class="brand">KICK</span><span class="tv-label">TV</span><span id="header-note" class="header-note" data-i18n="header_note">Live streams and replays</span></header>
+    <div id="home-content">
     <div class="content">
     <section class="selection" aria-labelledby="heading">
       <p id="home-eyebrow" class="eyebrow" data-i18n="home_eyebrow">Your channels. Your screen.</p>
@@ -20,15 +21,12 @@
       <p id="home-intro" data-i18n="home_intro">Enter a channel or return to one of your recent ones.</p>
       <form id="channel-form" novalidate>
         <label id="channel-label" for="channel" data-i18n="channel_label">Kick channel</label>
-        <input id="channel" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Channel name or kick.com/… link" data-i18n-attr="placeholder:channel_placeholder" aria-describedby="error">
+        <div class="channel-row"><input id="channel" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Channel name or kick.com/… link" data-i18n-attr="placeholder:channel_placeholder" aria-describedby="error"><button id="favorite-channel" class="favorite-heart" type="button"></button></div>
         <p id="error" role="alert"></p>
         <div class="home-actions">
           <button id="play" type="submit" class="primary"><span id="play-label" data-i18n="play_live">Play live</span> <span aria-hidden="true">▶</span></button>
           <button id="recordings" type="button" data-i18n="recordings">Replays</button>
           <button id="find-saved" type="button" data-i18n="find_saved">Find saved channels</button>
-          <button id="favorite-channel" type="button"></button>
-          <button id="about-button" type="button" data-i18n="about_title">About and updates</button>
-          <button id="accessibility-button" type="button" data-i18n="accessibility_title">Accessibility</button>
           <p id="favorite-feedback" role="status" class="favorite-feedback"></p>
         </div>
       </form>
@@ -52,7 +50,8 @@
       <div id="continue-list"></div>
       <nav id="continue-pages" hidden><button id="continue-previous" type="button" data-i18n="page_previous">← Previous</button><span id="continue-number"></span><button id="continue-next" type="button" data-i18n="page_next">Next →</button></nav>
     </section>
-    <footer><span id="footer-hints" data-i18n="footer_hints">↑ ↓ Select &nbsp; OK Confirm &nbsp; Back Return</span><small><span id="footer-note" data-i18n="footer_note">Unofficial Kick player · No chat</span> · <span id="app-version">v0.8.0</span></small></footer>
+    </div>
+    <footer><span id="footer-hints" data-i18n="footer_hints">↑ ↓ Select &nbsp; OK Confirm &nbsp; Back Return</span><div id="footer-actions"><button id="about-button" type="button" data-i18n="about_title">About and updates</button><button id="accessibility-button" type="button" data-i18n="accessibility_title">Accessibility</button></div><small><span id="footer-note" data-i18n="footer_note">Unofficial Kick player · No chat</span> · <span id="app-version">v0.8.1</span></small></footer>
   </main>
   <section id="about" aria-labelledby="about-heading" hidden><h1 id="about-heading" data-i18n="about_title">About and updates</h1>
     <p id="installed-version"></p><p id="latest-version"></p><p id="update-status" role="status"></p><p id="update-cache-note"></p><pre id="release-notes"></pre><p id="release-url"></p>
@@ -64,12 +63,12 @@
     <div class="catalog-header">
       <div class="catalog-description">
         <p id="catalog-eyebrow" class="eyebrow" data-i18n="channel_label">Kick channel</p>
-        <h1 id="catalog-heading"></h1>
+        <div class="catalog-title-row"><h1 id="catalog-heading"></h1><button id="catalog-favorite" class="favorite-heart" type="button"></button></div>
         <p id="channel-status" role="status"></p>
+        <p id="catalog-favorite-feedback" role="status" class="favorite-feedback"></p>
       </div>
       <div class="catalog-actions">
         <button id="catalog-search" type="button" data-i18n="search_replays">Search and filter replays</button>
-        <button id="catalog-favorite" type="button"></button><p id="catalog-favorite-feedback" role="status" class="favorite-feedback"></p>
         <button id="catalog-back" type="button" data-i18n="change_channel">Change channel</button>
         <button id="live" type="button" class="primary" hidden><span class="live-dot" aria-hidden="true"></span><span id="live-label" data-i18n="play_live">Play live</span></button>
       </div>

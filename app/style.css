@@ -29,7 +29,13 @@ button:disabled { cursor: default; opacity: .45; }
 input { width: 100%; padding: 24px; background: #16191c; color: #fff; border-color: #45494f; }
 input::placeholder { color: #979da5; }
 :focus { outline: 4px solid #53fc18; outline-offset: 5px; }
-#home { min-height: 100vh; padding: 4vh 5vw; display: flex; flex-direction: column; }
+#home { height: 100vh; min-height: 0; overflow: hidden; padding: 4vh 5vw; display: flex; flex-direction: column; }
+#home-content { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; margin: 0 -12px; padding: 12px; }
+#home > header, #home > footer { flex-shrink: 0; }
+.channel-row, .catalog-title-row { display: flex; align-items: center; }
+.channel-row input, .catalog-title-row h1 { flex: 1; min-width: 0; }
+.favorite-heart { flex: 0 0 68px; margin-left: 14px; padding: 16px 0; font-size: 36px; }
+.favorite-heart[aria-pressed="true"], .recent-favorite[aria-pressed="true"] { color: #ff8a9b; }
 header { display: flex; align-items: center; padding-bottom: 3vh; border-bottom: 1px solid #292d32; }
 .brand { font-family: Arial, sans-serif; font-weight: 900; font-size: 55px; color: #53fc18; letter-spacing: -3px; line-height: 1.2; }
 .tv-label { margin-left: 18px; border-left: 2px solid #45494f; padding-left: 18px; color: #bbc0c6; font-size: 25px; }
@@ -52,6 +58,7 @@ label { display: block; margin-bottom: 16px; font-size: 25px; }
 #recent-channels .recent-play { display: flex; align-items: center; flex: 1; margin: 0; padding: 14px 16px; font-size: 26px; text-align: left; white-space: nowrap; overflow: hidden; background: #16191c; }
 #recent-channels .recent-play::before { content: '▶'; flex-shrink: 0; color: #53fc18; font-size: 18px; margin-right: 12px; }
 #recent-channels .recent-remove { flex: 0 0 44px; margin-left: 10px; padding: 0; font-size: 28px; color: #a9afb7; background: #16191c; }
+#recent-channels .recent-favorite { flex: 0 0 48px; margin-left: 8px; padding: 0; font-size: 30px; background: #16191c; }
 .recent-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .recent-live { flex-shrink: 0; margin-left: 12px; padding: 4px 7px; border-radius: 3px; background: #173a0e; color: #53fc18; font-size: 16px; line-height: 20px; }
 #recent-pages { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
@@ -61,6 +68,9 @@ label { display: block; margin-bottom: 16px; font-size: 25px; }
 footer { display: flex; justify-content: space-between; flex-wrap: wrap; color: #979da5; font-size: 21px; padding-top: 24px; border-top: 1px solid #292d32; }
 footer small { font-size: inherit; }
 footer > * { min-width: 0; max-width: 100%; }
+#footer-actions { display: flex; flex-wrap: wrap; }
+#footer-actions button { padding: 10px 16px; margin: 0 12px 8px 0; font-size: 22px; }
+#app-version { white-space: nowrap; }
 #catalog { min-height: 100vh; padding: 4vh 5vw; }
 .catalog-header { display: flex; align-items: flex-start; }
 .catalog-description { display: flow-root; flex: 1; min-width: 0; }
@@ -216,6 +226,7 @@ footer > * { min-width: 0; max-width: 100%; }
 [data-text-size="large"] body, [data-text-size="large"] input, [data-text-size="large"] button { font-size: 36px; }
 [data-text-size="large"] label, [data-text-size="large"] #catalog h2 { font-size: 30px; }
 [data-text-size="large"] .header-note, [data-text-size="large"] footer { font-size: 28px; }
+[data-text-size="large"] #footer-actions button { font-size: 28px; }
 [data-text-size="large"] .eyebrow, [data-text-size="large"] #catalog .eyebrow { font-size: 28px; }
 [data-text-size="large"] #recent h2 { font-size: 34px; }
 [data-text-size="large"] #recent-channels .recent-play, [data-text-size="large"] #recent-pages button,

@@ -274,10 +274,21 @@ elements.channel.value='Gamma';elements.channel.handlers.input();click('favorite
 assert.deepEqual(JSON.parse(favoriteData.get('kick-favorites')),['alpha','beta','gamma']);
 submit('alpha');respond({live:null});click('catalog-back');
 assert.deepEqual(favoriteNames(),['alpha','beta','gamma'],'Opening a channel never reorders favorites');
-elements['recent-channels'].firstChild.children[1].handlers.click();
+elements['recent-channels'].firstChild.children[2].handlers.click();
 assert.deepEqual(favoriteNames(),['alpha','beta','gamma'],'Removing recents cannot remove favorites');
 assert.equal(favoriteData.get('kick-watched-videos'),favoriteHistory,'Favorite changes preserve replay history');
 assert.equal(elements['favorite-channel'].disabled,true,'Removing the last recent updates the empty channel action');
+// A recent-row heart changes favorites without removing or opening that channel.
+const heartData=new Map([['kick-recent-channels','["alpha","beta"]'],['kick-channel','alpha'],['kick-favorites','["alpha"]']]);
+boot({getItem:k=>heartData.get(k)||null,setItem:(k,v)=>heartData.set(k,v)});
+elements['recent-channels'].children[1].children[1].handlers.click();
+assert.deepEqual(JSON.parse(heartData.get('kick-favorites')),['alpha','beta'],'Row heart favorites its own channel without deleting the recent row');
+assert.deepEqual(names(),['alpha','beta']);assert.equal(elements.channel.value,'alpha');
+assert.equal(elements['recent-channels'].children[1].children[1].attrs['aria-pressed'],'true');
+elements['recent-channels'].children[0].children[1].focus();key(40);assert.equal(document.activeElement,elements['recent-channels'].children[1].children[1],'Down preserves the heart column');
+elements['recent-channels'].children[0].children[1].handlers.click();assert.deepEqual(JSON.parse(heartData.get('kick-favorites')),['beta']);assert.deepEqual(names(),['alpha','beta']);
+assert.equal(elements['favorite-channel'].attrs['aria-pressed'],'false');
+boot(favoriteStorage);
 // Reordering previews in memory; Back cancels and Save persists.
 elements['favorite-list'].children[1].children[1].handlers.click();assert.equal(elements['favorite-move'].hidden,false);
 key(9,{shiftKey:true});assert.equal(document.activeElement,elements['favorite-move-cancel']);key(9);assert.equal(document.activeElement,elements['favorite-move-up']);
@@ -489,10 +500,10 @@ click('check-updates');assert.ok(bridges.at(-1).uri.endsWith('/updates'));update
 const cachedUpdateCalls=bridges.length;click('check-updates');assert.equal(bridges.length,cachedUpdateCalls,'Fresh saved metadata suppresses checks across service idle exits');
 assert.equal(elements['release-notes'].textContent,'<script>plain notes</script>');assert.match(elements['install-guide'].textContent,/Dev Manager/);assert.match(elements['checksum-guide'].textContent,/not.*signature/i);
 advance(21600001);click('check-updates');updateReply('0.7.5');assert.match(elements['update-status'].textContent,/newer.*stable/i);
-advance(21600001);click('check-updates');updateReply('0.8.0');assert.match(elements['update-status'].textContent,/current/i);
+advance(21600001);click('check-updates');updateReply(appVersion);assert.match(elements['update-status'].textContent,/current/i);
 advance(21600001);click('check-updates');updateReply('0.9.0',{url:'https://evil.test/updates'});assert.match(elements['update-status'].textContent,/unavailable/i);assert.ok(!elements['release-url'].textContent.includes('evil'));
 advance(60001);click('check-updates');const obsoleteUpdate=bridges.at(-1);key(461);assert.equal(obsoleteUpdate.cancelled,true);obsoleteUpdate.onservicecallback(JSON.stringify({returnValue:true,release:{version:'99.0.0'}}));assert.equal(elements.home.hidden,false);click('about-button');assert.equal(elements['check-updates'].disabled,false,'Cancelled check can be retried after reopening About');
-boot(updateStore,'ok','en-US',false,clock);click('about-button');assert.match(elements['latest-version'].textContent,/0.8.0/);const offlineUpdates=bridges.length;click('check-updates');assert.equal(bridges.length,offlineUpdates);assert.match(elements['update-status'].textContent,/unavailable/i);
+boot(updateStore,'ok','en-US',false,clock);click('about-button');assert(elements['latest-version'].textContent.includes(appVersion));const offlineUpdates=bridges.length;click('check-updates');assert.equal(bridges.length,offlineUpdates);assert.match(elements['update-status'].textContent,/unavailable/i);
 navigator.onLine=true;click('check-updates');bridges.at(-1).onservicecallback(JSON.stringify({returnValue:false,retryAt:clock+21600000}));
 boot(updateStore,'ok','en-US',true,clock+6001);click('about-button');click('check-updates');assert.equal(bridges.length,0,'Rate-limit backoff survives app/service recreation');
 console.log('Updates UI: passed (viewer initiation, semantic status, safe notes/links, offline cache and cancellation).');
@@ -744,7 +755,7 @@ statusReply(bridges.at(-1),true);assert.equal(recentRow(0).firstChild.children[1
 assert.match(recentRow(0).firstChild.attrs['aria-label'],/právě vysílá/);
 recentRow(0).firstChild.focus();key(39);assert.equal(document.activeElement,recentRow(0).children[1]);
 key(40);assert.equal(document.activeElement,recentRow(1).children[1]);
-recentRow(0).children[1].handlers.click();assert.equal(names()[0],'saved-7');
+recentRow(0).children[2].handlers.click();assert.equal(names()[0],'saved-7');
 assert.equal(JSON.parse(recentStore.get('kick-recent-channels')).includes('saved-6'),false);
 assert.equal(document.activeElement,recentRow(0).firstChild);
 advance(60000);assert.equal(recentRow(0).firstChild.children[1].hidden,true,'Expired status is hidden while refreshing');
@@ -756,10 +767,10 @@ click('catalog-back');submit('newer-channel');respond({live:null});
 assert.equal(JSON.parse(recentStore.get('kick-recent-channels')).length,50);
 boot(recentStorage);assert.equal(names()[0],'newer-channel');
 for(let i=0;i<8;i++)click('recent-next');
-assert.equal(names().length,2);recentRow(1).children[1].handlers.click();recentRow(0).children[1].handlers.click();
+assert.equal(names().length,2);recentRow(1).children[2].handlers.click();recentRow(0).children[2].handlers.click();
 assert.equal(elements['recent-page-number'].textContent,'8 / 8','Deleting the final row clamps the page');
 recentStore.set('kick-recent-channels','["only"]');boot(recentStorage);
-recentRow(0).children[1].handlers.click();assert.equal(elements.recent.hidden,true);assert.equal(document.activeElement,elements.channel);
+recentRow(0).children[2].handlers.click();assert.equal(elements.recent.hidden,true);assert.equal(document.activeElement,elements.channel);
 boot(recentStorage);assert.deepEqual(names(),[],'Deleted channels are not restored by legacy migration');
 recentStore.set('kick-recent-channels','["only"]');boot(recentStorage);
 bridges.at(-1).onservicecallback('x'.repeat(4097));assert.equal(recentRow(0).firstChild.children[1].hidden,true);
