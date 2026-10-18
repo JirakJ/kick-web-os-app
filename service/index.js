@@ -210,7 +210,7 @@ service.register('prepare', function (message) {
       if (size && bps && +size[1] > 0 && +size[2] > 0 && +bps[1] > 0 && +bps[1] <= 200000000 && +size[1] <= 3840 && +size[2] <= 2160 && url) {
         var rate = fps ? +fps[1] : 0;
         if (!variants.some(function (v) { return v.url === url; })) variants.push({ width: +size[1], height: +size[2], bitrate: +bps[1],
-          fps: isFinite(rate) && rate > 0 && rate <= 240 ? rate : 0, url: url, manual: !group || audio[group[1]] === true });
+          fps: isFinite(rate) && rate > 0 && rate <= 240 ? rate : 0, url: url, manual: !/(?:[:,])AUDIO=/.test(line) || !!group && (line.match(/(?:[:,])AUDIO=/g) || []).length === 1 && audio[group[1]] === true });
       }
     }
     variants.sort(function (a, b) { return b.height - a.height || b.width - a.width || b.fps - a.fps || b.bitrate - a.bitrate; });

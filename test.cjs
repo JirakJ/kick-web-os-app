@@ -790,6 +790,10 @@ async function testService() {
   replies=[];handlers.prepare({payload:{url:vod.url},respond(d){replies.push(d);}});await new Promise(r=>setImmediate(r));
   assert.equal(replies[0].variants.length,2);assert.equal(replies[0].variants[0].manual,false);assert.equal(replies[0].variants[1].manual,true);
   assert.equal(replies[0].variants[1].url,'https://stream.kick.com/480.m3u8?token=a%2Fb');
+  playlist='#EXTM3U\n#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="'+'x'.repeat(129)+'",URI="audio.m3u8"\n#EXT-X-STREAM-INF:BANDWIDTH=3000000,RESOLUTION=1280x720,AUDIO="'+'x'.repeat(129)+'"\n720.m3u8';
+  replies=[];handlers.prepare({payload:{url:vod.url},respond(d){replies.push(d);}});await new Promise(r=>setImmediate(r));
+  assert.equal(replies[0].variants[0].manual,false,'An unparsed audio group fails closed');
+
   playlist='#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=7000000,RESOLUTION=1920x1080\nx.m3u8';
 
   playlist='#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=18000000,RESOLUTION=3840x2160\n4k.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=10000000,RESOLUTION=2560x1440\n1440.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=7000000,RESOLUTION=1920x1080\n1080.m3u8\n';
