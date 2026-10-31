@@ -59,22 +59,63 @@ check('Braces accepts normal patterns and bounds parsing and AST traversal', () 
   }
 });
 
-check('Both minimatch generations bound hostile brace expansions', () => {
-  const minimatchPaths = [
-    cliRequire.resolve('minimatch', { paths: [path.dirname(cliRequire.resolve('fstream'))] }),
-    cliRequire.resolve('minimatch', { paths: [path.dirname(cliRequire.resolve('rimraf'))] })
-  ];
-  assert.equal(new Set(minimatchPaths).size, 2, 'Exercise both installed minimatch generations');
-  for (const target of minimatchPaths) {
-    const child = spawnSync(process.execPath, ['-e', `
-      const assert = require('node:assert/strict');
-      const mm = require(${JSON.stringify(target)});
-      assert.deepEqual(mm.braceExpand('file-{a,b}'), ['file-a', 'file-b']);
-      mm.braceExpand('{' + '{a},'.repeat(7000) + 'b}');
-      mm.braceExpand('{'.repeat(3200) + 'a,b' + '}'.repeat(3200));
-      mm.braceExpand('{a}' + '}'.repeat(32000) + ',z}');
-    `], { timeout: 5000, encoding: 'utf8' });
-    assert.equal(child.status, 0, child.stderr || String(child.error));
+check('Only patched glob and minimatch remain and bound hostile brace expansions', () => {
+  const rimrafDir = path.dirname(cliRequire.resolve('rimraf/package.json'));
+  const globDir = path.dirname(require.resolve('glob/package.json', { paths: [rimrafDir] }));
+  assert.equal(require(path.join(globDir, 'package.json')).version, '14.0.3');
+  const target = require.resolve('minimatch', { paths: [globDir] });
+  assert.ok(Number(require(path.join(path.dirname(target), '..', '..', 'package.json')).version.split('.')[0]) >= 11);
+  const { packages } = require('./package-lock.json');
+  const major = (name) => Object.keys(packages)
+    .filter((key) => key.endsWith('node_modules/' + name))
+    .map((key) => Number(packages[key].version.split('.')[0]));
+  assert.deepEqual(major('glob').filter((m) => m < 14), [], 'glob before 14 (GHSA-3g3m-2fjr-6pw4)');
+  assert.deepEqual(major('minimatch').filter((m) => m < 11), [], 'minimatch before 11 (GHSA-g3hv-75wg-m249)');
+  const child = spawnSync(process.execPath, ['-e', `
+    const assert = require('node:assert/strict');
+    const { braceExpand } = require(${JSON.stringify(target)});
+    assert.deepEqual(braceExpand('file-{a,b}'), ['file-a', 'file-b']);
+    braceExpand('{' + '{a},'.repeat(7000) + 'b}');
+    braceExpand('{'.repeat(3200) + 'a,b' + '}'.repeat(3200));
+    braceExpand('{a}' + '}'.repeat(32000) + ',z}');
+  `], { timeout: 5000, encoding: 'utf8' });
+  assert.equal(child.status, 0, child.stderr || String(child.error));
+});
+
+check('Glob-free rimraf 2 shim removes trees for fstream and temp', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  for (const dependent of ['fstream', 'temp']) {
+    const from = path.dirname(cliRequire.resolve(dependent + '/package.json'));
+    const rimraf = require(require.resolve('rimraf', { paths: [from] }));
+    assert.equal(typeof rimraf, 'function');
+    assert.equal(typeof rimraf.sync, 'function');
+    const base = fs.mkdtempSync(path.join(os.tmpdir(), 'rimraf-shim-'));
+    fs.mkdirSync(path.join(base, 'a', 'b'), { recursive: true });
+    fs.writeFileSync(path.join(base, 'a', 'b', 'f'), 'x');
+    fs.writeFileSync(path.join(base, '*'), 'literal');
+    rimraf.sync(path.join(base, '*'), { maxBusyTries: 6 });
+    assert.ok(fs.existsSync(path.join(base, 'a')), 'a literal "*" must not glob');
+    rimraf.sync(base);
+    assert.equal(fs.existsSync(base), false);
+    rimraf.sync(base);
   }
+});
+
+check('Glob-free rimraf 2 shim keeps the callback API', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const from = path.dirname(cliRequire.resolve('fstream/package.json'));
+  const target = require.resolve('rimraf', { paths: [from] });
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'rimraf-shim-cb-'));
+  fs.mkdirSync(path.join(base, 'x', 'y'), { recursive: true });
+  const child = spawnSync(process.execPath, ['-e', `
+    const rimraf = require(${JSON.stringify(target)});
+    rimraf(${JSON.stringify(base)}, (er) => {
+      if (er || require('node:fs').existsSync(${JSON.stringify(base)})) process.exit(2);
+      rimraf(${JSON.stringify(base)}, { maxBusyTries: 6 }, (er2) => process.exit(er2 ? 3 : 0));
+    });
+  `], { timeout: 5000, encoding: 'utf8' });
+  assert.equal(child.status, 0, child.stderr || String(child.error));
 });
 process.exitCode = failures ? 1 : 0;

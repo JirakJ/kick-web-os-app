@@ -1,0 +1,8 @@
+{
+  "name": "rimraf",
+  "version": "2.7.1-compat.1",
+  "description": "Glob-free rimraf 2 API on fs.rm for the webOS CLI's fstream and temp",
+  "main": "index.js",
+  "license": "ISC",
+  "engines": { "node": ">=14.14.0" }
+}
