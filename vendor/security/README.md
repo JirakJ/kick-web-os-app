@@ -31,3 +31,17 @@ npm test
 patterns, proxy trust inputs and asynchronous precision payloads under Node's
 default uncaught-exception policy. It exercises both sprintf entry points and
 the two minimatch dependency generations. No vulnerability is suppressed.
+
+## rimraf 2 compatibility shim
+
+`rimraf-2.7.1-compat.1.tgz` is local code, not a fork. `fstream` and `temp` need
+rimraf 2, whose glob 7 → minimatch 3 chain carries GHSA-g3hv-75wg-m249 with no
+3.x fix (fixed only in minimatch 11.0.1). Both callers pass literal paths, so the
+shim keeps the rimraf 2 API (`rimraf(path, [opts], cb)`, `rimraf.sync`) on
+`fs.rm`/`fs.rmSync` with `recursive`, `force` and `maxBusyTries` → `maxRetries`,
+and drops glob expansion. Source: `rimraf-2-compat/`. Rebuild with
+`npm pack ./vendor/security/rimraf-2-compat --pack-destination vendor/security`;
+archive SHA-256 `1e67ce92a0029eab59cb0612a6332658dd1d946b4448853846e4aa7284207339`.
+
+The CLI's own rimraf 6 is overridden to glob 14.0.3 (minimatch 11) for
+GHSA-3g3m-2fjr-6pw4. Remove the shim when fstream/temp drop rimraf 2.
