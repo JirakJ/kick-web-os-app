@@ -1,3 +1,31 @@
+# Search Kick and layout checker for 0.9.0 (not yet device-verified)
+
+Checked on 12 November 2026 without a TV. The service `search` method was run
+against Kick's real `/api/search` endpoint for `cobra`, `la cobra` (empty, then
+retried as `lacobra`), `west`, `@Westcol`, a `kick.com` link with a query string,
+an unknown name and invalid input. Responses were about 5 KB for 20 channels; the
+service keeps only slug, display name (50 code points), live and verified flags.
+Controlled regressions cover banned/duplicate/invalid identities, lone surrogates,
+malformed JSON, HTTP errors, request cancellation on edit, late replies after the
+40-second interface timeout, hiding the app and keyboard-aware Back. The ES5
+service suite also exercises search on Node.js 0.12.2 and 8.12.0 in CI. All
+1,248 browser screens passed, including the search dialog fitting without
+scrolling at 720p and 1080p in every size/contrast mode.
+
+The geometry checker ([#28](https://github.com/JirakJ/kick-web-os-app/issues/28))
+now compares scroll extent with painted descendant boxes and text. On a Chromium 68
+snapshot (r555668, macOS under Rosetta, not the TV engine) a six-choice rendition
+list reported clientHeight 388 / scrollHeight 396. The previous checker flagged it;
+the new checker reports a collapsed-margin note and no error, and still flags a
+deliberately overflowing box. Details: [validation/layout-checker-0.9.0.json](validation/layout-checker-0.9.0.json).
+
+Not verified: native TV search, physical remote text entry and Back with the LG
+on-screen keyboard, the Home button, Voice Guide output and the checker on the
+TV's own engine. The [hardware acceptance protocol](hardware-acceptance.md) lists
+these steps. Kick's search endpoint is undocumented and may change or be restricted.
+
+---
+
 # Screen-fit acceptance for 0.8.2
 
 Checked on 18 October 2026 on LG 55NANO863NA / webOS 5.6.2 / Chromium 68.

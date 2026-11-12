@@ -8,7 +8,7 @@ The interface follows the TV's system language (Czech, Slovak, English, German, 
 
 [Download the latest installable IPK](https://github.com/JirakJ/kick-web-os-app/releases/latest).
 
-**0.8.2 fits home and replay browsing to the TV screen.** Three saved-channel panels and the replay grid adapt their page size to the available height, including larger text. The release workflow publishes the IPK, current TV screenshots and checksums only after every main-branch CI job succeeds. See the [device audit](docs/production-audit.md) for measured scope and remaining coverage limits.
+**0.9.0 adds Search Kick**: find any public channel by part of its name, an `@name` or a channel link, then open its live stream and replays with the remote. Back now closes the TV's on-screen keyboard before it closes a dialog. The release workflow publishes the IPK and checksums only after every main-branch CI job succeeds. 0.9.0 has not yet been checked on a TV; see the [device audit](docs/production-audit.md) and the [hardware acceptance protocol](docs/hardware-acceptance.md) for remaining coverage.
 
 ## Features
 
@@ -22,6 +22,7 @@ The interface follows the TV's system language (Czech, Slovak, English, German, 
 - Accessibility settings persist app-only text size and high contrast, with remote controls and reset. Large text uses a two-column replay grid; focus and statuses have visible text/semantics. Voice Guide is off on the tested TV; spoken output remains unverified.
 - About and updates shows installed/latest stable versions and short plain-text release notes. Checks are viewer initiated against the fixed official GitHub repository, cached for six hours with persisted failure/rate-limit deadlines that survive idle service exit. It provides Dev Manager/existing Homebrew installation and rollback guidance; no in-app installer. Offline saved results are labelled as potentially outdated.
 - Go to time accepts hours/minutes/seconds, previews a duration-clamped target and offers Confirm/Cancel. Fast-forward/rewind opens a ±10-minute preview; short timeline arrows remain ±10 seconds.
+- **Search Kick** finds public channels by part of a name, `@name` or `kick.com/…` link. It shows up to 20 matches (six per page, four on smaller screens or with large text) with LIVE and verified labels, and opens the selected channel's catalog without autoplay. A query with spaces that finds nothing is retried without spaces, and an exact username that search does not list is resolved directly. Searches start only when you confirm; editing the text, closing the dialog or leaving the app cancels a pending search. Results carry no thumbnails or media addresses.
 - Find saved channels locally; search replay titles, filter by viewing history and sort newest/oldest within the loaded catalog of up to 30 public replays. Up to six visible results per page; Back cancels changes and restores focus.
 - Network reconnect refreshes validated live/replay sources with two bounded attempts; offline flapping retains the budget. Pause, hide and Back cancel pending recovery. Manual Reconnect preserves pause intent. A 55-second TV-only internet outage, paused reconnect and cancellation passed on webOS 5; physical Wi-Fi/router restart remains unverified.
 - Auto quality up to 4K: 2160p → 1440p → 1080p → lower resolutions. Native adaptation remains enabled for slower connections. The quality menu also offers validated self-contained HLS renditions; fixed quality preserves position/pause, while playlists with separate audio require Auto. Preferences are local; missing renditions fall back explicitly to Auto. Actual decoder resolution/FPS is unavailable through the supported app API.
@@ -54,7 +55,7 @@ npm test
 npm run package
 ```
 
-The output is `dist/com.jakubjirak_0.8.2_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
+The output is `dist/com.jakubjirak_0.9.0_all.ipk`. It contains both the app (`com.jakubjirak`) and its service (`com.jakubjirak.service`), which must be installed together. CI runs the tests and uploads the built IPK as a workflow artifact.
 
 Build dependencies pin security updates and two documented [local backports](vendor/security/README.md) for fixes that have no official release yet. `npm test` also checks the installed CLI dependencies against hostile brace patterns, proxy trust inputs and numeric precision values. These development dependencies are not shipped to the TV.
 
@@ -86,6 +87,9 @@ Button labels below are the English strings; the app shows them in the TV's lang
 | Action | Control |
 | --- | --- |
 | Select a channel | Enter its name or `https://kick.com/channel` |
+| Find a channel on Kick | **Search Kick**, type part of the name, **OK**/**Search**; **↓** moves to the results |
+| Close the on-screen keyboard | **Back** (a second **Back** closes the dialog) |
+| Back without a Back key | **Esc**, or **Backspace** outside a text field |
 | Start live playback | **Play live**, or select a recent channel |
 | Browse replays | **Replays**; arrows move through cards and page buttons |
 | Favorite/unfavorite a channel | The **♡ / ♥** button beside the channel input, a recent-channel row or its catalog heading |
@@ -124,7 +128,7 @@ Version 0.5.1 adds a bundled emoji fallback for missing glyphs such as Czechfath
 
 Version 0.5.2 extends fallback routing to BMP emoji such as ⚔️, ⚠️, ⛽, ✍️, ❌ and ❣️, and keeps compound emoji intact. The [channel symbol audit](docs/symbol-audit.md) covers 681 titles from 35 channels, including 19 channels outside the initial sample. All 68 sampled emoji sequences were checked against the bundled font, rendered locally and added to catalog/player regressions. These local checks do not verify the TV renderer; the TV remained powered off.
 
-Version 0.6.0 was checked on the same TV for real live/replay playback, native seeking, the borderless seek bar, channel removal and LIVE badges. The screenshots above show this version. The [production audit](docs/production-audit.md) records security scan scope, rendering operation counts and layout checks executed in the TV's own browser. `test-layout.cjs` supplies the geometry checker for the installed app's Web Inspector; it does not open a local browser.
+Version 0.6.0 was checked on the same TV for real live/replay playback, native seeking, the borderless seek bar, channel removal and LIVE badges. The screenshots above show this version. The [production audit](docs/production-audit.md) records security scan scope, rendering operation counts and layout checks executed in the TV's own browser. `test-layout.cjs` supplies the geometry checker for the installed app's Web Inspector; it does not open a local browser. Since 0.9.0 it measures painted boxes and text instead of trusting `scrollHeight` alone, so Chromium 68's collapsed trailing margin is reported as a note (`checkLayout({ report: true })`) rather than as overflow; `test-layout-audit.cjs` keeps real clipped text, out-of-bounds and overlapping controls failing.
 
 Version 0.7.0 selects the interface language from `webOSSystem.locale` (falling back to `PalmSystem.locale` and the browser language) and ships localized launcher titles in `app/resources/<language>/appinfo.json`. The service now negotiates gzip for Kick responses and reuses TLS connections; measured against Kick on 12 September 2026, the channel document shrank from 8.8 KB to 2.4 KB and a 30-replay list from 64 KB to 7.5 KB on the wire. Service errors carry stable codes that the app translates. The gzip and connection-reuse paths were also exercised on a real Node 8.12.0 binary, matching the TV's service runtime. Regression tests cover all 13 languages (key coverage, placeholder parity, locale detection, launcher resources, translated service errors, compressed and malformed transfers). The TV was unreachable during this release, so the language switch, launcher title resources and gzip path were verified locally and in the packaged IPK only, not on the device.
 
@@ -146,7 +150,7 @@ This is not a guarantee of crash-free operation. Several-hour playback, router o
 - `test-player-resources.cjs`: retired-video collection with an unresolved play promise.
 - `test-service-resources.js`: real-socket origin and keep-alive resource limits.
 
-The service uses Kick's web endpoints (`/api/v2/channels/{channel}` and `/videos`), which are not a stable documented public API. Kick may change or restrict them. HTTP errors are shown in the app. Only allowlisted Kick media and thumbnail hosts are accepted, TLS validation remains enabled, and remote titles render as text.
+The service uses Kick's web endpoints (`/api/v2/channels/{channel}`, `/videos` and `/api/search`), which are not a stable documented public API. Kick may change or restrict them. HTTP errors are shown in the app. Only allowlisted Kick media and thumbnail hosts are accepted, TLS validation remains enabled, and remote titles render as text.
 
 Requests are limited to 1 MiB of decoded text, 12 seconds and six concurrent connections; gzip responses are inflated incrementally and stopped at the same limit. Playback recovery makes at most two attempts before asking the viewer to retry. These controls bound resource use and recovery; they cannot fix a platform outage or an unsupported TV decoder.
 
