@@ -142,7 +142,19 @@ function test() {
     assert.strictEqual(reply.returnValue, true, 'Service still works after failed transfers');
     return invoke('updates',{}).then(function (update) { assert.strictEqual(update.returnValue,true); assert.strictEqual(update.release.version,'0.10.0'); assert.strictEqual(requests[requests.length-1].hostname,'api.github.com'); });
   }).then(function () {
-    console.log('Legacy service: passed on ' + process.version + ' (channel, replays, statuses, HLS, Unicode, gzip, limits and failures).');
+    // The local server returns no search list, so search falls back to direct username resolution.
+    var before = requests.length;
+    return invoke('search', { query: ' @Example ' }).then(function (reply) {
+      assert.strictEqual(reply.returnValue, true);
+      assert.strictEqual(requests[before].path, '/api/search?searched_word=example');
+      assert.strictEqual(requests[before + 1].path, '/api/v2/channels/example');
+      assert.strictEqual(reply.results.length, 1);
+      assert.strictEqual(reply.results[0].channel, 'example');
+      assert.strictEqual(reply.results[0].live, true);
+      return invoke('search', { query: '' });
+    }).then(function (reply) { assert.strictEqual(reply.errorCode, 'invalid_query'); });
+  }).then(function () {
+    console.log('Legacy service: passed on ' + process.version + ' (channel, replays, statuses, HLS, Unicode, gzip, limits, failures and search).');
   });
 }
 server.listen(0, '127.0.0.1', function () {

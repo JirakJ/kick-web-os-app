@@ -16,13 +16,13 @@ agent.on('free', function () {
   for (var i = 0; i < free.length - 2; i++) free[i].destroy();
 });
 
-function titleText(value, fallback) {
+function titleText(value, fallback, limit) {
   var text = String(value || fallback || '');
   // Some TV builds omit ICU normalization; keep readable text on those builds.
   if (typeof text.normalize === 'function') text = text.normalize('NFKC');
   // Node 0.12 has no Array.from. Count code points without splitting emoji.
   var end = 0, count = 0;
-  while (end < text.length && count < 200) {
+  while (end < text.length && count < (limit || 200)) {
     var first = text.charCodeAt(end++), second = text.charCodeAt(end);
     if (first >= 0xD800 && first <= 0xDBFF && second >= 0xDC00 && second <= 0xDFFF) end++;
     count++;
@@ -280,6 +280,70 @@ service.register('channel', function (message) {
   }).catch(function (e) {
     respond(message, errorReply(e));
   });
+});
+
+// Free-text channel search. Accepts names, @names and kick.com channel links; returns at most
+// 20 channel identities (slug, display name, live, verified). No thumbnails or media URLs.
+function searchQuery(value) {
+  if (typeof value !== 'string' || value.length > 200) return '';
+  var text = value.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().toLowerCase();
+  var link = text.match(/^(?:https?:\/\/)?(?:www\.)?kick\.com\/([a-z0-9_-]{1,25})\/?(?:[?#].*)?$/);
+  if (link) return link[1];
+  text = text.replace(/^@+/, '').replace(/\s+/g, ' ');
+  return text.length >= 1 && text.length <= 50 ? text : '';
+}
+
+function channelIdentity(item, slug) {
+  var user = item.user && typeof item.user === 'object' ? item.user : {};
+  var name = typeof user.username === 'string' && user.username.length <= 100 ? user.username : slug;
+  return { channel: slug, name: titleText(name, slug, 50),
+    live: item.isLive === true || !!(item.livestream && item.livestream.is_live === true), verified: !!item.verified };
+}
+
+function searchResults(data) {
+  var channels = data && Array.isArray(data.channels) ? data.channels : [], seen = Object.create(null), results = [];
+  for (var i = 0; i < channels.length && results.length < 20; i++) {
+    var item = channels[i], slug = item && item.slug;
+    // Only explicitly unbanned channels with a valid identity are offered.
+    if (typeof slug !== 'string' || !/^[a-z0-9_-]{1,25}$/.test(slug) || seen[slug] || item.is_banned !== false) continue;
+    seen[slug] = true;
+    results.push(channelIdentity(item, slug));
+  }
+  return results;
+}
+
+service.register('search', function (message) {
+  var query = searchQuery(message.payload && message.payload.query);
+  if (!query) { respond(message, errorReply(failure('invalid_query', 'Enter a channel name to search.'))); return; }
+  function lookup(text) {
+    var encoded;
+    // A lone surrogate cannot be URI-encoded; reject it instead of throwing out of the handler.
+    try { encoded = encodeURIComponent(text); } catch (e) { return Promise.reject(failure('invalid_query', 'Enter a channel name to search.')); }
+    return getText('kick.com', '/api/search?searched_word=' + encoded).then(function (body) {
+      try { return searchResults(JSON.parse(body)); }
+      catch (e) { throw failure('invalid_data', 'Kick returned invalid data.'); }
+    });
+  }
+  var compact = query.replace(/ /g, '');
+  lookup(query).then(function (results) {
+    // "la cobra" finds nothing while "lacobra" matches the channel slug.
+    return results.length || compact === query ? results : lookup(compact);
+  }).then(function (results) {
+    if (results.length || !/^[a-z0-9_-]{1,25}$/.test(compact)) return results;
+    // An exact username can exist although search does not index it yet.
+    return getJSON(compact).then(function (channel) {
+      return channel && channel.slug === compact && channel.is_banned !== true ? [channelIdentity(channel, compact)] : [];
+    }, function (error) {
+      if (error && error.code === 'http' && error.params && error.params.status === 404) return [];
+      throw error;
+    });
+  }).then(function (results) {
+    // An exact slug match is the most likely intent; keep Kick's order for the rest.
+    // Filter instead of sort: Node 0.12's sort is not stable for longer arrays.
+    var exact = results.filter(function (item) { return item.channel === compact; });
+    respond(message, { returnValue: true, query: query,
+      results: exact.concat(results.filter(function (item) { return item.channel !== compact; })) });
+  }).catch(function (error) { respond(message, errorReply(error)); });
 });
 
   function versionParts(value) {

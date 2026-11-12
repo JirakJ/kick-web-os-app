@@ -469,6 +469,57 @@ boot(searchStore,'ok','en-US');submit('example');respond({live:null,videos:[{...
 click('catalog-search');elements['replay-query'].value='target';elements['replay-query'].handlers.input();assert.equal(elements.videos.children.length,1,'Search includes the full 200-code-point title');key(461);
 console.log('Local search: passed (saved channels, Unicode titles, viewing filters, deterministic sort, cancel/focus and no per-key requests).');
 
+// Global Kick channel search (#31): explicit submit, cancellation, stale replies, keyboard-aware Back and paging.
+{
+  const emptyStore={getItem(){return null;},setItem(){}};
+  boot(emptyStore,'ok','en-US');
+  const kickSubmit=()=>elements['kick-search-form'].handlers.submit({preventDefault(){}});
+  const kickReply=(data,bridge=bridges.at(-1))=>bridge.onservicecallback(JSON.stringify(data));
+  const result=(channel,extra={})=>({channel,name:channel.toUpperCase(),live:false,verified:false,...extra});
+  click('kick-search-open');assert.equal(elements['kick-search'].hidden,false);assert.equal(document.activeElement,elements['kick-query']);
+  const before=bridges.length;kickSubmit();assert.equal(elements['kick-search-status'].textContent,'Enter a channel name to search.');assert.equal(bridges.length,before,'An empty query never reaches the service');
+  elements['kick-query'].value='  la   cobra ';kickSubmit();
+  const first=bridges.at(-1);assert.ok(first.uri.endsWith('/search'));assert.deepEqual(first.payload,{query:'la cobra'});assert.equal(elements['kick-search-status'].textContent,'Searching Kick…');
+  elements['kick-query'].value='la cobr';elements['kick-query'].handlers.input();assert.equal(first.cancelled,true,'Editing the query cancels the pending search');assert.equal(elements['kick-search-status'].textContent,'');
+  kickReply({returnValue:true,results:[result('stale')]},first);assert.equal(elements['kick-results'].children.length,0,'A cancelled reply cannot replace results');
+  elements['kick-query'].focus();kickSubmit();
+  const valid=Array.from({length:8},(_,i)=>result('channel_'+i,{live:i===0,verified:i===1}));
+  kickReply({returnValue:true,results:[...valid,result('../evil'),{...result('channel_0')},{channel:'bad',name:5,live:false,verified:false},result('UPPER')]});
+  assert.equal(elements['kick-search-status'].textContent,'Channels found: 8','Invalid, duplicate and malformed identities are dropped');
+  assert.equal(elements['kick-results'].children.length,6);assert.equal(document.activeElement,elements['kick-query'],'A reply never steals focus from the text field');
+  assert.equal(elements['kick-results'].children[0].attrs['aria-label'],'CHANNEL_0, live now');assert.equal(elements['kick-results'].children[1].attrs['aria-label'],'CHANNEL_1, Verified');
+  key(40);assert.equal(document.activeElement,elements['kick-search-submit']);key(40);assert.equal(document.activeElement,elements['kick-results'].children[0]);
+  click('kick-next');assert.equal(elements['kick-results'].children.length,2);assert.equal(elements['kick-number'].textContent,'2 / 2');assert.equal(elements['kick-next'].disabled,true);
+  assert.equal(document.activeElement,elements['kick-results'].children[0]);click('kick-previous');assert.equal(elements['kick-number'].textContent,'1 / 2');
+  // webOS on-screen keyboard: Back hides the keyboard first and must not close the dialog.
+  Object.assign(elements['kick-query'],{tagName:'INPUT',type:'text'});elements['kick-query'].focus();
+  document.handlers.keyboardStateChange({detail:{visibility:true}});key(461);assert.equal(elements['kick-search'].hidden,false,'Back with the keyboard visible keeps the dialog');
+  document.handlers.keyboardStateChange({detail:{visibility:false}});key(461);assert.equal(elements['kick-search'].hidden,true);
+  assert.equal(elements['kick-results'].children.length,0,'Closing releases result rows');assert.equal(document.activeElement,elements['kick-search-open']);
+  // Pressing Search moves focus to the first result; selecting it opens the channel catalog without autoplay.
+  click('kick-search-open');elements['kick-query'].value='west';elements['kick-search-submit'].focus();kickSubmit();
+  kickReply({returnValue:true,results:[result('westcol',{live:true})]});assert.equal(document.activeElement,elements['kick-results'].children[0]);
+  elements['kick-results'].children[0].handlers.click();assert.equal(elements['kick-search'].hidden,true);assert.equal(elements.catalog.hidden,false);
+  assert.ok(bridges.at(-1).uri.endsWith('/channel'));assert.deepEqual(bridges.at(-1).payload,{channel:'westcol'});
+  respond({live,videos:[vod]});assert.equal(elements['live'].hidden,false,'Live search results offer Play live in the catalog');assert.equal(elements.watch.hidden,true,'Opening a search result never autoplays');
+  // Backspace outside a text field acts as Back.
+  elements['catalog-back'].focus();key(8);assert.equal(elements.home.hidden,false);
+  // Service errors, timeouts and hiding the app.
+  click('kick-search-open');elements['kick-query'].value='x';kickSubmit();kickReply({returnValue:false,errorCode:'invalid_query',errorText:'raw'});
+  assert.equal(elements['kick-search-status'].textContent,'Enter a channel name to search.');
+  kickSubmit();kickReply({returnValue:false,errorCode:'http',errorParams:{status:429},errorText:''});assert.equal(elements['kick-search-status'].textContent,'Kick API: HTTP 429');
+  kickSubmit();const slow=bridges.at(-1);advance(39999);assert.equal(elements['kick-search-status'].textContent,'Searching Kick…');advance(1);
+  assert.equal(slow.cancelled,true);assert.equal(elements['kick-search-status'].textContent,'Kick did not respond in time. Try again.');
+  kickReply({returnValue:true,results:[result('late')]},slow);assert.equal(elements['kick-results'].children.length,0,'A reply after the timeout is ignored');
+  kickSubmit();const hidden=bridges.at(-1);document.hidden=true;document.handlers.visibilitychange();
+  assert.equal(hidden.cancelled,true);assert.equal(elements['kick-search'].hidden,true,'Hiding the app closes the search and cancels its request');document.hidden=false;document.handlers.visibilitychange();
+  click('kick-search-open');elements['kick-query'].value='x';navigator.onLine=false;const offlineCalls=bridges.length;kickSubmit();
+  assert.equal(bridges.length,offlineCalls);assert.match(elements['kick-search-status'].textContent,/not connected/);navigator.onLine=true;
+  window.handlers.pagehide();assert.equal(elements['kick-search'].hidden,true);
+  boot(emptyStore,'missing','en-US');click('kick-search-open');elements['kick-query'].value='x';kickSubmit();assert.match(elements['kick-search-status'].textContent,/service/);
+}
+console.log('Kick search: passed (validation, cancellation on edit, stale/late replies, focus, paging, keyboard-aware Back, catalog opening, errors, timeout and lifecycle).');
+
 // Large jumps preview without native seeks until explicit confirmation.
 boot(qualityStore,'ok','en-US');submit('example');respond({live:null,videos:[{...vod,id:'long-replay',duration:18000}]});openReplay();
 node().duration=18000;node().handlers.durationchange();node()._time=120;node().handlers.timeupdate();click('toggle');
@@ -865,6 +916,7 @@ async function testService() {
   const {EventEmitter}=require('node:events');
   let serviceNow=1000000, releases=[], latestRelease=null;
   let handlers={}, calls=[], replies=[], status=200, transport='ok', waiting=[], aborted=0, agents=[], resets={};
+  let searchIndex={};const searchBody=query=>Object.prototype.hasOwnProperty.call(searchIndex,query)?(typeof searchIndex[query]==='string'?searchIndex[query]:JSON.stringify(searchIndex[query])):JSON.stringify({channels:[],categories:[]});
   const settle=async(condition)=>{const until=Date.now()+5000;while(!condition()&&Date.now()<until)await new Promise(r=>setImmediate(r));assert.ok(condition(),'Reply arrived');};
   const gzip=text=>require('node:zlib').gzipSync(Buffer.from(text,'utf8'));
   const serviceTimers=new Map();
@@ -892,7 +944,7 @@ async function testService() {
       if(transport==='response-error'){res.emit('error',Error('response failed'));return;}
       if(transport==='large'){res.emit('data','ž'.repeat(600000));res.emit('end');return;}
       if(transport==='invalid'){res.emit('data','null');res.emit('end');return;}
-      res.emit('data',options.hostname==='api.github.com'?JSON.stringify(options.path.endsWith('/latest')?latestRelease:releases):options.hostname==='kick.com' ? JSON.stringify(options.path.endsWith('/videos')?recordings:responseData) : playlist);res.emit('end');
+      res.emit('data',options.hostname==='api.github.com'?JSON.stringify(options.path.endsWith('/latest')?latestRelease:releases):options.hostname==='kick.com' ? options.path.startsWith('/api/search?')?searchBody(decodeURIComponent(options.path.split('=')[1])):JSON.stringify(options.path.endsWith('/videos')?recordings:responseData) : playlist);res.emit('end');
     };
     if(transport==='wait')waiting.push(deliver);else queueMicrotask(deliver);
     return req;
@@ -1048,6 +1100,36 @@ async function testService() {
   serviceNow+=21600001;latestRelease={message:'bad data'};replies=[];checkUpdates();await new Promise(r=>setImmediate(r));assert.equal(replies[0].returnValue,false);
   const negativeCalls=calls.length;checkUpdates();await new Promise(r=>setImmediate(r));assert.equal(calls.length,negativeCalls,'Malformed/rate-limited checks back off');
   serviceNow+=60001;status=429;replies=[];checkUpdates();await new Promise(r=>setImmediate(r));assert.equal(replies[0].returnValue,false);status=200;
-  console.log('TV service: passed (channel validation, fixed API origin, public replays only, media URL validation, offline and HTTP errors).');
+  // Global search (#31): normalization, fixed endpoint, filtering, fallbacks and bounded identities.
+  const search=async query=>{replies=[];handlers.search({payload:{query},respond(d){replies.push(d);}});await settle(()=>replies.length);return JSON.parse(JSON.stringify(replies[0]));};
+  const hit=(slug,extra={})=>({slug,is_banned:false,isLive:false,user:{username:slug.toUpperCase(),bio:'x'.repeat(5000),profilePic:'https://files.kick.com/p.webp'},playback_url:live.url,verified:null,...extra});
+  searchIndex={'cobra':{channels:[hit('lacobraaa',{verified:{id:1},isLive:true}),hit('lacobraaa'),hit('banned_one',{is_banned:true}),hit('missing_flag',{is_banned:undefined}),hit('../evil'),hit('Upper'),null,{slug:7},
+    hit('long_name',{user:{username:'🔴'.repeat(45)+'abcdefghij'}}),hit('huge_name',{user:{username:'x'.repeat(101)}}),hit('odd_user',{user:'text'}),...Array.from({length:30},(_,i)=>hit('cobra_'+i))]},
+    'lacobra':{channels:[hit('lacobraaa'),hit('lacobra')]},'broken':'{not json'};
+  for(const bad of [undefined,null,7,'',' ','@','a\uD800','x'.repeat(51),'x'.repeat(201),{query:'x'}]){const r=await search(bad);assert.equal(r.errorCode,'invalid_query',String(bad));}
+  const searchStart=calls.length;let reply=await search('  CoBRA ');
+  assert.equal(calls.length,searchStart+1);assert.equal(calls.at(-1).hostname,'kick.com');assert.equal(calls.at(-1).path,'/api/search?searched_word=cobra');
+  assert.equal(reply.returnValue,true);assert.equal(reply.results.length,20,'At most 20 results');
+  assert.deepEqual(reply.results[0],{channel:'lacobraaa',name:'LACOBRAAA',live:true,verified:true});
+  assert.ok(reply.results.every(r=>/^[a-z0-9_-]{1,25}$/.test(r.channel)&&Object.keys(r).join()==='channel,name,live,verified'),'Only identity fields; no bios, images or media URLs');
+  assert.ok(!reply.results.some(r=>['banned_one','missing_flag'].includes(r.channel)),'Banned or unflagged channels are dropped');
+  assert.equal(new Set(reply.results.map(r=>r.channel)).size,reply.results.length,'Duplicates are dropped');
+  assert.equal(reply.results.find(r=>r.channel==='huge_name').name,'huge_name');assert.equal(reply.results.find(r=>r.channel==='long_name').name,'🔴'.repeat(45)+'abcde','Names are limited to 50 code points without splitting emoji');
+  assert.equal(reply.results.find(r=>r.channel==='odd_user').name,'odd_user');
+  for(const [input,expected] of [['@LaCobraaa','lacobraaa'],['https://kick.com/LaCobraaa?ref=tv#x','lacobraaa'],['kick.com/lacobraaa/','lacobraaa'],['a\u0000b   c','a b c']]){const at=calls.length;await search(input);assert.equal(decodeURIComponent(calls[at].path.split('=')[1]),expected,input);}
+  const spaced=calls.length;reply=await search('la cobra');
+  assert.deepEqual(calls.slice(spaced).map(c=>c.path),['/api/search?searched_word=la%20cobra','/api/search?searched_word=lacobra'],'An empty spaced query retries without spaces');
+  assert.deepEqual(reply.results.map(r=>r.channel),['lacobra','lacobraaa'],'The exact slug match is listed first');
+  const direct=calls.length;reply=await search('example');
+  assert.deepEqual(calls.slice(direct).map(c=>c.path),['/api/search?searched_word=example','/api/v2/channels/example'],'An exact username falls back to direct resolution');
+  assert.deepEqual(reply.results,[{channel:'example',name:'example',live:false,verified:false}]);
+  const none=calls.length;reply=await search('two.words x');
+  assert.equal(calls.length,none+2,'Nothing found after the spaceless retry: no direct lookup for an invalid slug');assert.deepEqual(reply.results,[]);
+  status=404;reply=await search('ghost');status=200;assert.equal(reply.returnValue,false,'A failed search request is reported');
+  assert.equal(reply.errorCode,'http');
+  const ghostCalls=calls.length;reply=await search('ghost');
+  assert.equal(calls.length,ghostCalls+2);assert.deepEqual(reply.results,[],'A direct lookup returning another channel adds nothing');
+  reply=await search('broken');assert.equal(reply.errorCode,'invalid_data');
+  console.log('TV service: passed (channel validation, fixed API origin, public replays only, media URL validation, offline and HTTP errors, global channel search).');
 }
 testService().catch(e=>{console.error(e);process.exitCode=1;});
