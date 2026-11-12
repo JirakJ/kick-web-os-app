@@ -20,13 +20,15 @@ const output='artifacts/browser';fs.mkdirSync(output,{recursive:true});for(const
     localStorage.setItem('kick-watched-videos',JSON.stringify(Array.from({length:6},(_,i)=>({key:'example:replay-'+i,position:100+i,duration:600,finished:i%2!==0}))));
     const videos=Array.from({length:14},(_,i)=>({id:'replay-'+i,title:'Replay '+i+' 🔴 👩🏽‍💻 Čaj — '+('Long replay title '.repeat(8))+i,url:'https://stream.kick.com/a/master.m3u8',date:'2026-10-18',duration:600,thumbnail:'https://files.kick.com/test.jpg'}));
     const live={...videos[0],isLive:true};
-    const variants=[{url:'https://stream.kick.com/a/1080.m3u8',width:1920,height:1080,bitrate:7000000,fps:60,manual:true},{url:'https://stream.kick.com/a/720.m3u8',width:1280,height:720,bitrate:3000000,fps:30,manual:true}];
+    // Five renditions plus Auto: the real six-choice quality list from native acceptance (#28).
+    const variants=[[1920,1080,7000000,60],[1280,720,3000000,60],[854,480,1500000,30],[640,360,800000,30],[284,160,300000,30]].map(([width,height,bitrate,fps])=>({url:'https://stream.kick.com/a/'+height+'.m3u8',width,height,bitrate,fps,manual:true}));
     window.PalmServiceBridge=function(){this.cancel=()=>{this.cancelled=true;};this.call=(uri,json)=>{
      const data=JSON.parse(json);let reply;
      if(uri.endsWith('/channel'))reply={returnValue:true,channel:data.channel,live,videos};
      else if(uri.endsWith('/statuses'))reply=window.fixtureStatusesUnavailable?{returnValue:false}:{returnValue:true,statuses:data.channels.map(channel=>({channel,live:true}))};
      else if(uri.endsWith('/replay'))reply=window.fixtureReplayUnavailable?{returnValue:false}:{returnValue:true,video:videos.find(v=>v.id===data.id)||null};
      else if(uri.endsWith('/prepare'))reply={returnValue:true,best:variants[0],variants};
+     else if(uri.endsWith('/search'))reply={returnValue:true,query:data.query,results:Array.from({length:8},(_,i)=>({channel:'channel_'+i+'_'+'x'.repeat(14),name:'Channel '+i+' '+'Long name '.repeat(9),live:i%2===0,verified:i%3===0}))};
      else reply={returnValue:false};
      setTimeout(()=>{if(!this.cancelled)this.onservicecallback(JSON.stringify(reply));},5);
     };};
@@ -96,6 +98,14 @@ const output='artifacts/browser';fs.mkdirSync(output,{recursive:true});for(const
    }
    await page.click('#accessibility-button');await audit('settings');await page.click('#accessibility-close');
    await page.click('#find-saved');await page.fill('#saved-query','channel');await audit('saved-search');await page.click('#saved-cancel');
+   await page.click('#kick-search-open');await page.fill('#kick-query','channel');await page.click('#kick-search-submit');
+   await page.waitForFunction(()=>document.querySelectorAll('#kick-results button').length>0);await audit('kick-search');
+   const kickFits=await page.evaluate(()=>{const card=document.querySelector('#kick-search .modal-card');return card.scrollHeight<=card.clientHeight+1||[card.scrollHeight,card.clientHeight,document.querySelectorAll('#kick-results button').length].join();});
+   assert.equal(kickFits,true,'Search Kick shows heading, field, results and paging without scrolling: '+[viewport.width,locale,large,high]);
+   const kickRows=await page.locator('#kick-results button').count();assert.ok(kickRows>=(viewport.height>=900?4:2),'Search keeps a useful page of results: '+kickRows);if(viewport.height>=900&&!large)assert.equal(kickRows,6,'Full HD shows six results');
+   const kickPagesShown=await page.evaluate(()=>document.getElementById('kick-number').textContent);assert.equal(kickPagesShown,'1 / '+Math.ceil(8/kickRows));
+   if(locale==='en'&&viewport.width===1920&&!large&&high)await page.screenshot({path:`${output}/kick-search-${viewport.width}.png`});
+   await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.getElementById('kick-search').hidden&&document.activeElement.id),'kick-search-open','Back closes search and restores focus');
    await page.click('#recordings');await page.waitForFunction(()=>document.querySelectorAll('#videos>button').length>0);await page.waitForTimeout(40);await audit('catalog');
    if(locale==='de'&&large){
     await page.click('#catalog-back');await page.fill('#channel','abcdefghijklmnopqrstuvwxy');await page.click('#recordings');await page.waitForTimeout(60);

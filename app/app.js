@@ -32,6 +32,9 @@ if (typeof document !== 'undefined') (function () {
   var accessibility = { size: 'normal', contrast: false }, accessibilityOpen = false;
   var page = 0, catalogQuery = '', catalogFilter = 'all', catalogOrder = 'newest', toolsSnapshot = null;
   var savedPage = 0, savedSearchButtons = [];
+  var kickOpen = false, kickResults = [], kickPage = 0, kickButtons = [], kickRequest = null, kickTimer, kickGeneration = 0;
+  // webOS reports its on-screen keyboard; Back then belongs to the keyboard, not the dialog.
+  var keyboardVisible = false;
   var recents = [];
   var recentPage = 0, recentStatus = Object.create(null), recentRequest = null, recentTimer, recentGeneration = 0;
   var favorites = [], favoritePage = 0, favoriteButtons = [], favoriteControls = [], favoriteMove = null;
@@ -162,6 +165,96 @@ if (typeof document !== 'undefined') (function () {
     el('saved-count').textContent = t('results_count', { count: names.length });
     el('saved-number').textContent = (savedPage + 1) + ' / ' + pages;
     el('saved-previous').disabled = savedPage === 0; el('saved-next').disabled = savedPage === pages - 1;
+  }
+  // Global channel search through the TV service. Results hold identities only, never media URLs.
+  var kickSize = 6;
+  function kickPageSize() { return kickSize; }
+  // Up to six rows; fewer when the screen height or text size would make the dialog scroll.
+  function fitKickResults() {
+    if (!kickOpen || typeof window.getComputedStyle !== 'function') return;
+    var card = el('kick-search').querySelector('.modal-card'), first = kickPage * kickSize;
+    var focused = kickButtons.indexOf(document.activeElement), absolute = focused >= 0 ? first + focused : first;
+    // Measure on the first page, which is full whenever there are enough results.
+    kickSize = 6; kickPage = 0; renderKickResults();
+    while (kickSize > 1 && card.scrollHeight > card.clientHeight + 1) { kickSize--; renderKickResults(); }
+    kickPage = Math.floor(absolute / kickSize); renderKickResults();
+    if (focused >= 0) (kickButtons[absolute % kickSize] || kickButtons[0] || el('kick-query')).focus();
+  }
+  function cancelKickSearch() {
+    kickGeneration++; clearTimeout(kickTimer); kickTimer = null;
+    var pending = kickRequest; kickRequest = null;
+    if (pending) { try { pending.cancel(); } catch (e) { /* The search connection may already be closed. */ } }
+  }
+  function renderKickResults() {
+    var size = kickPageSize(), pages = Math.max(1, Math.ceil(kickResults.length / size));
+    kickPage = Math.max(0, Math.min(kickPage, pages - 1));
+    var list = el('kick-results'); while (list.firstChild) list.removeChild(list.firstChild); kickButtons = [];
+    kickResults.slice(kickPage * size, kickPage * size + size).forEach(function (result) {
+      var button = document.createElement('button'); button.type = 'button'; button.className = 'kick-result';
+      var name = document.createElement('span'); name.className = 'kick-result-name'; name.textContent = result.name; button.appendChild(name);
+      if (result.name.toLowerCase() !== result.channel) {
+        var slug = document.createElement('span'); slug.className = 'kick-result-slug'; slug.textContent = result.channel; button.appendChild(slug);
+      }
+      if (result.verified) { var verified = document.createElement('span'); verified.className = 'kick-verified'; verified.textContent = t('verified'); button.appendChild(verified); }
+      if (result.live) { var live = document.createElement('span'); live.className = 'recent-live'; live.textContent = t('live_badge'); button.appendChild(live); }
+      button.setAttribute('aria-label', result.name + (result.live ? ', ' + t('live_now') : '') + (result.verified ? ', ' + t('verified') : ''));
+      button.addEventListener('click', function () { closeKickSearch(false); startChannel(result.channel, false); });
+      list.appendChild(button); kickButtons.push(button);
+    });
+    el('kick-number').textContent = kickResults.length ? (kickPage + 1) + ' / ' + pages : '';
+    el('kick-previous').disabled = kickPage === 0; el('kick-next').disabled = kickPage === pages - 1;
+  }
+  function openKickSearch() {
+    cancelKickSearch(); kickOpen = true; kickResults = []; kickPage = 0;
+    el('kick-query').value = ''; el('kick-search-status').textContent = ''; renderKickResults();
+    el('kick-search').hidden = false; el('kick-query').focus();
+  }
+  function closeKickSearch(focus) {
+    var wasOpen = kickOpen;
+    cancelKickSearch(); kickOpen = false; kickResults = []; kickPage = 0;
+    el('kick-search').hidden = true;
+    var list = el('kick-results'); while (list.firstChild) list.removeChild(list.firstChild); kickButtons = [];
+    if (focus && wasOpen) el('kick-search-open').focus();
+  }
+  function validKickResults(value) {
+    var seen = {};
+    return Array.isArray(value) ? value.slice(0, 20).filter(function (item) {
+      var ok = item && typeof item.channel === 'string' && kickChannel(item.channel) === item.channel && !seen[item.channel] &&
+        typeof item.name === 'string' && item.name.length > 0 && item.name.length <= 100 && typeof item.live === 'boolean' && typeof item.verified === 'boolean';
+      if (ok) seen[item.channel] = true;
+      return ok;
+    }).map(function (item) { return { channel: item.channel, name: titleSlice(item.name), live: item.live, verified: item.verified }; }) : [];
+  }
+  function runKickSearch() {
+    if (!kickOpen) return;
+    cancelKickSearch();
+    var query = String(el('kick-query').value || '').replace(/\s+/g, ' ').trim(), status = el('kick-search-status');
+    if (!query) { status.textContent = t('kick_search_enter'); el('kick-query').focus(); return; }
+    if (navigator.onLine === false) { status.textContent = t('offline'); return; }
+    if (typeof PalmServiceBridge === 'undefined') { status.textContent = t('needs_service'); return; }
+    var token = kickGeneration, submitted = document.activeElement === el('kick-search-submit');
+    kickResults = []; kickPage = 0; renderKickResults(); status.textContent = t('kick_search_loading');
+    function finish(data) {
+      if (token !== kickGeneration || !kickOpen) return;
+      cancelKickSearch();
+      if (data && data.returnValue === true) {
+        kickResults = validKickResults(data.results); kickPage = 0; renderKickResults(); fitKickResults();
+        status.textContent = kickResults.length ? t('kick_search_results', { count: kickResults.length }) : t('kick_search_none');
+        // Move focus only if the viewer pressed Search; typing in the field is never interrupted.
+        if (submitted && document.activeElement === el('kick-search-submit') && kickButtons[0]) kickButtons[0].focus();
+      } else status.textContent = data ? serviceError(data, 'kick_search_failed') : t('svc_timeout');
+    }
+    try {
+      kickRequest = new PalmServiceBridge();
+      kickRequest.onservicecallback = function (response) {
+        var data;
+        try { if (typeof response === 'string' && response.length <= 65536) data = JSON.parse(response); } catch (e) { /* Reported below. */ }
+        finish(data && typeof data === 'object' && !Array.isArray(data) ? data : { errorText: t('invalid_response') });
+      };
+      // The service may need a search, a retry without spaces and a direct lookup (12 s each).
+      kickTimer = setTimeout(function () { finish(null); }, 40000);
+      kickRequest.call('luna://com.jakubjirak.service/search', JSON.stringify({ query: query }));
+    } catch (e) { finish({ errorText: t('service_unavailable') }); }
   }
   function filteredVideos() {
     var query = searchText(catalogQuery);
@@ -480,7 +573,7 @@ if (typeof document !== 'undefined') (function () {
   }
 
   function setScreen(name) {
-    closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelContinue();
+    closeAccessibility(false); closeJump(false); closeSearch(false, false); closeKickSearch(false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelContinue();
     screen = name;
     cancelHomeLayout(); cancelCatalogLayout();
     ['home', 'catalog', 'watch', 'about'].forEach(function (id) { el(id).hidden = id !== name; });
@@ -1022,6 +1115,14 @@ if (typeof document !== 'undefined') (function () {
   el('saved-query').addEventListener('input', function () { savedPage = 0; renderSavedSearch(); });
   el('saved-clear').addEventListener('click', function () { el('saved-query').value = ''; savedPage = 0; renderSavedSearch(); el('saved-query').focus(); });
   el('saved-cancel').addEventListener('click', function () { closeSearch(false, true); });
+  closeKickSearch(false);
+  el('kick-search-open').addEventListener('click', openKickSearch);
+  el('kick-search-form').addEventListener('submit', function (event) { event.preventDefault(); runKickSearch(); });
+  // Editing the query abandons the pending request so a stale reply cannot replace newer intent.
+  el('kick-query').addEventListener('input', function () { if (kickRequest) { cancelKickSearch(); el('kick-search-status').textContent = ''; } });
+  el('kick-cancel').addEventListener('click', function () { closeKickSearch(true); });
+  [-1, 1].forEach(function (delta) { el(delta < 0 ? 'kick-previous' : 'kick-next').addEventListener('click', function () { kickPage += delta; renderKickResults(); (kickButtons[0] || el('kick-query')).focus(); }); });
+  document.addEventListener('keyboardStateChange', function (event) { keyboardVisible = !!(event && event.detail && event.detail.visibility); });
   [-1, 1].forEach(function (delta) { el(delta < 0 ? 'saved-previous' : 'saved-next').addEventListener('click', function () { savedPage += delta; renderSavedSearch(); (savedSearchButtons[0] || el('saved-query')).focus(); }); });
   el('catalog-search').addEventListener('click', function () {
     toolsSnapshot = { catalog: catalog, query: catalogQuery, filter: catalogFilter, order: catalogOrder, page: page, offset: page * catalogPageSize };
@@ -1086,7 +1187,8 @@ if (typeof document !== 'undefined') (function () {
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
       cancelHomeLayout(); cancelCatalogLayout();
-      cancelRecentStatus(); cancelContinue(); closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false);
+      cancelRecentStatus(); cancelContinue(); closeAccessibility(false); closeJump(false); closeSearch(false, false); closeKickSearch(false); closeQuality(); closeFavoriteMove(false); closeResume(false);
+      keyboardVisible = false;
       var interrupted = !!request;
       cancelRequest();
       if (screen === 'about') { el('check-updates').disabled = false; el('update-status').textContent = t('update_unavailable'); }
@@ -1102,12 +1204,16 @@ if (typeof document !== 'undefined') (function () {
     else if (screen === 'home') { renderContinue(); refreshRecentStatus(); }
     else if (screen === 'catalog') { fitCatalog(); (videoButtons[0] || el('catalog-back')).focus(); }
   });
-  window.addEventListener('pagehide', function () { cancelContinue(); closeAccessibility(false); closeJump(false); closeSearch(false, false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); cancelHomeLayout(); cancelCatalogLayout(); });
-  window.addEventListener('resize', function () { fitHome(); fitCatalog(); });
+  window.addEventListener('pagehide', function () { cancelContinue(); closeAccessibility(false); closeJump(false); closeSearch(false, false); closeKickSearch(false); closeQuality(); closeFavoriteMove(false); closeResume(false); cancelRecentStatus(); cancelRequest(); player.suspend(); cancelHomeLayout(); cancelCatalogLayout(); });
+  window.addEventListener('resize', function () { fitHome(); fitCatalog(); fitKickResults(); });
   window.addEventListener('offline', function () { if (screen === 'watch') player.offline(); });
   window.addEventListener('online', function () { if (screen === 'watch' && !document.hidden) player.online(); if (screen === 'home' && !document.hidden) { renderContinue(); refreshRecentStatus(); } });
   document.addEventListener('keydown', function (event) {
-    var key = event.keyCode;
+    var key = event.keyCode, target = event.target, editing = !!target && target.tagName === 'INPUT' && target.type !== 'range';
+    // While the on-screen keyboard is open, Back closes the keyboard; it must not also close a dialog or screen.
+    if (key === 461 && keyboardVisible && editing) return;
+    // PC keyboards and some remotes send Backspace; outside text fields it means Back.
+    if (key === 8 && !editing) key = 461;
     // Transport commands remain active while a playback dialog owns navigation focus.
     if (screen === 'watch' && (key === 19 || key === 415 || key === 179)) {
       event.preventDefault();
@@ -1134,6 +1240,18 @@ if (typeof document !== 'undefined') (function () {
         if (jumpControls.indexOf(event.target) < 3 && (key === 37 || key === 39)) return;
         event.preventDefault(); var ji = jumpControls.indexOf(event.target), jd = key === 9 ? event.shiftKey ? -1 : 1 : key === 37 || key === 38 ? -1 : 1;
         var jt = jumpControls[(Math.max(0, ji) + jd + jumpControls.length) % jumpControls.length]; jt.focus(); jt.scrollIntoView({ block: 'nearest' });
+      }
+      return;
+    }
+    if (kickOpen) {
+      var kickInput = el('kick-query'), kickControls = [kickInput, el('kick-search-submit')].concat(kickButtons, [el('kick-previous'), el('kick-next'), el('kick-cancel')])
+        .filter(function (control) { return !control.disabled; });
+      if (key === 461 || key === 27) { event.preventDefault(); closeKickSearch(true); }
+      else if (key === 9 || key >= 37 && key <= 40) {
+        if (target === kickInput && (key === 37 || key === 39)) return;
+        event.preventDefault(); var kickIndex = kickControls.indexOf(target), kickStep = key === 9 ? event.shiftKey ? -1 : 1 : key === 37 || key === 38 ? -1 : 1;
+        var kickTarget = kickControls[(Math.max(0, kickIndex) + kickStep + kickControls.length) % kickControls.length];
+        kickTarget.focus(); kickTarget.scrollIntoView({ block: 'nearest' });
       }
       return;
     }
@@ -1210,7 +1328,7 @@ if (typeof document !== 'undefined') (function () {
       if (key === 412 || key === 417) { event.preventDefault(); openJump(key === 412 ? -600 : 600); return; }
       if (key >= 37 && key <= 40) showControls();
     }
-    var controls = screen === 'home' ? [input, el('favorite-channel'), el('play'), el('recordings'), el('find-saved')].concat(recentControls,
+    var controls = screen === 'home' ? [input, el('favorite-channel'), el('play'), el('recordings'), el('kick-search-open'), el('find-saved')].concat(recentControls,
       el('recent-pages').hidden ? [] : [el('recent-previous'), el('recent-next')], favoriteControls, el('favorite-pages').hidden ? [] : [el('favorite-previous'), el('favorite-next')], continueControls,
       el('continue-pages').hidden ? [] : [el('continue-previous'), el('continue-next')], [el('about-button'), el('accessibility-button')]) :
       screen === 'catalog' ? [el('catalog-search')].concat(el('live').hidden ? [] : [el('live')], videoButtons,

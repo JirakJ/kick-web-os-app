@@ -1,0 +1,22 @@
+{
+  "issue": "https://github.com/JirakJ/kick-web-os-app/issues/28",
+  "date": "2026-11-12",
+  "checker": "test-layout.cjs (0.9.0)",
+  "chromium68": {
+    "engine": "Chromium 68.0.3419.0 snapshot r555668 (macOS x86_64 under Rosetta, headless, 1920x1080), not the TV engine",
+    "fixture": "Six-choice rendition list, block buttons with margin 8px 0, followed by a separate Cancel button inside a scrolling modal card",
+    "measured": { "clientHeight": 388, "scrollHeight": 396 },
+    "previousChecker": ["quality-options: vertical content overflow"],
+    "newChecker": {
+      "errors": [],
+      "notes": ["quality-options: vertical scroll extent +8px without painted overflow (collapsed margin)"]
+    },
+    "deliberatelyBrokenBox": ["broken: vertical content overflow"]
+  },
+  "modernChromium": {
+    "engine": "Playwright Chromium (headless shell 156)",
+    "suite": "test-layout-audit.cjs and test-browser.cjs (six-choice quality list in all 13 locales, two viewports, four size/contrast modes)",
+    "result": "passed"
+  },
+  "nativeTv": "Not yet repeated on LG 55NANO863NA / webOS 5.6.2. The 0.8.0 harness exception is no longer needed by the checker; confirm with the next native acceptance run."
+}

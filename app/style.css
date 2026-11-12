@@ -209,6 +209,33 @@ footer > * { min-width: 0; max-width: 100%; }
 .modal-card { max-height: 88vh; overflow-y: auto; }
 
 #saved-results button { display: block; width: 100%; margin: 10px 0; }
+.kick-search-row { display: flex; align-items: center; }
+.kick-search-row input { flex: 1; min-width: 0; margin-right: 18px; }
+.modal-card .kick-search-row button { flex-shrink: 0; margin: 0; }
+#kick-search-status { min-height: 1.4em; }
+#kick-results button { display: flex; align-items: center; width: 100%; margin: 6px 0; padding-top: 10px; padding-bottom: 10px; text-align: left; }
+#kick-search .modal-card h2 { margin-top: 0; }
+.kick-result-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kick-result-slug { flex: 1 1 auto; min-width: 0; margin-left: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #a9afb7; font-weight: 400; }
+.kick-verified { flex-shrink: 0; margin-left: auto; padding-left: 14px; color: #c5cbd3; font-size: 18px; font-weight: 400; }
+.kick-result-slug + .kick-verified { margin-left: 0; }
+#kick-results .recent-live { margin-left: 12px; }
+#kick-results .kick-result-name + .recent-live { margin-left: auto; }
+.kick-pages { display: flex; align-items: center; flex-wrap: wrap; }
+#kick-number { margin: 0 18px 0 0; }
+[data-text-size="large"] .kick-verified { font-size: 24px; }
+/* Short screens keep the field, results and paging visible; the heading names the dialog. */
+@media (max-height: 800px) {
+  #kick-search { padding-top: 2vh; padding-bottom: 2vh; }
+  #kick-search .modal-card { max-height: 96vh; padding: 18px 30px; }
+  #kick-search-scope { display: none; }
+  #kick-search h2 { margin-bottom: 8px; }
+  #kick-search label { display: block; margin-bottom: 4px; }
+  #kick-search-status { margin: 8px 0; }
+  #kick-results button { margin: 4px 0; padding-top: 6px; padding-bottom: 6px; }
+  #kick-search .kick-pages button { margin-top: 6px; margin-bottom: 0; }
+}
+[data-contrast="high"] .kick-result-slug, [data-contrast="high"] .kick-verified { color: #fff; }
 #search-summary { color: #a9afb7; font-size: 22px; }
 
 .jump-fields { display: flex; align-items: center; flex-wrap: wrap; }
