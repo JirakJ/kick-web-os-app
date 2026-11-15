@@ -36,6 +36,7 @@ if (typeof document !== 'undefined') (function () {
   // webOS reports its on-screen keyboard; Back then belongs to the keyboard, not the dialog.
   var keyboardVisible = false;
   var recents = [];
+  var favoriteOrder = '';
   var recentPage = 0, recentStatus = Object.create(null), recentRequest = null, recentTimer, recentGeneration = 0;
   var favorites = [], favoritePage = 0, favoriteButtons = [], favoriteControls = [], favoriteMove = null;
   var continuePage = 0, continueControls = [], continueRequests = [], continueGeneration = 0;
@@ -394,9 +395,9 @@ if (typeof document !== 'undefined') (function () {
     var name = favoriteMove.name;
     if (save) saveFavorites(); else favorites = favoriteMove.before;
     favoriteMove = null;
-    favoritePage = Math.floor(Math.max(0, favorites.indexOf(name)) / homePageSize);
+    favoritePage = Math.floor(Math.max(0, displayFavorites().indexOf(name)) / homePageSize);
     renderFavorites(); refreshRecentStatus();
-    var index = favorites.indexOf(name) - favoritePage * homePageSize;
+    var index = displayFavorites().indexOf(name) - favoritePage * homePageSize;
     (favoriteControls[index * 3 + 1] || input).focus();
   }
   function moveFavorite(delta) {
@@ -426,7 +427,8 @@ if (typeof document !== 'undefined') (function () {
     el('favorite-previous').disabled = favoritePage === 0;
     el('favorite-next').disabled = favoritePage === pages - 1;
     el('favorite-number').textContent = (favoritePage + 1) + ' / ' + pages;
-    favorites.slice(favoritePage * homePageSize, favoritePage * homePageSize + homePageSize).forEach(function (name) {
+    favoriteOrder = displayFavorites().join(',');
+    displayFavorites().slice(favoritePage * homePageSize, favoritePage * homePageSize + homePageSize).forEach(function (name) {
       var row = document.createElement('div'), play = document.createElement('button'), move = document.createElement('button'), remove = document.createElement('button');
       var label = document.createElement('span'), state = document.createElement('span');
       row.className = 'favorite-row'; play.type = move.type = remove.type = 'button';
@@ -459,11 +461,11 @@ if (typeof document !== 'undefined') (function () {
     el(screen === 'catalog' ? 'catalog-favorite-feedback' : 'favorite-feedback').textContent = ''; fitHome(); fitCatalog();
     cancelRecentStatus();
     if (index < 0) favorites.push(name); else favorites.splice(index, 1);
-    favoritePage = Math.floor(Math.max(0, favorites.indexOf(name)) / homePageSize);
+    favoritePage = Math.floor(Math.max(0, displayFavorites().indexOf(name)) / homePageSize);
     saveFavorites(); renderFavorites(); refreshRecentStatus();
   }
   function visibleStatusNames() {
-    return favorites.slice(favoritePage * homePageSize, favoritePage * homePageSize + homePageSize).concat(recents.slice(recentPage * homePageSize, recentPage * homePageSize + homePageSize)).filter(function (name, index, all) { return all.indexOf(name) === index; });
+    return displayFavorites().slice(favoritePage * homePageSize, favoritePage * homePageSize + homePageSize).concat(recents.slice(recentPage * homePageSize, recentPage * homePageSize + homePageSize)).concat(favorites).filter(function (name, index, all) { return all.indexOf(name) === index; });
   }
   function resumePosition(item) {
     var entry = watchedVideo(item), length = Number(item.duration) || entry && entry.duration || 0;
@@ -650,9 +652,18 @@ if (typeof document !== 'undefined') (function () {
     el('recent-page-number').textContent = (recentPage + 1) + ' / ' + pages;
     favoriteLabels(); showRecentStatus(); fitHome();
   }
+  // Live favorites first (user order kept inside each group); plain user order while moving.
+  function isLiveFavorite(name) {
+    var value = recentStatus[name];
+    return !!(value && value.live === true && Date.now() - value.at < 180000);
+  }
+  function displayFavorites() {
+    if (favoriteMove) return favorites;
+    return favorites.filter(isLiveFavorite).concat(favorites.filter(function (name) { return !isLiveFavorite(name); }));
+  }
   function showRecentStatus() {
     favoriteButtons.forEach(function (button, index) {
-      var name = favorites[favoritePage * homePageSize + index], value = recentStatus[name];
+      var name = displayFavorites()[favoritePage * homePageSize + index], value = recentStatus[name];
       var live = value && Date.now() - value.at < 60000 ? value.live : null;
       var status = t(live === true ? 'live_badge' : live === false ? 'offline_status' : 'unknown_status');
       button.children[1].textContent = status; button.setAttribute('aria-label', name + ', ' + status);
@@ -693,6 +704,14 @@ if (typeof document !== 'undefined') (function () {
         if (status && names.indexOf(status.channel) !== -1 && typeof status.live === 'boolean')
           recentStatus[status.channel] = { live: status.live, at: Date.now() };
       });
+      if (!favoriteMove && displayFavorites().join(',') !== favoriteOrder) {
+        var focusedIndex = favoriteControls.indexOf(document.activeElement), shown = favoriteOrder.split(',');
+        var focusedName = focusedIndex >= 0 ? shown[favoritePage * homePageSize + Math.floor(focusedIndex / 3)] : '';
+        renderFavorites();
+        var again = displayFavorites().indexOf(focusedName) - favoritePage * homePageSize;
+        if (focusedName && again >= 0 && favoriteControls[again * 3 + focusedIndex % 3]) favoriteControls[again * 3 + focusedIndex % 3].focus();
+        else if (focusedName) (favoriteControls[0] || input).focus();
+      }
       refreshRecentStatus();
     }
     try {

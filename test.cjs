@@ -299,6 +299,13 @@ assert.deepEqual(favoriteNames(),['alpha','beta','gamma']);assert.equal(elements
 elements['favorite-list'].children[1].children[1].handlers.click();click('favorite-move-up');click('favorite-move-save');
 assert.deepEqual(JSON.parse(favoriteData.get('kick-favorites')),['beta','alpha','gamma']);
 boot(favoriteStorage);assert.deepEqual(favoriteNames(),['beta','alpha','gamma'],'Chosen order survives an app restart');
+// Live favorites move to the top for display only; the saved order and offline order stay unchanged.
+const liveFirstData=new Map([['kick-favorites','["one","two","three","four"]']]);
+boot({getItem:k=>liveFirstData.get(k)||null,setItem:(k,v)=>liveFirstData.set(k,v)});
+bridges.filter(b=>b.uri.endsWith('/statuses')).at(-1).onservicecallback(JSON.stringify({returnValue:true,statuses:[{channel:'one',live:false},{channel:'two',live:false},{channel:'three',live:true},{channel:'four',live:false}]}));
+assert.deepEqual(favoriteNames(),['three','one','two','four'],'Live favorites are shown first in saved order');
+assert.deepEqual(JSON.parse(liveFirstData.get('kick-favorites')),['one','two','three','four'],'Live ordering never rewrites saved favorites');
+assert.equal(elements['favorite-list'].firstChild.firstChild.children[1].textContent,'ŽIVĚ','The live badge follows its moved row');
 // Removing a favorite invalidates its status cache, bounding retained channel entries.
 const cacheFavorites=new Map([['kick-favorites','["cache-one","cache-two"]']]);
 boot({getItem:k=>cacheFavorites.get(k)||null,setItem:(k,v)=>cacheFavorites.set(k,v)});
