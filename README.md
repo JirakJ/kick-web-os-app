@@ -13,7 +13,7 @@ The interface follows the TV's system language (Czech, Slovak, English, German, 
 ## Features
 
 - Live streams and public replays, including a replay picker when a channel is offline.
-- Up to 50 independently ordered favorite channels, up to six per page depending on screen height and text size, with row hearts, remote-only move/save/cancel controls and visible LIVE/offline/unknown status.
+- Up to 50 independently ordered favorite channels, up to six per page depending on screen height and text size, with row hearts, remote-only move/save/cancel controls and visible LIVE/offline/unknown status. Live favorites are listed first on home; the saved order is unchanged and applies within the live and offline groups.
 - Up to 50 recent channels stored locally, up to six per page depending on available space, with a **LIVE** badge for live channels and an individual remove button.
 - Interface language taken from the TV's locale, including the launcher title, with English as the fallback.
 - Replay thumbnails, titles, dates and durations, with up to six recordings per page; the grid adapts to the available screen height.
